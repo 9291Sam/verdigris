@@ -41,23 +41,19 @@ FetchContent_Declare(concurrentqueue
         )
 FetchContent_MakeAvailable(concurrentqueue)
 
-add_executable(verdigris 
-  src/main.cxx
-
-  # src/util/misc.cxx
-)
+add_executable(verdigris src/main.cxx)
 target_sources(verdigris
   PUBLIC
   FILE_SET cxx_modules TYPE CXX_MODULES FILES
 
   src/gfx/renderer.cxx
 
-  src/util/log.cxx
+  src/util/log.ixx
   src/util/misc.ixx
-  # src/util/misc.cxx
 )
 target_sources(verdigris PUBLIC
-src/util/misc.cxx
+  src/util/misc.cxx
+  src/util/log.cxx
 )
 
 target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue)

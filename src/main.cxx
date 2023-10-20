@@ -9,8 +9,6 @@ int main()
 {
     util::installGlobalLoggerRacy(std::make_unique<util::Logger>());
 
-    util::debugBreak();
-
     try
     {
         gfx::Renderer renderer {};
