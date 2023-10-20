@@ -1,16 +1,36 @@
 module;
 
+import util.log;
+
 #include <array>
 #include <print>
 
 export module gfx.renderer;
 
-export namespace gfx
+namespace gfx
 {
-    void foo()
+    export class Renderer
     {
-        std::array<int, 8> asdf {};
+    public:
 
-        std::println("Foo!");
-    }
+        Renderer();
+        ~Renderer();
+
+        Renderer(const Renderer&)             = delete;
+        Renderer(Renderer&&)                  = delete;
+        Renderer& operator= (const Renderer&) = delete;
+        Renderer& operator= (Renderer&&)      = delete;
+
+        void drawFrame();
+
+    private:
+    };
 } // namespace gfx
+
+gfx::Renderer::Renderer() {}
+gfx::Renderer::~Renderer() {}
+
+void gfx::Renderer::drawFrame()
+{
+    util::logLog("drawFrame()");
+}

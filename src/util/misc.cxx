@@ -1,15 +1,17 @@
-export module util.misc;
+module;
 
-namespace util
+#include <cstdio>
+
+module util.misc;
+
+[[noreturn]] void util::debugBreak()
 {
-    export [[noreturn]] void debugBreak()
-    {
+    std::fputs("util::debugBreak()\n", stderr);
 #ifdef _MSC_VER
-        __debugbreak();
+    __debugbreak();
 #elif defined(__GNUC__) || defined(__clang__)
-        __builtin_trap();
+    __builtin_trap();
 #else
 #error Unsupported compiler
 #endif
-    }
-} // namespace util
+}

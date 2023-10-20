@@ -1,29 +1,26 @@
-
 import gfx.renderer;
 import util.log;
 import util.misc;
-import stdlib;
+
+#include <atomic>
+#include <memory>
 
 int main()
 {
     util::installGlobalLoggerRacy(std::make_unique<util::Logger>());
 
-    std::atomic_thread_fence(std::memory_order_seq_cst);
+    util::debugBreak();
 
     try
     {
-        gfx::foo();
+        gfx::Renderer renderer {};
 
-        util::logLog("Foo, {}", "bar");
-
-        throw std::runtime_error {"asddd"};
+        renderer.drawFrame();
     }
     catch (const std::exception& e)
     {
         util::logTrace("Verdigris crash | {}", e.what());
     }
-
-    std::atomic_thread_fence(std::memory_order_seq_cst);
 
     std::ignore = util::removeGlobalLoggerRacy();
 }

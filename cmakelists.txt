@@ -12,22 +12,19 @@ include(FetchContent)
 # endif()
 set(CMAKE_CXX_STANDARD 23)
 
-add_library(gfx)
-target_sources(gfx
-  PUBLIC
-  FILE_SET cxx_modules TYPE CXX_MODULES FILES
-  src/gfx/renderer.cxx
-)
+# add_library(gfx)
+# target_sources(gfx
+#   PUBLIC
+#   FILE_SET cxx_modules TYPE CXX_MODULES FILES
+# )
+# target_link_libraries(gfx PUBLIC util fmt::fmt concurrentqueue)
 
-add_library(util)
-target_sources(util
-  PUBLIC
-  FILE_SET cxx_modules TYPE CXX_MODULES FILES
-  src/util/log.cxx
-  src/util/misc.cxx
-  src/util/stdlib.cxx
-)
-target_link_libraries(util PUBLIC fmt::fmt concurrentqueue)
+# add_library(util)
+# target_sources(util
+#   PUBLIC
+#   FILE_SET cxx_modules TYPE CXX_MODULES FILES
+# )
+# target_link_libraries(util PUBLIC fmt::fmt concurrentqueue)
 
 
 FetchContent_Declare(fmt
@@ -44,6 +41,24 @@ FetchContent_Declare(concurrentqueue
         )
 FetchContent_MakeAvailable(concurrentqueue)
 
-add_executable(verdigris src/main.cxx)
-target_link_libraries(verdigris PUBLIC gfx util fmt::fmt concurrentqueue)
+add_executable(verdigris 
+  src/main.cxx
+
+  # src/util/misc.cxx
+)
+target_sources(verdigris
+  PUBLIC
+  FILE_SET cxx_modules TYPE CXX_MODULES FILES
+
+  src/gfx/renderer.cxx
+
+  src/util/log.cxx
+  src/util/misc.ixx
+  # src/util/misc.cxx
+)
+target_sources(verdigris PUBLIC
+src/util/misc.cxx
+)
+
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue)
 

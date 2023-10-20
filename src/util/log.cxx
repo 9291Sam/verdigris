@@ -3,6 +3,7 @@ module;
 #include <concurrentqueue.h>
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -26,6 +27,7 @@ namespace util
 
     export class Logger;
     export void installGlobalLoggerRacy(std::unique_ptr<Logger>);
+    // export void foo();
     export std::unique_ptr<Logger> removeGlobalLoggerRacy();
 
     void asynchronouslyLog(
@@ -176,9 +178,9 @@ const char* util::LoggingLevel_asString(LoggingLevel level)
     case LoggingLevel::Debug:
         return "Debug";
     case LoggingLevel::Log:
-        return "Log";
+        return " Log ";
     case LoggingLevel::Warn:
-        return "Warn";
+        return "Warn ";
     case LoggingLevel::Fatal:
         return "Fatal";
     default:
@@ -198,7 +200,7 @@ void util::asynchronouslyLog(
     std::chrono::system_clock::time_point time)
 {
     std::string output = fmt::format(
-        "[{0}][{1}][{2}] {3}\n",
+        "[{0}] [{1}] [{2}] {3}\n",
         [&] // 0 time
         {
             std::string workingString {31, ' '};
