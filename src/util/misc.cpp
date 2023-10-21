@@ -1,8 +1,6 @@
-module;
-
+#include "misc.hpp"
 #include <cstdio>
-
-module util.misc;
+#include <utility>
 
 [[noreturn]] void util::debugBreak()
 {
@@ -14,4 +12,6 @@ module util.misc;
 #else
 #error Unsupported compiler
 #endif
+
+    std::unreachable();
 }

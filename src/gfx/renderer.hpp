@@ -1,15 +1,10 @@
-module;
-
-import util.log;
 
 #include <array>
 #include <print>
 
-export module gfx.renderer;
-
 namespace gfx
 {
-    export class Renderer
+    class Renderer
     {
     public:
 
@@ -26,11 +21,3 @@ namespace gfx
     private:
     };
 } // namespace gfx
-
-gfx::Renderer::Renderer() {}
-gfx::Renderer::~Renderer() {}
-
-void gfx::Renderer::drawFrame()
-{
-    util::logLog("drawFrame()");
-}

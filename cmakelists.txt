@@ -3,29 +3,7 @@ project(verdigris)
 
 include(FetchContent)
 
-# # Default to C++ extensions being off. Clang's modules support have trouble
-# # with extensions right now and it is not required for any other compiler
-# set(CMAKE_CXX_EXTENSIONS OFF)
-
-# if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-#   include(gcc_modules.cmake)
-# endif()
 set(CMAKE_CXX_STANDARD 23)
-
-# add_library(gfx)
-# target_sources(gfx
-#   PUBLIC
-#   FILE_SET cxx_modules TYPE CXX_MODULES FILES
-# )
-# target_link_libraries(gfx PUBLIC util fmt::fmt concurrentqueue)
-
-# add_library(util)
-# target_sources(util
-#   PUBLIC
-#   FILE_SET cxx_modules TYPE CXX_MODULES FILES
-# )
-# target_link_libraries(util PUBLIC fmt::fmt concurrentqueue)
-
 
 FetchContent_Declare(fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt.git
@@ -41,20 +19,15 @@ FetchContent_Declare(concurrentqueue
         )
 FetchContent_MakeAvailable(concurrentqueue)
 
-add_executable(verdigris src/main.cxx)
-target_sources(verdigris
-  PUBLIC
-  FILE_SET cxx_modules TYPE CXX_MODULES FILES
+add_executable(verdigris
+  src/main.cpp
 
-  src/gfx/renderer.cxx
+  src/gfx/renderer.cpp
 
-  src/util/log.ixx
-  src/util/misc.ixx
+  src/util/log.cpp
+  src/util/misc.cpp
 )
-target_sources(verdigris PUBLIC
-  src/util/misc.cxx
-  src/util/log.cxx
-)
-
+target_compile_definitions(verdigris PUBLIC VERDIGRIS_ENABLE_VALIDATION)
 target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue)
+target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src)
 

@@ -1,24 +1,52 @@
-module;
-
-#include <cassert>
-#include <concurrentqueue.h>
-#include <cstdint>
-#include <cstdio>
-#include <ctime>
+#include "log.hpp"
+#include <atomic>
 #include <fmt/chrono.h>
-#include <fmt/core.h>
-#include <fmt/format.h>
 #include <latch>
-#include <memory>
-#include <source_location>
-#include <thread>
-
-module util.log;
 
 namespace util
 {
 
-    const char* LoggingLevel_asString(LoggingLevel level);
+    namespace
+    {
+        const char* LoggingLevel_asString(LoggingLevel level)
+        {
+            switch (level)
+            {
+            case LoggingLevel::Trace:
+                return "Trace";
+            case LoggingLevel::Debug:
+                return "Debug";
+            case LoggingLevel::Log:
+                return " Log ";
+            case LoggingLevel::Warn:
+                return "Warn ";
+            case LoggingLevel::Fatal:
+                return "Fatal";
+            default:
+                return "Unknown level";
+            };
+        }
+    } // namespace
+
+    class Logger
+    {
+    public:
+
+        Logger();
+        ~Logger();
+
+        Logger(const Logger&)             = delete;
+        Logger(Logger&&)                  = delete;
+        Logger& operator= (const Logger&) = delete;
+        Logger& operator= (Logger&&)      = delete;
+
+        void send(std::string string);
+
+    private:
+        std::unique_ptr<std::atomic<bool>> should_thread_close {};
+        std::thread                        worker_thread;
+        std::unique_ptr<moodycamel::ConcurrentQueue<std::string>> message_queue;
+    };
 
     Logger::Logger()
         : should_thread_close {std::make_unique<std::atomic<bool>>(false)}
@@ -90,46 +118,46 @@ namespace util
 
     namespace
     {
-        static std::atomic<Logger*> GLOBAL_LOGGER {nullptr};
+        static std::atomic<Logger*>      GLOBAL_LOGGER {nullptr};
+        static std::atomic<LoggingLevel> GLOBAL_LOGGING_LEVEL {
+            LoggingLevel::Log};
+    } // namespace
+
+    void installGlobalLoggerRacy()
+    {
+        GLOBAL_LOGGER.store(new Logger {}, std::memory_order_seq_cst);
+
+        // this thread fence means that reading from GLOBAL_LOGGER, even when
+        // using Relaxed is guaranteed to acquire this new value. This is a non
+        // trivial optimization and led to about a 10% performance uplift
+        std::atomic_thread_fence(std::memory_order_seq_cst);
     }
 
-    std::unique_ptr<Logger> removeGlobalLoggerRacy()
+    void removeGlobalLoggerRacy()
     {
         Logger* const currentLogger =
             GLOBAL_LOGGER.exchange(nullptr, std::memory_order_seq_cst);
 
+        // doing very similar things with this fence here, we want relaxed
+        // reading, but still to actually flush the change
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+
         assert(currentLogger != nullptr && "Logger was already nullptr!");
 
-        return std::unique_ptr<Logger> {currentLogger};
+        delete currentLogger;
     }
 
-    void installGlobalLoggerRacy(std::unique_ptr<Logger> logger)
+    void setLoggingLevel(LoggingLevel level)
     {
-        GLOBAL_LOGGER.store(logger.release(), std::memory_order_seq_cst);
-    }
+        GLOBAL_LOGGING_LEVEL.store(level, std::memory_order_seq_cst);
 
-    const char* LoggingLevel_asString(LoggingLevel level)
-    {
-        switch (level)
-        {
-        case LoggingLevel::Trace:
-            return "Trace";
-        case LoggingLevel::Debug:
-            return "Debug";
-        case LoggingLevel::Log:
-            return " Log ";
-        case LoggingLevel::Warn:
-            return "Warn ";
-        case LoggingLevel::Fatal:
-            return "Fatal";
-        default:
-            return "Unknown level";
-        };
+        // Used for similar reasons as above, we want relaxed loading
+        std::atomic_thread_fence(std::memory_order_seq_cst);
     }
 
     LoggingLevel getCurrentLevel()
     {
-        return LoggingLevel::Trace;
+        return GLOBAL_LOGGING_LEVEL.load(std::memory_order_relaxed);
     }
 
     void asynchronouslyLog(
@@ -183,6 +211,7 @@ namespace util
             }(),
             message);
 
-        GLOBAL_LOGGER.load(std::memory_order_acquire)->send(std::move(output));
+        // the previous memory fences mean this is fine.
+        GLOBAL_LOGGER.load(std::memory_order_relaxed)->send(std::move(output));
     }
 } // namespace util
