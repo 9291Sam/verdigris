@@ -1,9 +1,12 @@
+#ifndef SRC_GFX_RENDERER_HPP
+#define SRC_GFX_RENDERER_HPP
 
-#include <array>
-#include <print>
+#include <memory>
 
 namespace gfx
 {
+    class Window;
+
     class Renderer
     {
     public:
@@ -19,5 +22,8 @@ namespace gfx
         void drawFrame();
 
     private:
+        std::unique_ptr<Window> window;
     };
 } // namespace gfx
+
+#endif
