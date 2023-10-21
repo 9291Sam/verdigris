@@ -201,7 +201,7 @@ namespace util
                 }
             };
 
-            if (!this->message_queue.enqueue(std::move(queueFunction)))
+            if (!this->message_queue->enqueue(std::move(queueFunction)))
             {
                 std::fputs(
                     "Failed to upload function to ThreadPool::message_queue!",
@@ -214,13 +214,17 @@ namespace util
         };
 
     private:
-        std::unique_ptr<std::atomic<std::barrier<void()>>> thread_barrier;
+        std::unique_ptr<std::barrier<void()>> thread_barrier;
         std::atomic<std::shared_ptr<std::binary_semaphore>>
             thread_barrier_semaphore;
 
-        mutable moodycamel::BlockingConcurrentQueue<
-            std::move_only_function<void()>>
-            message_queue;
+        mutable std::unique_ptr<moodycamel::BlockingConcurrentQueue<
+            std::move_only_function<void()>>>
+                                 message_queue;
+        std::vector<std::thread> workers;
+
+        std::unique_ptr<std::atomic<bool>> barrier_active;
+        std::unique_ptr<std::atomic<bool>> should_stop;
     };
 } // namespace util
 
