@@ -4,7 +4,9 @@
 #include <atomic>
 #include <barrier>
 #include <blockingconcurrentqueue.h>
+#include <expected>
 #include <functional>
+#include <future>
 #include <latch>
 #include <optional>
 #include <semaphore>
@@ -13,218 +15,174 @@
 namespace util
 {
     template<class T>
-    class FutureImpl
+    class Sender;
+
+    template<class T>
+    class Receiver;
+
+    template<class T>
+    struct ChannelControlBlock
     {
-    public:
+        ChannelControlBlock() = default;
 
-        FutureImpl()
-            : result_ready {1}
-            , result {std::nullopt}
-        {}
-        ~FutureImpl() = default;
+        ChannelControlBlock(const ChannelControlBlock&)             = delete;
+        ChannelControlBlock(ChannelControlBlock&&)                  = delete;
+        ChannelControlBlock& operator= (const ChannelControlBlock&) = delete;
+        ChannelControlBlock& operator= (ChannelControlBlock&&)      = delete;
 
-        FutureImpl(const FutureImpl&)             = delete;
-        FutureImpl(FutureImpl&&)                  = delete;
-        FutureImpl& operator= (const FutureImpl&) = delete;
-        FutureImpl& operator= (FutureImpl&&)      = delete;
-
-        void fulfill(T&& t)
-        {
-            if constexpr (VERDIGRIS_ENABLE_VALIDATION)
-            {
-                assert(
-                    !this->result.has_value()
-                    && "fulfill called on a moved from future!");
-            }
-
-            this->result = std::forward<T>(t);
-
-            this->result_ready.count_down();
-        }
-
-        T await()
-        {
-            this->result_ready.wait();
-
-            if constexpr (VERDIGRIS_ENABLE_VALIDATION)
-            {
-                assert(
-                    this->result.has_value()
-                    && "Await called on a moved from future!");
-            }
-
-            return std::move(*this->result);
-        }
-
-        std::optional<T> tryAwait()
-        {
-            if (this->result_ready.try_wait())
-            {
-                if constexpr (VERDIGRIS_ENABLE_VALIDATION)
-                {
-                    assert(
-                        this->result.has_value()
-                        && "Await called on a moved from future!");
-                }
-
-                return std::move(*result);
-            }
-            else
-            {
-                return std::nullopt;
-            }
-        }
-
-    private:
-        std::latch       result_ready;
-        std::optional<T> result;
+        moodycamel::BlockingConcurrentQueue<T> queue;
+        std::size_t                            number_of_senders;
+        std::size_t                            number_of_receivers;
     };
 
-    template<>
-    class FutureImpl<void>
+    // TODO: figure out friending templates from templates
+    template<class T>
+    [[nodiscard]] std::pair<Sender<T>, Receiver<T>> createChannel()
+        requires std::is_move_constructible_v<T>
+    {
+        std::shared_ptr<ChannelControlBlock<T>> block =
+            std::make_shared<ChannelControlBlock<T>>();
+
+        block->number_of_senders   = 1;
+        block->number_of_receivers = 1;
+
+        return std::make_pair(Sender {block}, Receiver {block});
+    }
+
+    template<class T>
+    class Sender
     {
     public:
 
-        FutureImpl()
-            : result_ready {1}
+        Sender()
+            : control_block {nullptr}
         {}
-        ~FutureImpl() = default;
+        Sender(std::shared_ptr<ChannelControlBlock<T>> newBlock)
+            : control_block {std::move(newBlock)}
+        {}
+        ~Sender()
+        {
+            if (this->control_block != nullptr)
+            {
+                this->control_block->number_of_senders -= 1;
+            }
+        }
 
-        FutureImpl(const FutureImpl&)             = delete;
-        FutureImpl(FutureImpl&&)                  = delete;
-        FutureImpl& operator= (const FutureImpl&) = delete;
-        FutureImpl& operator= (FutureImpl&&)      = delete;
+        explicit Sender(const Sender& other)
+            : control_block {other.control_block}
+        {
+            this->control_block->number_of_senders += 1;
+        }
+        Sender(Sender&&)                  = default;
+        Sender& operator= (const Sender&) = delete;
+        Sender& operator= (Sender&&)      = default;
 
-        void fulfill()
+        void send(T&& t) const
         {
             if constexpr (VERDIGRIS_ENABLE_VALIDATION)
             {
-                assert(
-                    !this->result_ready.try_wait()
-                    && "fulfill called on a moved from future!");
+                assert(this->control_block != nullptr);
+                assert(this->control_block->number_of_receivers > 0);
             }
 
-            this->result_ready.count_down();
-        }
-
-        void await()
-        {
-            this->result_ready.wait();
-        }
-
-        bool tryAwait()
-        {
-            return this->result_ready.try_wait();
+            if (!this->control_block->queue.enqueue(std::forward<T>(t)))
+            {
+                throw std::bad_alloc {};
+            }
         }
 
     private:
-        std::latch result_ready;
+        std::shared_ptr<ChannelControlBlock<T>> control_block;
     };
 
     template<class T>
-    class Future
+    class Receiver
     {
     public:
 
-        Future()
-            : impl {nullptr}
+        struct NoSendersAlive
+        {};
+
+    public:
+
+        Receiver()
+            : control_block {nullptr}
         {}
-        ~Future()
+        Receiver(std::shared_ptr<ChannelControlBlock<T>> newBlock)
+            : control_block {std::move(newBlock)}
+        {}
+        ~Receiver()
         {
-            if (this->impl != nullptr)
+            if (this->control_block != nullptr)
             {
-                std::ignore = this->impl->await();
+                this->control_block->number_of_receivers -= 1;
             }
         }
 
-        Future(const Future&)             = delete;
-        Future(Future&&)                  = default;
-        Future& operator= (const Future&) = delete;
-        Future& operator= (Future&&)      = default;
-
-        decltype(auto) await()
+        explicit Receiver(const Receiver& other)
+            : control_block {other.control_block}
         {
-            return this->impl->await();
+            this->control_block->number_of_receivers += 1;
         }
-        decltype(auto) tryAwait()
+        Receiver(Receiver&&)                  = default;
+        Receiver& operator= (const Receiver&) = delete;
+        Receiver& operator= (Receiver&&)      = default;
+
+        [[nodiscard]] std::expected<std::optional<T>, NoSendersAlive>
+        try_receive() const
         {
-            return this->impl->tryAwait();
-        }
-
-    private:
-        friend class ThreadPool;
-
-        Future(std::shared_ptr<FutureImpl<T>>);
-
-        std::shared_ptr<FutureImpl<T>> impl;
-    };
-
-    // TODO: remove polling and use jthread and stop token
-    class ThreadPool
-    {
-    public:
-
-        ThreadPool(std::size_t numberOfThreads);
-        ~ThreadPool();
-        // TODO: deal with the case of a threadpool being
-        // destructed while a barrier is still being worked on
-
-        /// This function
-        /// 1. takes each individual thread on the pool and blocks it from doing
-        /// any more work until all threads have stopped
-        /// 2. returns a semaphore that indicates when all the threads have
-        /// stopped
-        ///
-        /// This is only when you need to synchronize all functions per
-        std::binary_semaphore emitThreadBarrier();
-
-        template<class... Ts, class R>
-        void run(std::move_only_function<R(Ts...)> func, Ts&&... args) const
-        {
-            std::shared_ptr<FutureImpl<R>> futureImpl =
-                std::make_shared<FutureImpl<R>>();
-
-            std::move_only_function<void()> queueFunction =
-                [lambdaImpl     = futureImpl,
-                 lambdaFunc     = std::move(func),
-                 ... lambdaArgs = std::forward<Ts>(args)]()
+            if constexpr (VERDIGRIS_ENABLE_VALIDATION)
             {
-                if constexpr (!std::same_as<R, void>)
+                assert(this->control_block != nullptr);
+            }
+
+            std::optional<T> maybeOutput = std::nullopt;
+
+            this->control_block->queue.try_dequeue(maybeOutput);
+
+            if (maybeOutput.has_value())
+            {
+                return maybeOutput;
+            }
+            else
+            {
+                if (this->control_block->number_of_senders == 0)
                 {
-                    lambdaImpl->fulfill(std::invoke(lambdaFunc, lambdaArgs...));
+                    return std::unexpected(NoSendersAlive {});
                 }
                 else
                 {
-                    std::invoke(lambdaFunc, lambdaArgs...);
-
-                    lambdaImpl->fulfill();
+                    return std::nullopt;
                 }
-            };
-
-            if (!this->message_queue->enqueue(std::move(queueFunction)))
-            {
-                std::fputs(
-                    "Failed to upload function to ThreadPool::message_queue!",
-                    stderr);
-
-                queueFunction();
-
-                throw std::bad_alloc {};
             }
-        };
+        }
+
+        [[nodiscard]] std::expected<T, NoSendersAlive> receive() const
+        {
+            while (true)
+            {
+                if (this->control_block->number_of_senders == 0)
+                {
+                    return std::unexpected(NoSendersAlive {});
+                }
+
+                std::optional<T> maybeResult;
+
+                this->control_block->queue.wait_dequeue_timed(maybeResult, 750);
+
+                if (maybeResult.has_value())
+                {
+                    return *maybeResult;
+                }
+                else
+                {
+                    std::this_thread::yield();
+                }
+            }
+        }
 
     private:
-        std::unique_ptr<std::barrier<void()>> thread_barrier;
-        std::atomic<std::shared_ptr<std::binary_semaphore>>
-            thread_barrier_semaphore;
-
-        mutable std::unique_ptr<moodycamel::BlockingConcurrentQueue<
-            std::move_only_function<void()>>>
-                                 message_queue;
-        std::vector<std::thread> workers;
-
-        std::unique_ptr<std::atomic<bool>> barrier_active;
-        std::unique_ptr<std::atomic<bool>> should_stop;
+        std::shared_ptr<ChannelControlBlock<T>> control_block;
     };
 } // namespace util
 

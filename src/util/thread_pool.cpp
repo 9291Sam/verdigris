@@ -1,43 +1,40 @@
 #include "thread_pool.hpp"
 
 util::ThreadPool::ThreadPool(std::size_t numberOfWorkers)
-    : thread_barrier {nullptr}
-    , thread_barrier_semaphore {std::make_shared<std::binary_semaphore>(1)}
-    , message_queue {}
+    : sender {}
     , workers {numberOfWorkers}
 {
-    // std::make_unique<
-    //     std::unique_ptr<std::atomic<std::barrier<void() noexcept>>>>(nullptr)
+    auto [localSender, receiver] = util::createChannel<std::function<void()>>();
 
-    std::barrier<void()> barrier {16, [] noexcept {}};
+    this->sender = std::move(localSender);
 
     for (std::thread& t : this->workers)
     {
-        t = std::thread {
-            [pinnedQueue         = this->message_queue.get(),
-             pinnedBarrier       = this->thread_barrier.get(),
-             pinnedBarrierActive = this->barrier_active.get(),
-             pinnedShouldStop    = this->should_stop.get()]
-            {
-                std::optional<std::move_only_function<void()>> maybeFunction;
+        t = std::thread {[localReceiver = std::move(receiver)]
+                         {
+                             std::optional<std::function<void()>> maybeFunction;
 
-                while (true)
-                {
-                    if (pinnedQueue->wait_dequeue_timed(maybeFunction, 750))
-                    {
-                        std::invoke(*maybeFunction);
-                    }
+                             while (true)
+                             {
+                                 auto receiveResult = localReceiver.receive();
 
-                    if (pinnedShouldStop->load(std::memory_order_acquire))
-                    {
-                        break;
-                    }
+                                 if (!receiveResult.has_value())
+                                 {
+                                     break;
+                                 }
 
-                    if (pinnedBarrierActive->load(std::memory_order_acquire))
-                    {
-                        // pinnedBarrier.?
-                    }
-                }
-            }};
+                                 std::invoke(*receiveResult);
+                             }
+                         }};
+    }
+}
+
+util::ThreadPool::~ThreadPool()
+{
+    this->sender = Sender<std::function<void()>> {};
+
+    for (std::thread& t : this->workers)
+    {
+        t.join();
     }
 }
