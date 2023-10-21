@@ -16,16 +16,30 @@ int main()
     {
         gfx::Renderer renderer {};
 
-        renderer.drawFrame();
+        std::atomic<bool> shouldStop {false};
 
-        util::logLog(
-            "{}",
-            std::async(
-                []
-                {
-                    return 3;
-                })
-                .get());
+        std::future<void> gameLoop = std::async(
+            [&]
+            {
+                // while (!shouldStop.load(std::memory_order_acquire))
+                // {}
+
+                using namespace std::chrono_literals;
+
+                std::this_thread::sleep_for(3s);
+
+                shouldStop.store(true, std::memory_order_release);
+            });
+
+        while (renderer.continueTicking()
+               && !shouldStop.load(std::memory_order_acquire))
+        {
+            renderer.drawFrame();
+        }
+
+        shouldStop.store(true, std::memory_order_release);
+
+        gameLoop.wait();
     }
     catch (const std::exception& e)
     {

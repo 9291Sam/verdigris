@@ -7,6 +7,11 @@ namespace gfx
 {
     class Window;
 
+    namespace vulkan
+    {
+        class Instance;
+    }
+
     class Renderer
     {
     public:
@@ -19,10 +24,13 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
+        bool continueTicking();
         void drawFrame();
 
     private:
         std::unique_ptr<Window> window;
+
+        std::shared_ptr<vulkan::Instance> instance;
     };
 } // namespace gfx
 

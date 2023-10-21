@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(verdigris)
+project(verdigris VERSION 0.0.0.1)
 
 include(FetchContent)
 
@@ -36,6 +36,8 @@ find_package(Vulkan REQUIRED)
 add_executable(verdigris
     src/main.cpp
 
+    src/gfx/vulkan/instance.cpp
+
     src/gfx/renderer.cpp
     src/gfx/window.cpp
 
@@ -47,6 +49,11 @@ target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw)
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 
 # Compile definitions
+
+target_compile_definitions(verdigris PUBLIC VERDIGRIS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR})
+target_compile_definitions(verdigris PUBLIC VERDIGRIS_VERSION_MINOR=${PROJECT_VERSION_MINOR})
+target_compile_definitions(verdigris PUBLIC VERDIGRIS_VERSION_PATCH=${PROJECT_VERSION_PATCH})
+target_compile_definitions(verdigris PUBLIC VERDIGRIS_VERSION_TWEAK=${PROJECT_VERSION_TWEAK})
 
 target_compile_definitions(verdigris PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 target_compile_definitions(verdigris PUBLIC VULKAN_HPP_NO_CONSTRUCTORS=1)
