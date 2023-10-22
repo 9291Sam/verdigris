@@ -32,7 +32,7 @@ namespace gfx::vulkan
             util::assertFatal(
                 this->dynamic_loader.success(),
                 "Vulkan is not supported on this system");
-            const PFN_vkGetInstanceProcAddr dynVkGetInstanceProcAddr =
+            PFN_vkGetInstanceProcAddr dynVkGetInstanceProcAddr =
                 this->dynamic_loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
                     "vkGetInstanceProcAddr");
 
@@ -173,7 +173,7 @@ namespace gfx::vulkan
         }
     }
 
-    Instance::~Instance() {}
+    Instance::~Instance() = default;
 
     std::uint32_t Instance::getVulkanVersion() const
     {

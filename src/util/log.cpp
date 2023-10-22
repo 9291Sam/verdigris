@@ -76,7 +76,7 @@ namespace util
                 {
                     if (messageQueue->try_dequeue(temporary_string))
                     {
-                        std::fwrite(
+                        std::ignore = std::fwrite(
                             temporary_string.data(),
                             sizeof(char),
                             temporary_string.size(),
@@ -87,7 +87,7 @@ namespace util
                 // Cleanup loop
                 while (messageQueue->try_dequeue(temporary_string))
                 {
-                    std::fwrite(
+                    std::ignore = std::fwrite(
                         temporary_string.data(),
                         sizeof(char),
                         temporary_string.size(),
@@ -112,22 +112,23 @@ namespace util
         if (!this->message_queue->enqueue(string))
         {
             std::puts("Unable to send message to worker thread!\n");
-            std::fwrite(string.data(), sizeof(char), string.size(), stdout);
+            std::ignore =
+                std::fwrite(string.data(), sizeof(char), string.size(), stdout);
         }
     }
 
     namespace
     {
-        static std::atomic<Logger*>      GLOBAL_LOGGER {nullptr};
-        static std::atomic<LoggingLevel> GLOBAL_LOGGING_LEVEL {
-            LoggingLevel::Log};
+        std::atomic<Logger*>      LOGGER {nullptr};                  // NOLINT
+        std::atomic<LoggingLevel> LOGGING_LEVEL {LoggingLevel::Log}; // NOLINT
     } // namespace
 
     void installGlobalLoggerRacy()
     {
-        GLOBAL_LOGGER.store(new Logger {}, std::memory_order_seq_cst);
+        LOGGER.store(
+            new Logger {}, std::memory_order_seq_cst); // NOLINT: Wwning pointer
 
-        // this thread fence means that reading from GLOBAL_LOGGER, even when
+        // this thread fence means that reading from LOGGER, even when
         // using Relaxed is guaranteed to acquire this new value. This is a non
         // trivial optimization and led to about a 10% performance uplift
         std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -136,7 +137,7 @@ namespace util
     void removeGlobalLoggerRacy()
     {
         Logger* const currentLogger =
-            GLOBAL_LOGGER.exchange(nullptr, std::memory_order_seq_cst);
+            LOGGER.exchange(nullptr, std::memory_order_seq_cst);
 
         // doing very similar things with this fence here, we want relaxed
         // reading, but still to actually flush the change
@@ -144,12 +145,12 @@ namespace util
 
         assert(currentLogger != nullptr && "Logger was already nullptr!");
 
-        delete currentLogger;
+        delete currentLogger; // NOLINT: Owning pointer
     }
 
     void setLoggingLevel(LoggingLevel level)
     {
-        GLOBAL_LOGGING_LEVEL.store(level, std::memory_order_seq_cst);
+        LOGGING_LEVEL.store(level, std::memory_order_seq_cst);
 
         // Used for similar reasons as above, we want relaxed loading
         std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -157,7 +158,7 @@ namespace util
 
     LoggingLevel getCurrentLevel()
     {
-        return GLOBAL_LOGGING_LEVEL.load(std::memory_order_relaxed);
+        return LOGGING_LEVEL.load(std::memory_order_relaxed);
     }
 
     void asynchronouslyLog(
@@ -170,16 +171,16 @@ namespace util
             "[{0}] [{1}] [{2}] {3}\n",
             [&] // 0 time
             {
-                std::string workingString {31, ' '};
+                std::string workingString {31, ' '}; // NOLINT
 
                 workingString = fmt::format(
                     "{:0%b %m/%d/%Y %I:%M}:{:%S}",
-                    fmt::localtime(std::time(nullptr)),
-                    std::chrono::system_clock::now());
+                    fmt::localtime(std::chrono::system_clock::to_time_t(time)),
+                    time);
 
-                workingString.erase(30, std::string::npos);
+                workingString.erase(30, std::string::npos); // NOLINT
 
-                workingString.at(workingString.size() - 7) = ':';
+                workingString.at(workingString.size() - 7) = ':'; // NOLINT
                 workingString.insert(workingString.size() - 3, ":");
 
                 return workingString;
@@ -215,6 +216,6 @@ namespace util
             message);
 
         // the previous memory fences mean this is fine.
-        GLOBAL_LOGGER.load(std::memory_order_relaxed)->send(std::move(output));
+        LOGGER.load(std::memory_order_relaxed)->send(std::move(output));
     }
 } // namespace util

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <util/log.hpp>
+#include <vulkan/vulkan.hpp>
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
@@ -27,9 +28,9 @@ namespace gfx
     constexpr std::chrono::duration<float> MaximumSingleFireTime {0.01ms};
 
     Window::Window(
-        std::unordered_map<Action, ActionInformation> key_information_map,
-        vk::Extent2D                                  size,
-        const char*                                   name)
+        const std::map<Action, ActionInformation>& key_information_map,
+        vk::Extent2D                               size,
+        const char*                                name)
         : window {nullptr}
         , ignore_frames {3}
         , framebuffer_size {size}

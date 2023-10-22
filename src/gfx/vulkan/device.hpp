@@ -3,7 +3,7 @@
 
 #include <functional>
 #include <map>
-#include <util/misc.hpp>
+#include <util/threads.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 

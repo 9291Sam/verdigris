@@ -29,7 +29,7 @@ namespace util
         std::source_location                  location,
         std::chrono::system_clock::time_point time);
 
-#define MAKE_LOGGER(LEVEL)                                                     \
+#define MAKE_LOGGER(LEVEL) /* NOLINT */                                        \
     template<class... Ts>                                                      \
     struct log##LEVEL                                                          \
     {                                                                          \
@@ -54,15 +54,15 @@ namespace util
     template<class... Ts>                                                      \
     log##LEVEL(fmt::format_string<Ts...>, Ts&&...)->log##LEVEL<Ts...>;
 
-    MAKE_LOGGER(Trace)
-    MAKE_LOGGER(Debug)
-    MAKE_LOGGER(Log)
-    MAKE_LOGGER(Warn)
-    MAKE_LOGGER(Fatal)
+    MAKE_LOGGER(Trace) // NOLINT: We want implicit conversions
+    MAKE_LOGGER(Debug) // NOLINT: We want implicit conversions
+    MAKE_LOGGER(Log)   // NOLINT: We want implicit conversions
+    MAKE_LOGGER(Warn)  // NOLINT: We want implicit conversions
+    MAKE_LOGGER(Fatal) // NOLINT: We want implicit conversions
 
 #undef MAKE_LOGGER
 
-#define MAKE_ASSERT(LEVEL, THROW_ON_FAIL)                                      \
+#define MAKE_ASSERT(LEVEL, THROW_ON_FAIL) /* NOLINT */                         \
     template<class... Ts>                                                      \
     struct assert##LEVEL                                                       \
     {                                                                          \
@@ -106,18 +106,18 @@ namespace util
     assert##LEVEL(bool, fmt::format_string<J...>, J&&...)                      \
         ->assert##LEVEL<J...>;
 
-    MAKE_ASSERT(Trace, false)
-    MAKE_ASSERT(Debug, false)
-    MAKE_ASSERT(Log, false)
-    MAKE_ASSERT(Warn, false)
-    MAKE_ASSERT(Fatal, true)
+    MAKE_ASSERT(Trace, false) // NOLINT: We want implicit conversions
+    MAKE_ASSERT(Debug, false) // NOLINT: We want implicit conversions
+    MAKE_ASSERT(Log, false)   // NOLINT: We want implicit conversions
+    MAKE_ASSERT(Warn, false)  // NOLINT: We want implicit conversions
+    MAKE_ASSERT(Fatal, true)  // NOLINT: We want implicit conversions
 
 #undef MAKE_ASSERT
 
     template<class... Ts>
     struct panic
     {
-        panic(
+        panic( // NOLINT
             fmt::format_string<Ts...> fmt,
             Ts&&... args,
             const std::source_location& location =
@@ -132,7 +132,7 @@ namespace util
                 location,
                 std::chrono::system_clock::now());
 
-            throw std::runtime_error {std::move(message)};
+            throw std::runtime_error {message};
         }
     };
     template<class... J>

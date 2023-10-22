@@ -1,10 +1,10 @@
-#include "vulkan/vulkan.hpp"
-#include "vulkan/vulkan_structs.hpp"
+
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <new>
-#include <unordered_map>
+#include <map>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 struct GLFWwindow;
 
@@ -59,7 +59,7 @@ namespace gfx
     public:
 
         Window(
-            std::unordered_map<Action, ActionInformation>,
+            const std::map<Action, ActionInformation>&,
             vk::Extent2D windowSize,
             const char*  name);
         ~Window();
@@ -100,13 +100,13 @@ namespace gfx
 
         std::atomic<Delta> screen_space_mouse_delta;
 
-        std::unordered_map<GlfwKeyType, std::vector<Action>> key_to_actions_map;
-        std::unordered_map<
+        std::map<GlfwKeyType, std::vector<Action>> key_to_actions_map;
+        std::map<
             Action,
             std::atomic<std::chrono::time_point<std::chrono::steady_clock>>>
-            action_to_maybe_active_time_map;
-        std::unordered_map<Action, InteractionMethod> action_interaction_map;
-        std::array<std::atomic<bool>, 8> mouse_buttons_pressed_state;
+                                            action_to_maybe_active_time_map;
+        std::map<Action, InteractionMethod> action_interaction_map;
+        std::array<std::atomic<bool>, 8>    mouse_buttons_pressed_state;
 
         std::chrono::time_point<std::chrono::steady_clock> last_frame_end_time;
         std::atomic<std::chrono::duration<float>>          last_frame_duration;

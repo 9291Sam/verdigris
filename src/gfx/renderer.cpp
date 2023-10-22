@@ -10,13 +10,10 @@ namespace gfx
 {
     namespace
     {
-        const std::
-            unordered_map<gfx::Window::Action, gfx::Window::ActionInformation>
-                keys = []
+        const std::map<gfx::Window::Action, gfx::Window::ActionInformation>
+            keys = []
         {
-            std::unordered_map<
-                gfx::Window::Action,
-                gfx::Window::ActionInformation>
+            std::map<gfx::Window::Action, gfx::Window::ActionInformation>
                 workingMap;
             using enum gfx::Window::Action;
             using enum gfx::Window::InteractionMethod;
@@ -53,7 +50,7 @@ namespace gfx
               **this->instance, **this->surface)}
     {}
 
-    Renderer::~Renderer() {}
+    Renderer::~Renderer() = default;
 
     bool Renderer::continueTicking()
     {

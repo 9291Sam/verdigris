@@ -1,95 +1,71 @@
 #ifndef SRC_UTIL_MISC_HPP
 #define SRC_UTIL_MISC_HPP
 
-#include <mutex>
+#include <concepts>
 
 namespace util
 {
     [[noreturn]] void debugBreak();
 
-    template<class... T>
-    class Mutex
+    template<class T>
+    class AtomicUniquePtr
     {
     public:
-
-        explicit Mutex(T... t)
-            : tuple {std::forward<T>(t)...}
+        explicit AtomicUniquePtr() noexcept
+            : owned_t {nullptr}
         {}
-        ~Mutex() = default;
 
-        Mutex(const Mutex&)                 = delete;
-        Mutex(Mutex&&) noexcept             = default;
-        Mutex& operator= (const Mutex&)     = delete;
-        Mutex& operator= (Mutex&&) noexcept = default;
+        template<class... Args>
+        explicit AtomicUniquePtr(Args&&... args)
+            requires std::is_constructible_v<T, Args...>
+            : owned_t {new T {std::forward<Args>(args)...}}
+        {}
 
-        void lock(std::invocable<T&...> auto func) noexcept(
-            noexcept(std::apply(func, this->tuple)))
+        explicit AtomicUniquePtr(T&& t) // NOLINT
+            requires std::is_move_constructible_v<T>
+            : owned_t {new T {std::move<T>(t)}}
+        {}
+
+        ~AtomicUniquePtr()
         {
-            std::unique_lock lock {this->mutex};
+            delete this->owned_t;
 
-            std::apply(func, this->tuple);
+            this->owned_t = nullptr;
         }
 
-        void lock(std::invocable<const T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
+        AtomicUniquePtr(const AtomicUniquePtr&) = delete;
+        AtomicUniquePtr(AtomicUniquePtr&& other) noexcept
+            : owned_t {other.t}
         {
-            std::unique_lock lock {this->mutex};
+            other.owned_t = nullptr;
+        }
+        AtomicUniquePtr& operator= (const AtomicUniquePtr&) = delete;
+        AtomicUniquePtr& operator= (AtomicUniquePtr&& other) noexcept
+        {
+            delete this->owned_t;
 
-            std::apply(func, this->tuple);
+            this->owned_t = other.owned_t;
+
+            other.owned_t = nullptr;
         }
 
-        bool try_lock(std::invocable<T&...> auto func) noexcept(
-            noexcept(std::apply(func, this->tuple)))
+        [[nodiscard]] T* leak()
         {
-            std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
+            T* output = this->owned_t;
 
-            if (lock.try_lock())
-            {
-                std::apply(func, this->tuple);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        bool try_lock(std::invocable<const T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
-        {
-            std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
-
-            if (lock.try_lock())
-            {
-                std::apply(func, this->tuple);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
-            requires (sizeof...(T) == 1)
-        {
-            using V = std::tuple_element_t<0, std::tuple<T...>>;
-
-            V output {};
-
-            this->lock(
-                [&](const V& data)
-                {
-                    output = data;
-                });
+            this->owned_t = nullptr;
 
             return output;
         }
 
+        void destroy()
+        {
+            delete this->owned_t;
+        }
+
     private:
-        mutable std::mutex mutex;
-        std::tuple<T...>   tuple;
-    }; // class Mutex
+        T* owned_t;
+    };
 } // namespace util
 
 #endif // SRC_UTIL_MISC_HPP
