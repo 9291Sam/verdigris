@@ -2,6 +2,8 @@
 #define SRC_GFX_RENDERER_HPP
 
 #include <memory>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace gfx
 {
@@ -10,7 +12,8 @@ namespace gfx
     namespace vulkan
     {
         class Instance;
-    }
+        class Device;
+    } // namespace vulkan
 
     class Renderer
     {
@@ -24,13 +27,14 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
-        bool continueTicking();
-        void drawFrame();
+        [[nodiscard]] bool continueTicking();
+        void               drawFrame();
 
     private:
-        std::unique_ptr<Window> window;
-
-        std::shared_ptr<vulkan::Instance> instance;
+        std::unique_ptr<Window>               window;
+        std::unique_ptr<vulkan::Instance>     instance;
+        std::unique_ptr<vk::UniqueSurfaceKHR> surface;
+        std::unique_ptr<vulkan::Device>       device;
     };
 } // namespace gfx
 

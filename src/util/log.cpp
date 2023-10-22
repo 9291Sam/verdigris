@@ -203,7 +203,10 @@ namespace util
                 }
 
                 return fmt::format(
-                    "{}:{}", raw_file_name.substr(index + 1), location.line());
+                    "{}:{}:{}",
+                    raw_file_name.substr(index + 1),
+                    location.line(),
+                    location.column());
             }(),
             [&] // 2 message level
             {

@@ -21,12 +21,8 @@ int main()
         std::future<void> gameLoop = std::async(
             [&]
             {
-                // while (!shouldStop.load(std::memory_order_acquire))
-                // {}
-
-                using namespace std::chrono_literals;
-
-                std::this_thread::sleep_for(3s);
+                while (!shouldStop.load(std::memory_order_acquire))
+                {}
 
                 shouldStop.store(true, std::memory_order_release);
             });

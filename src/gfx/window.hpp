@@ -69,9 +69,9 @@ namespace gfx
         Window& operator= (const Window&) = delete;
         Window& operator= (Window&&)      = delete;
 
-        [[nodiscard]] Delta getScreenSpaceMouseDelta() const;
         [[nodiscard]] bool
         isActionActive(Action, bool IgnoreCursorAttached = false) const;
+        [[nodiscard]] Delta        getScreenSpaceMouseDelta() const;
         [[nodiscard]] float        getDeltaTimeSeconds() const;
         [[nodiscard]] vk::Extent2D getFramebufferSize() const;
 

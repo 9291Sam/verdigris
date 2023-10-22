@@ -174,4 +174,14 @@ namespace gfx::vulkan
     }
 
     Instance::~Instance() {}
+
+    std::uint32_t Instance::getVulkanVersion() const
+    {
+        return this->vulkan_api_version;
+    }
+
+    vk::Instance Instance::operator* () const
+    {
+        return *this->instance;
+    }
 } // namespace gfx::vulkan

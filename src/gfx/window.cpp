@@ -1,11 +1,9 @@
 #include "window.hpp"
 #include "GLFW/glfw3.h"
-#include "util/misc.hpp"
 #include "vulkan/vulkan_structs.hpp"
 #include <atomic>
 #include <chrono>
 #include <thread>
-#include <type_traits>
 #include <util/log.hpp>
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE

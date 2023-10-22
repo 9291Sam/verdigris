@@ -1,8 +1,10 @@
 #include "renderer.hpp"
+#include "vulkan/device.hpp"
 #include "vulkan/instance.hpp"
 #include "window.hpp"
 #include <GLFW/glfw3.h>
 #include <util/log.hpp>
+#include <vulkan/vulkan.hpp>
 
 namespace gfx
 {
@@ -44,7 +46,11 @@ namespace gfx
     Renderer::Renderer()
         : window {std::make_unique<Window>(
             keys, vk::Extent2D(1920, 1080), "Verdigris")}
-        , instance {std::make_shared<vulkan::Instance>()}
+        , instance {std::make_unique<vulkan::Instance>()}
+        , surface {std::make_unique<vk::UniqueSurfaceKHR>(
+              this->window->createSurface(**this->instance))}
+        , device {std::make_unique<vulkan::Device>(
+              **this->instance, **this->surface)}
     {}
 
     Renderer::~Renderer() {}

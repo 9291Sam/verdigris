@@ -4,6 +4,9 @@ project(verdigris VERSION 0.0.0.1)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# https://bugs.llvm.org/show_bug.cgi?id=47950
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
 # Libraries
 
@@ -36,6 +39,7 @@ find_package(Vulkan REQUIRED)
 add_executable(verdigris
     src/main.cpp
 
+    src/gfx/vulkan/device.cpp
     src/gfx/vulkan/instance.cpp
 
     src/gfx/renderer.cpp
@@ -94,8 +98,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             # target_compile_options(verdigris PUBLIC -fsanitize=leak)
             # target_link_options(verdigris PUBLIC -fsanitize=leak)
 
-            target_compile_options(verdigris PUBLIC -fsanitize=thread)
-            target_link_options(verdigris PUBLIC -fsanitize=thread)
+            # target_compile_options(verdigris PUBLIC -fsanitize=thread)
+            # target_link_options(verdigris PUBLIC -fsanitize=thread)
         endif ()
 
         target_compile_options(verdigris PUBLIC -Wno-c++98-compat)
