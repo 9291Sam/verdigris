@@ -2,7 +2,8 @@
 #define SRC_GFX_VULKAN_INSTANCE_HPP
 
 #include <cstdint>
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace gfx::vulkan
 {

@@ -8,6 +8,27 @@ namespace util
     [[noreturn]] void debugBreak();
 
     template<class T>
+    concept Integer = requires {
+        requires std::integral<T>;
+        requires !std::floating_point<T>;
+        requires !std::same_as<T, bool>;
+        requires !std::is_pointer_v<T>;
+    };
+
+    template<class T>
+    concept UnsignedInteger = requires {
+        requires Integer<T>;
+        requires std::is_unsigned_v<T>;
+    };
+
+    template<class T>
+    concept Arithmetic = requires {
+        requires std::integral<T> || std::floating_point<T>;
+        requires !std::same_as<T, bool>;
+        requires !std::is_pointer_v<T>;
+    };
+
+    template<class T>
     class AtomicUniquePtr
     {
     public:

@@ -31,6 +31,13 @@ FetchContent_Declare(glfw
         )
 FetchContent_MakeAvailable(glfw)
 
+FetchContent_Declare(gcem
+        GIT_REPOSITORY https://github.com/kthohr/gcem
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+        )
+FetchContent_MakeAvailable(gcem)
+
 # execute_process(
 #     COMMAND git submodule update --init --recursive
 #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/VulkanMemoryAllocator
@@ -64,7 +71,7 @@ add_executable(verdigris
     src/util/log.cpp
     src/util/misc.cpp
 )
-target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw VulkanMemoryAllocator)
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem VulkanMemoryAllocator)
 
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 
