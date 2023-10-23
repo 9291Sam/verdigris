@@ -62,6 +62,7 @@ find_package(Vulkan REQUIRED)
 add_executable(verdigris
     src/main.cpp
 
+    src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/device.cpp
     src/gfx/vulkan/instance.cpp
 

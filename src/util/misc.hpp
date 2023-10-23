@@ -2,6 +2,7 @@
 #define SRC_UTIL_MISC_HPP
 
 #include <concepts>
+#include <type_traits>
 
 namespace util
 {

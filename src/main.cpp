@@ -15,7 +15,7 @@ int main()
 
     try
     {
-        constexpr util::Vec3 vecc {1.0f, 2.0f, 3.0f};
+        constexpr util::Vec3 vec {1.0f, 2.0f, 3.0f};
 
         gfx::Renderer renderer {};
 
@@ -30,8 +30,7 @@ int main()
                 shouldStop.store(true, std::memory_order_release);
             });
 
-        while (renderer.continueTicking()
-               && !shouldStop.load(std::memory_order_acquire))
+        while (renderer.continueTicking() && !shouldStop.load(std::memory_order_acquire))
         {
             renderer.drawFrame();
         }

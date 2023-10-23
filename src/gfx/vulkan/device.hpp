@@ -61,12 +61,12 @@ namespace gfx::vulkan
         Queue& operator= (const Queue&) = delete;
         Queue& operator= (Queue&&)      = delete;
 
-        bool tryAccess(
+        [[nodiscard]] bool tryAccess(
             const std::function<void(vk::Queue, vk::CommandBuffer)>&) const;
-        bool           isInUse() const;
-        std::size_t    getNumberOfOperationsSupported() const;
-        vk::QueueFlags getFlags() const;
-        bool           getSurfaceSupport() const;
+        [[nodiscard]] bool           isInUse() const;
+        [[nodiscard]] std::size_t    getNumberOfOperationsSupported() const;
+        [[nodiscard]] vk::QueueFlags getFlags() const;
+        [[nodiscard]] bool           getSurfaceSupport() const;
 
         std::strong_ordering operator<=> (const Queue&) const;
 

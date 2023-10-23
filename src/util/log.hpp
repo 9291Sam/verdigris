@@ -1,6 +1,7 @@
 #ifndef SRC_UTIL_LOG_HPP
 #define SRC_UTIL_LOG_HPP
 
+#include "misc.hpp"
 #include <concurrentqueue.h>
 #include <cstdint>
 #include <fmt/core.h>
@@ -89,6 +90,8 @@ namespace util
                         location,                                              \
                         std::chrono::system_clock::now());                     \
                                                                                \
+                    util::debugBreak();                                        \
+                                                                               \
                     throw std::runtime_error {std::move(message)};             \
                 }                                                              \
                 else                                                           \
@@ -124,6 +127,7 @@ namespace util
                 std::source_location::current())
         {
             using enum LoggingLevel;
+            using namespace std::chrono_literals;
             std::string message = fmt::format(fmt, std::forward<Ts>(args)...);
 
             asynchronouslyLog(
@@ -131,6 +135,8 @@ namespace util
                 LoggingLevel::Fatal,
                 location,
                 std::chrono::system_clock::now());
+
+            util::debugBreak();
 
             throw std::runtime_error {message};
         }

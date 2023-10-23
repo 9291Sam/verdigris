@@ -215,7 +215,15 @@ namespace util
             }(),
             message);
 
-        // the previous memory fences mean this is fine.
-        LOGGER.load(std::memory_order_relaxed)->send(std::move(output));
+        if (level == LoggingLevel::Fatal || level == LoggingLevel::Warn)
+        {
+            std::ignore =
+                std::fwrite(output.data(), sizeof(char), output.size(), stdout);
+        }
+        else
+        {
+            // the previous memory fences mean this is fine.
+            LOGGER.load(std::memory_order_relaxed)->send(std::move(output));
+        }
     }
 } // namespace util

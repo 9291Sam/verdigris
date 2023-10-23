@@ -13,6 +13,7 @@ namespace gfx
     {
         class Instance;
         class Device;
+        class Allocator;
     } // namespace vulkan
 
     class Renderer
@@ -32,12 +33,15 @@ namespace gfx
 
     private:
 
-        //
+        // Vulkan prelude objects
         std::unique_ptr<Window>               window;
         std::unique_ptr<vulkan::Instance>     instance;
         std::unique_ptr<vk::UniqueSurfaceKHR> surface;
         std::unique_ptr<vulkan::Device>       device;
         std::unique_ptr<vulkan::Allocator>    allocator;
+
+        // Rendering objects
+        // std::unique_ptr<vulkan::Swapchain> swapchain;
     };
 } // namespace gfx
 
