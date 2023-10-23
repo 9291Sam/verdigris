@@ -1,6 +1,7 @@
 #include <future>
 #include <gfx/renderer.hpp>
 #include <util/log.hpp>
+#include <util/vector.hpp>
 
 int main()
 {
@@ -14,6 +15,8 @@ int main()
 
     try
     {
+        constexpr util::Vec3 vecc {1.0f, 2.0f, 3.0f};
+
         gfx::Renderer renderer {};
 
         std::atomic<bool> shouldStop {false};

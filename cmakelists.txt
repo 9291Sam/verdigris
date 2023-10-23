@@ -31,6 +31,13 @@ FetchContent_Declare(glfw
         )
 FetchContent_MakeAvailable(glfw)
 
+FetchContent_Declare(gcem
+        GIT_REPOSITORY https://github.com/kthohr/gcem
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+        )
+FetchContent_MakeAvailable(gcem)
+
 find_package(Vulkan REQUIRED)
 
 
@@ -48,7 +55,7 @@ add_executable(verdigris
     src/util/log.cpp
     src/util/misc.cpp
 )
-target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw)
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem)
 
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 
