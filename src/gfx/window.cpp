@@ -7,19 +7,19 @@
 #include <util/log.hpp>
 #include <vulkan/vulkan.hpp>
 
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
 
-// #define VMA_IMPLEMENTATION           1
-// #define VMA_STATIC_VULKAN_FUNCTIONS  0
-// #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-// #include "vk_mem_alloc.h"
+#define VMA_IMPLEMENTATION           1
+#define VMA_STATIC_VULKAN_FUNCTIONS  0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#include "vk_mem_alloc.h"
 
 #pragma clang diagnostic pop
 
-namespace gfx
+    namespace gfx
 {
     using std::chrono_literals::operator""ms;
     using Order = std::memory_order;
@@ -35,11 +35,11 @@ namespace gfx
         , ignore_frames {3}
         , framebuffer_size {size}
         , screen_space_mouse_delta {{0.0f, 0.0f}}
-        , key_to_actions_map {}
-        , action_to_maybe_active_time_map {}
-        , action_interaction_map {}
+        , key_to_actions_map {}              // NOLINT
+        , action_to_maybe_active_time_map {} // NOLINT
+        , action_interaction_map {}          // NOLINT
         , last_frame_end_time {std::chrono::steady_clock::now()}
-        , last_frame_duration {16ms}
+        , last_frame_duration {16ms} // NOLINT
         , previous_mouse_position {{0.0f, 0.0f}}
         , mouse_delta_pixels {{0.0f, 0.0f}}
         , is_cursor_attached {true}
@@ -50,11 +50,12 @@ namespace gfx
             "Error callback was set multiple times! Multiple windows were "
             "spawned!");
 
-        util::assertFatal(glfwInit(), "Failed to initialize GLFW!");
+        util::assertFatal(
+            glfwInit() == GLFW_TRUE, "Failed to initialize GLFW!");
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-        this->window = glfwCreateWindow(
+        this->window = glfwCreateWindow( // NOLINT
             static_cast<int>(size.width),
             static_cast<int>(size.height),
             name,
@@ -96,8 +97,8 @@ namespace gfx
             this->window, Window::mouseButtonCallback);
 
         // the requested framebuffer size may be different than the window size
-        int width;
-        int height;
+        int width  = -1;
+        int height = -1;
         glfwGetFramebufferSize(this->window, &width, &height);
 
         this->framebuffer_size.store(
@@ -148,7 +149,7 @@ namespace gfx
         }
         else
         {
-            if (this->is_cursor_attached.load(Order::acquire) == false)
+            if (!this->is_cursor_attached.load(Order::acquire))
             {
                 return false;
             }
@@ -291,7 +292,7 @@ namespace gfx
     }
 
     void Window::keypressCallback(
-        GLFWwindow*          glfwWindow,
+        GLFWwindow * glfwWindow,
         int                  key,
         [[maybe_unused]] int scancode,
         int                  inputAction,
@@ -337,7 +338,7 @@ namespace gfx
     }
 
     void Window::frameBufferResizeCallback(
-        GLFWwindow* glfwWindow, int newWidth, int newHeight)
+        GLFWwindow * glfwWindow, int newWidth, int newHeight)
     {
         gfx::Window* window =
             static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
@@ -350,7 +351,7 @@ namespace gfx
     }
 
     void Window::mouseButtonCallback(
-        GLFWwindow* glfwWindow, int button, int action, int)
+        GLFWwindow * glfwWindow, int button, int action, int)
     {
         gfx::Window* window =
             static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
@@ -384,7 +385,7 @@ namespace gfx
         }
     }
 
-    void Window::windowFocusCallback(GLFWwindow* glfwWindow, int isFocused)
+    void Window::windowFocusCallback(GLFWwindow * glfwWindow, int isFocused)
     {
         gfx::Window* window =
             static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));

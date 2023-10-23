@@ -23,7 +23,7 @@ namespace
 namespace gfx::vulkan
 {
     Instance::Instance()
-        : dynamic_loader {}
+        : dynamic_loader {} // NOLINT
         , instance {nullptr}
         , debug_messenger {nullptr}
         , vulkan_api_version {VK_API_VERSION_1_2}
@@ -32,15 +32,10 @@ namespace gfx::vulkan
             util::assertFatal(
                 this->dynamic_loader.success(),
                 "Vulkan is not supported on this system");
-            PFN_vkGetInstanceProcAddr dynVkGetInstanceProcAddr =
+
+            VULKAN_HPP_DEFAULT_DISPATCHER.init(
                 this->dynamic_loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
-                    "vkGetInstanceProcAddr");
-
-            util::assertFatal(
-                dynVkGetInstanceProcAddr != nullptr,
-                "Unable to acquire vkGetInstanceProcAddr");
-
-            VULKAN_HPP_DEFAULT_DISPATCHER.init(dynVkGetInstanceProcAddr);
+                    "vkGetInstanceProcAddr"));
         }
 
         const vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
@@ -125,7 +120,7 @@ namespace gfx::vulkan
                 // These pointers are alive as long as glfwInit is valid
                 for (std::size_t i = 0; i < numberOfInstanceExtensions; ++i)
                 {
-                    temp.push_back(instanceExtensionsArray[i]);
+                    temp.push_back(instanceExtensionsArray[i]); // NOLINT
 #pragma clang diagnostic pop
                 }
             }
@@ -139,7 +134,7 @@ namespace gfx::vulkan
                     {
                         if constexpr (VERDIGRIS_ENABLE_VALIDATION)
                         {
-                            return reinterpret_cast<const void*>(
+                            return reinterpret_cast<const void*>( // NOLINT
                                 &debugUtilsCreateInfo);
                         }
                         else

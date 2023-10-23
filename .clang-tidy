@@ -8,6 +8,14 @@ Checks: >
   -readability-else-after-return,
   -fuchsia-default-arguments-declarations,
   -altera-id-dependent-backward-branch,
+  -altera-struct-pack-align,
+  -readability-redundant-access-specifiers,
+  -google-readability-todo,
+  -hicpp-uppercase-literal-suffix,
+  -readability-uppercase-literal-suffix,
+  -fuchsia-overloaded-operator,
+  -readability-identifier-length,
+  
 # WarningsAsErrors: "*"
 
 # CheckOptions:

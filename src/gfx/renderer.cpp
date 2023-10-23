@@ -10,8 +10,9 @@ namespace gfx
 {
     namespace
     {
-        const std::map<gfx::Window::Action, gfx::Window::ActionInformation>
-            keys = []
+        static /* NOLINT */ std::
+            map<gfx::Window::Action, gfx::Window::ActionInformation>
+                keys = [] // NOLINT
         {
             std::map<gfx::Window::Action, gfx::Window::ActionInformation>
                 workingMap;
@@ -39,15 +40,17 @@ namespace gfx
             return workingMap;
         }();
 
-    }
+    } // namespace
+
     Renderer::Renderer()
         : window {std::make_unique<Window>(
-            keys, vk::Extent2D(1920, 1080), "Verdigris")}
+            keys, vk::Extent2D {1920, 1080}, "Verdigris")} // NOLINT
         , instance {std::make_unique<vulkan::Instance>()}
         , surface {std::make_unique<vk::UniqueSurfaceKHR>(
               this->window->createSurface(**this->instance))}
         , device {std::make_unique<vulkan::Device>(
               **this->instance, **this->surface)}
+        , allocator {}
     {}
 
     Renderer::~Renderer() = default;

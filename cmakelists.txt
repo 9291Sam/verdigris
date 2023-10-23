@@ -31,6 +31,22 @@ FetchContent_Declare(glfw
         )
 FetchContent_MakeAvailable(glfw)
 
+# execute_process(
+#     COMMAND git submodule update --init --recursive
+#     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/VulkanMemoryAllocator
+# )
+execute_process(
+    COMMAND git submodule update --init --recursive -- inc/VulkanMemoryAllocator
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMAND_ERROR_IS_FATAL ANY
+)
+add_library(VulkanMemoryAllocator INTERFACE)
+set_target_properties(VulkanMemoryAllocator PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES
+    ${CMAKE_SOURCE_DIR}/inc/VulkanMemoryAllocator/include
+)
+
+
 find_package(Vulkan REQUIRED)
 
 
@@ -48,7 +64,7 @@ add_executable(verdigris
     src/util/log.cpp
     src/util/misc.cpp
 )
-target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw)
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw VulkanMemoryAllocator)
 
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 

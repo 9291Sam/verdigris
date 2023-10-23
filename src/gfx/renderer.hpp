@@ -31,10 +31,13 @@ namespace gfx
         void               drawFrame();
 
     private:
+
+        //
         std::unique_ptr<Window>               window;
         std::unique_ptr<vulkan::Instance>     instance;
         std::unique_ptr<vk::UniqueSurfaceKHR> surface;
         std::unique_ptr<vulkan::Device>       device;
+        std::unique_ptr<vulkan::Allocator>    allocator;
     };
 } // namespace gfx
 

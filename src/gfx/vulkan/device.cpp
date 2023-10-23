@@ -1,5 +1,8 @@
 #include "device.hpp"
 #include <util/log.hpp>
+#include <util/threads.hpp>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_beta.h>
 
 namespace gfx::vulkan
 {
@@ -14,12 +17,12 @@ namespace gfx::vulkan
         };
     } // namespace
 
-    Device::Device(vk::Instance instance_, vk::SurfaceKHR surface_)
+    Device::Device(vk::Instance instance_, vk::SurfaceKHR surface_) // NOLINT
         : instance {instance_}
         , surface {surface_}
         , logical_device {nullptr}
         , physical_device {nullptr}
-        , queues {}
+        , queues {} // NOLINT
         , should_buffers_stage {true}
     {
         // Initialize physical device
@@ -27,11 +30,11 @@ namespace gfx::vulkan
             const std::vector<vk::PhysicalDevice> physicalDevices =
                 this->instance.enumeratePhysicalDevices();
 
-            auto rateDevice = [&](vk::PhysicalDevice d) -> std::size_t
+            auto rateDevice = [&](vk::PhysicalDevice device) -> std::size_t
             {
                 std::size_t score = 0;
 
-                const auto deviceLimits {d.getProperties().limits};
+                const auto deviceLimits {device.getProperties().limits};
 
                 score += deviceLimits.maxImageDimension2D;
                 score += deviceLimits.maxImageDimension3D;
@@ -42,9 +45,9 @@ namespace gfx::vulkan
             this->physical_device = *std::max_element(
                 physicalDevices.begin(),
                 physicalDevices.end(),
-                [&](vk::PhysicalDevice d1, vk::PhysicalDevice d2)
+                [&](vk::PhysicalDevice deviceL, vk::PhysicalDevice deviceR)
                 {
-                    return rateDevice(d1) < rateDevice(d2);
+                    return rateDevice(deviceL) < rateDevice(deviceR);
                 });
         }
 
@@ -105,8 +108,8 @@ namespace gfx::vulkan
             };
 
             vk::PhysicalDeviceFeatures deviceFeatures = {};
-            deviceFeatures.samplerAnisotropy          = true;
-            deviceFeatures.fillModeNonSolid           = true;
+            deviceFeatures.samplerAnisotropy = static_cast<vk::Bool32>(true);
+            deviceFeatures.fillModeNonSolid  = static_cast<vk::Bool32>(true);
 
             const vk::DeviceCreateInfo deviceCreateInfo {
                 .sType {vk::StructureType::eDeviceCreateInfo},
@@ -211,7 +214,7 @@ namespace gfx::vulkan
                 if (memoryProperties.memoryHeaps
                         .at(idx_of_gpu_main_memory.value())
                         .size
-                    > 257 * 1024 * 1024)
+                    > 257 * 1024 * 1024) // NOLINT
                 {
                     return false;
                 }
@@ -225,7 +228,7 @@ namespace gfx::vulkan
         }
     }
 
-    Device::~Device() {}
+    Device::~Device() = default;
 
     bool Device::shouldBuffersStage() const
     {
@@ -242,8 +245,8 @@ namespace gfx::vulkan
     }
 
     void Device::accessQueue(
-        vk::QueueFlags                                    flags,
-        std::function<void(vk::Queue, vk::CommandBuffer)> func)
+        vk::QueueFlags                                           flags,
+        const std::function<void(vk::Queue, vk::CommandBuffer)>& func)
     {
         const std::vector<std::shared_ptr<Queue>>& queueVector =
             this->queues.at(flags);
@@ -292,7 +295,7 @@ namespace gfx::vulkan
 
         this->queue_buffer_mutex =
             std::make_unique<util::Mutex<vk::Queue, vk::UniqueCommandBuffer>>(
-                queue,
+                std::move(queue), // NOLINT: rvalue is required
                 std::move(
                     device
                         .allocateCommandBuffersUnique(commandBufferAllocateInfo)
@@ -300,7 +303,7 @@ namespace gfx::vulkan
     }
 
     bool Queue::tryAccess(
-        std::function<void(vk::Queue, vk::CommandBuffer)> func) const
+        const std::function<void(vk::Queue, vk::CommandBuffer)>& func) const
     {
         return this->queue_buffer_mutex->try_lock(
             [&](vk::Queue& queue, vk::UniqueCommandBuffer& commandBuffer)

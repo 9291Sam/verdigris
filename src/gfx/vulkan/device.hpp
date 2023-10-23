@@ -30,7 +30,8 @@ namespace gfx::vulkan
         [[nodiscard]] vk::PhysicalDevice asPhysicalDevice() const;
 
         void accessQueue(
-            vk::QueueFlags, std::function<void(vk::Queue, vk::CommandBuffer)>);
+            vk::QueueFlags,
+            const std::function<void(vk::Queue, vk::CommandBuffer)>&);
 
     private:
         vk::Instance   instance;
@@ -60,13 +61,14 @@ namespace gfx::vulkan
         Queue& operator= (const Queue&) = delete;
         Queue& operator= (Queue&&)      = delete;
 
-        bool tryAccess(std::function<void(vk::Queue, vk::CommandBuffer)>) const;
-        bool isInUse() const;
+        bool tryAccess(
+            const std::function<void(vk::Queue, vk::CommandBuffer)>&) const;
+        bool           isInUse() const;
         std::size_t    getNumberOfOperationsSupported() const;
         vk::QueueFlags getFlags() const;
         bool           getSurfaceSupport() const;
 
-        std::strong_ordering operator<=> (const Queue& o) const;
+        std::strong_ordering operator<=> (const Queue&) const;
 
     private:
         vk::QueueFlags        flags;
