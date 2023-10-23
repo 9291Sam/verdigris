@@ -13,7 +13,7 @@ namespace util
 {
     // TODO: rotors && special matricies
     template<Arithmetic T, std::size_t N>
-    class alignas(8) Vector final
+    class alignas(8) Vector final // NOLINT
     {
     public:
         static constexpr std::size_t Length {N};
@@ -23,11 +23,9 @@ namespace util
         [[nodiscard]] constexpr Vector() noexcept
             : data {}
         {
-            std::fill(
-                this->data.begin(), this->data.end(), static_cast<T>(INFINITY));
+            std::fill(this->data.begin(), this->data.end(), static_cast<T>(INFINITY));
         }
-        [[nodiscard]] constexpr explicit Vector(
-            std::same_as<T> auto... args) noexcept
+        [[nodiscard]] constexpr explicit Vector(std::same_as<T> auto... args) noexcept
             requires (sizeof...(args) == N)
             : data {args...}
         {}
@@ -68,7 +66,7 @@ namespace util
             for (std::size_t i = 0; i < N; ++i)
             {
                 std::partial_ordering order =
-                    std::partial_order(this->data[i], other.data[i]);
+                    std::partial_order(this->data[i], other.data[i]); // NOLINT
 
                 if (order != std::partial_ordering::equivalent)
                 {
@@ -79,14 +77,12 @@ namespace util
             return std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool
-        operator== (const Vector& other) const noexcept
+        [[nodiscard]] constexpr bool operator== (const Vector& other) const noexcept
         {
             return ((*this) <=> (other)) == std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool
-        operator!= (const Vector& other) const noexcept
+        [[nodiscard]] constexpr bool operator!= (const Vector& other) const noexcept
         {
             return !((*this) == other);
         }
@@ -223,14 +219,13 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector
-        operator+ (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector operator+ (const Vector& other) const noexcept
         {
             Vector output {*this};
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] += other.data[i];
+                output.data[i] += other.data[i]; // NOLINT
             }
 
             return output;
@@ -242,20 +237,19 @@ namespace util
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] += value;
+                output.data[i] += value; // NOLINT
             }
 
             return output;
         }
 
-        [[nodiscard]] constexpr Vector
-        operator- (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector operator- (const Vector& other) const noexcept
         {
             Vector output {*this};
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] -= other.data[i];
+                output.data[i] -= other.data[i]; // NOLINT
             }
 
             return output;
@@ -267,20 +261,19 @@ namespace util
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] -= value;
+                output.data[i] -= value; // NOLINT
             }
 
             return output;
         }
 
-        [[nodiscard]] constexpr Vector
-        operator* (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector operator* (const Vector& other) const noexcept
         {
             Vector output {*this};
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] *= other.data[i];
+                output.data[i] *= other.data[i]; // NOLINT
             }
 
             return output;
@@ -292,20 +285,19 @@ namespace util
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] *= value;
+                output.data[i] *= value; // NOLINT
             }
 
             return output;
         }
 
-        [[nodiscard]] constexpr Vector
-        operator/ (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector operator/ (const Vector& other) const noexcept
         {
             Vector output {*this};
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] /= other.data[i];
+                output.data[i] /= other.data[i]; // NOLINT
             }
 
             return output;
@@ -317,14 +309,13 @@ namespace util
 
             for (std::size_t i = 0; i < N; ++i)
             {
-                output.data[i] /= value;
+                output.data[i] /= value; // NOLINT
             }
 
             return output;
         }
 
-        [[nodiscard]] constexpr Vector
-        operator% (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector operator% (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -332,11 +323,11 @@ namespace util
             {
                 if consteval
                 {
-                    output.data[i] = gcem::fmod(output.data[i], other.data[i]);
+                    output.data[i] = gcem::fmod(output.data[i], other.data[i]); // NOLINT
                 }
                 else
                 {
-                    output.data[i] = std::fmod(output.data[i], other.data[i]);
+                    output.data[i] = std::fmod(output.data[i], other.data[i]); // NOLINT
                 }
             }
 
@@ -351,11 +342,11 @@ namespace util
             {
                 if consteval
                 {
-                    output.data[i] = gcem::fmod(output.data[i], value);
+                    output.data[i] = gcem::fmod(output.data[i], value); // NOLINT
                 }
                 else
                 {
-                    output.data[i] = std::fmod(output.data[i], value);
+                    output.data[i] = std::fmod(output.data[i], value); // NOLINT
                 }
             }
 
@@ -480,8 +471,7 @@ namespace util
 
         [[nodiscard]] constexpr T angleTo(const Vector& other) const noexcept
         {
-            const T intermediate =
-                (this->dot(other)) / (this->magnitude() * other.magnitude());
+            const T intermediate = (this->dot(other)) / (this->magnitude() * other.magnitude());
             if consteval
             {
                 return gcem::acos(intermediate);
@@ -499,14 +489,12 @@ namespace util
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator
-        begin() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator begin() const noexcept
         {
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator
-        cbegin() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator cbegin() const noexcept
         {
             return this->data.begin();
         }
@@ -516,14 +504,12 @@ namespace util
             return this->data.end();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator
-        end() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator end() const noexcept
         {
             return this->data.cend();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator
-        cend() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator cend() const noexcept
         {
             return this->data.cend();
         }
@@ -536,6 +522,7 @@ namespace util
     using Vec3 = Vector<float, 3>;
     using Vec4 = Vector<float, 4>;
 
+    // NOLINTBEGIN
     consteval bool testVector()
     {
         // construction
@@ -767,8 +754,7 @@ namespace util
             constexpr util::Vector<float, 3> vec0 {1.0f, 0.0f, 0.0f};
             constexpr util::Vector<float, 3> vec1 {0.0f, 1.0f, 0.0f};
 
-            static_assert(
-                vec0.cross(vec1) == util::Vector<float, 3> {0.0f, 0.0f, 1.0f});
+            static_assert(vec0.cross(vec1) == util::Vector<float, 3> {0.0f, 0.0f, 1.0f});
         }
 
         // magnitude
@@ -817,6 +803,7 @@ namespace util
     }
 
     static_assert(testVector());
+    // NOLINTEND
 } // namespace util
 
 #endif // SRC_UTIL_VECTOR_HPP

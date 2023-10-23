@@ -2,6 +2,7 @@
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/instance.hpp"
+#include "vulkan/swapchain.hpp"
 #include "window.hpp"
 #include <GLFW/glfw3.h>
 #include <util/log.hpp>
@@ -46,7 +47,9 @@ namespace gfx
               this->window->createSurface(**this->instance))}
         , device {std::make_unique<vulkan::Device>(**this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(*this->instance, *this->device)}
-    {}
+    {
+        this->initializeRenderer();
+    }
 
     Renderer::~Renderer() = default;
 
@@ -60,4 +63,9 @@ namespace gfx
         this->window->endFrame();
     }
 
+    void Renderer::initializeRenderer()
+    {
+        this->swapchain = std::make_unique<vulkan::Swapchain>(
+            *this->device, **this->surface, this->window->getFramebufferSize());
+    }
 } // namespace gfx

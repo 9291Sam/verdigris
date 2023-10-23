@@ -14,6 +14,7 @@ namespace gfx
         class Instance;
         class Device;
         class Allocator;
+        class Swapchain;
     } // namespace vulkan
 
     class Renderer
@@ -33,6 +34,8 @@ namespace gfx
 
     private:
 
+        void initializeRenderer();
+
         // Vulkan prelude objects
         std::unique_ptr<Window>               window;
         std::unique_ptr<vulkan::Instance>     instance;
@@ -41,7 +44,7 @@ namespace gfx
         std::unique_ptr<vulkan::Allocator>    allocator;
 
         // Rendering objects
-        // std::unique_ptr<vulkan::Swapchain> swapchain;
+        std::unique_ptr<vulkan::Swapchain> swapchain;
     };
 } // namespace gfx
 
