@@ -1,6 +1,7 @@
 #ifndef SRC_UTIL_MISC_HPP
 #define SRC_UTIL_MISC_HPP
 
+#include <atomic>
 #include <concepts>
 #include <type_traits>
 
@@ -50,43 +51,43 @@ namespace util
 
         ~AtomicUniquePtr()
         {
-            delete this->owned_t;
-
-            this->owned_t = nullptr;
+            delete this->owned_t.exchange(nullptr, std::memory_order_acq_rel); // NOLINT
         }
 
         AtomicUniquePtr(const AtomicUniquePtr&) = delete;
         AtomicUniquePtr(AtomicUniquePtr&& other) noexcept
-            : owned_t {other.t}
+            : owned_t {nullptr}
         {
-            other.owned_t = nullptr;
+            this->owned_t.store(
+                other.owned_t.exchange(nullptr, std::memory_order_acq_rel),
+                std::memory_order_acq_rel);
         }
         AtomicUniquePtr& operator= (const AtomicUniquePtr&) = delete;
         AtomicUniquePtr& operator= (AtomicUniquePtr&& other) noexcept
         {
-            delete this->owned_t;
+            delete this->owned_t.exchange(nullptr, std::memory_order_acq_rel); // NOLINT
 
-            this->owned_t = other.owned_t;
-
-            other.owned_t = nullptr;
+            this->owned_t = other.owned_t.exchange(nullptr, std::memory_order_acq_rel);
         }
 
-        [[nodiscard]] T* leak()
+        // Primary interaction method
+        operator std::atomic<T*>& () const // NOLINT: implicit
         {
-            T* output = this->owned_t;
-
-            this->owned_t = nullptr;
-
-            return output;
+            return this->owned_t;
         }
 
-        void destroy()
+        [[nodiscard]] T* leak() noexcept
         {
-            delete this->owned_t;
+            return this->owned_t.exchange(nullptr, std::memory_order_acq_rel);
+        }
+
+        void destroy() noexcept
+        {
+            delete this->owned_t.exchange(nullptr, std::memory_order_acq_rel); // NOLINT
         }
 
     private:
-        T* owned_t;
+        std::atomic<T*> owned_t;
     };
 } // namespace util
 

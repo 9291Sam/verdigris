@@ -184,7 +184,7 @@ namespace util
                                 // Fill the subMatrix by skipping the current
                                 // column and copying the remaining elements.
                                 subMatrix[subMatrixColumn][currentRow - 1] =
-                                    data[originalColumn][currentRow];
+                                    data[originalColumn][currentRow]; // NOLINT
                                 ++subMatrixColumn;
                             }
                         }
@@ -200,7 +200,7 @@ namespace util
 
                     // Multiply the element of the first row with its cofactor
                     // and accumulate the results.
-                    output += data[currentColumn][0] * subDeterminant;
+                    output += data[currentColumn][0] * subDeterminant; // NOLINT
                 }
 
                 return output;
@@ -247,7 +247,7 @@ namespace util
                                 ++origRow;
                             }
 
-                            subMatrix[subCol][subRow] = data[origCol][origRow];
+                            subMatrix[subCol][subRow] = data[origCol][origRow]; // NOLINT
                         }
                     }
 
@@ -305,6 +305,7 @@ namespace util
         std::array<Vector<T, R>, C> data;
     };
 
+    // NOLINTBEGIN
     consteval bool test()
     {
         {
@@ -480,6 +481,7 @@ namespace util
     }
 
     static_assert(test());
+    // NOLINTEND
 
 } // namespace util
 

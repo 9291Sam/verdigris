@@ -1,6 +1,7 @@
 #include "renderer.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
+#include "vulkan/image.hpp"
 #include "vulkan/instance.hpp"
 #include "vulkan/swapchain.hpp"
 #include "window.hpp"
@@ -67,5 +68,15 @@ namespace gfx
     {
         this->swapchain = std::make_unique<vulkan::Swapchain>(
             *this->device, **this->surface, this->window->getFramebufferSize());
+
+        this->depth_buffer = std::make_unique<vulkan::Image2D>(
+            &*this->allocator,
+            this->device->asLogicalDevice(),
+            this->swapchain->getExtent(),
+            vk::Format::eD32Sfloat,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            vk::ImageAspectFlagBits::eDepth,
+            vk::ImageTiling::eOptimal,
+            vk::MemoryPropertyFlagBits::eDeviceLocal);
     }
 } // namespace gfx

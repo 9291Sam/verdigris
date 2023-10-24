@@ -2,10 +2,11 @@
 #define SRC_GFX_VULKAN_BUFFER
 
 #include <cstdint>
-#include <vk_mem_alloc.h>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
+VK_DEFINE_HANDLE(VmaAllocation)
+VK_DEFINE_HANDLE(VmaAllocator)
 
 namespace gfx::vulkan
 {
@@ -38,6 +39,7 @@ namespace gfx::vulkan
     private:
         void free();
 
+        VmaAllocator                    allocator;
         vk::Buffer                      buffer;
         VmaAllocation                   allocation;
         std::size_t                     size_bytes;
