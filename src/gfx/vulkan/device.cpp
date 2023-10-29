@@ -246,7 +246,7 @@ namespace gfx::vulkan
 
     void Device::accessQueue(
         vk::QueueFlags                                           flags,
-        const std::function<void(vk::Queue, vk::CommandBuffer)>& func)
+        const std::function<void(vk::Queue, vk::CommandBuffer)>& func) const
     {
         const std::vector<std::shared_ptr<Queue>>& queueVector =
             this->queues.at(flags);

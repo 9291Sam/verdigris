@@ -24,14 +24,13 @@ namespace gfx::vulkan
         Device& operator= (const Device&) = delete;
         Device& operator= (Device&&)      = delete;
 
-        [[nodiscard]] bool shouldBuffersStage() const;
-
-        [[nodiscard]] vk::Device         asLogicalDevice() const;
+        [[nodiscard]] bool               shouldBuffersStage() const;
         [[nodiscard]] vk::PhysicalDevice asPhysicalDevice() const;
+        [[nodiscard]] vk::Device         asLogicalDevice() const;
 
         void accessQueue(
             vk::QueueFlags,
-            const std::function<void(vk::Queue, vk::CommandBuffer)>&);
+            const std::function<void(vk::Queue, vk::CommandBuffer)>&) const;
 
     private:
         vk::Instance   instance;

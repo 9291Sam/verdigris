@@ -38,10 +38,7 @@ FetchContent_Declare(gcem
         )
 FetchContent_MakeAvailable(gcem)
 
-# execute_process(
-#     COMMAND git submodule update --init --recursive
-#     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/VulkanMemoryAllocator
-# )
+# Vulkan memory Allocator
 execute_process(
     COMMAND git submodule update --init --recursive -- inc/VulkanMemoryAllocator
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
@@ -52,6 +49,31 @@ set_target_properties(VulkanMemoryAllocator PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES
     ${CMAKE_SOURCE_DIR}/inc/VulkanMemoryAllocator/include
 )
+
+# imgui
+execute_process(
+    COMMAND git submodule update --init --recursive -- inc/imgui
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMAND_ERROR_IS_FATAL ANY
+)
+add_library(imgui INTERFACE)
+target_sources(imgui PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui_demo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui_draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui_widgets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui_tables.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends/imgui_impl_vulkan.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends/imgui_impl_glfw.cpp
+)
+target_include_directories(imgui INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends
+    ${CMAKE_SOURCE_DIR}/inc/imgui/include
+)
+target_compile_definitions(imgui INTERFACE IMGUI_IMPL_VULKAN_NO_PROTOTYPES=1)
 
 
 find_package(Vulkan REQUIRED)
@@ -70,13 +92,15 @@ add_executable(verdigris
     src/gfx/vulkan/render_pass.cpp
     src/gfx/vulkan/swapchain.cpp
 
+    src/gfx/imgui_menu.cpp
     src/gfx/renderer.cpp
     src/gfx/window.cpp
 
     src/util/log.cpp
     src/util/misc.cpp
+    src/util/uuid.cpp
 )
-target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem VulkanMemoryAllocator)
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem VulkanMemoryAllocator imgui)
 
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 

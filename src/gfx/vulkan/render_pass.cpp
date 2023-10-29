@@ -1,5 +1,4 @@
 #include "render_pass.hpp"
-#include "device.hpp"
 #include "image.hpp"
 #include "swapchain.hpp"
 

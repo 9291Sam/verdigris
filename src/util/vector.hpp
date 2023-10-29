@@ -6,8 +6,10 @@
 #include <array>
 #include <cmath>
 #include <compare>
+#include <format>
 #include <gcem.hpp> // TODO: remove once big three have constexpr <cmath> support
 #include <numbers>
+#include <string>
 
 namespace util
 {
@@ -16,7 +18,7 @@ namespace util
     class alignas(ALIGN) Vector final
     {
     public:
-        static constexpr T           InvalidT = std::numeric_limits<T>::quiet_NaN();
+        static constexpr T InvalidT = std::numeric_limits<T>::quiet_NaN();
         static constexpr std::size_t Length {N};
 
         using ElementType = T;
@@ -27,7 +29,8 @@ namespace util
         {
             std::fill(this->data.begin(), this->data.end(), fillData);
         }
-        [[nodiscard]] constexpr explicit Vector(std::same_as<T> auto... args) noexcept
+        [[nodiscard]] constexpr explicit Vector(
+            std::same_as<T> auto... args) noexcept
             requires (sizeof...(args) == N)
             : data {args...}
         {}
@@ -79,12 +82,14 @@ namespace util
             return std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool operator== (const Vector& other) const noexcept
+        [[nodiscard]] constexpr bool
+        operator== (const Vector& other) const noexcept
         {
             return ((*this) <=> (other)) == std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool operator!= (const Vector& other) const noexcept
+        [[nodiscard]] constexpr bool
+        operator!= (const Vector& other) const noexcept
         {
             return !((*this) == other);
         }
@@ -221,7 +226,8 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector operator+ (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector
+        operator+ (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -245,7 +251,8 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector operator- (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector
+        operator- (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -269,7 +276,8 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector operator* (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector
+        operator* (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -293,7 +301,8 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector operator/ (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector
+        operator/ (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -317,7 +326,8 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr Vector operator% (const Vector& other) const noexcept
+        [[nodiscard]] constexpr Vector
+        operator% (const Vector& other) const noexcept
         {
             Vector output {*this};
 
@@ -325,11 +335,13 @@ namespace util
             {
                 if consteval
                 {
-                    output.data[i] = gcem::fmod(output.data[i], other.data[i]); // NOLINT
+                    output.data[i] =
+                        gcem::fmod(output.data[i], other.data[i]); // NOLINT
                 }
                 else
                 {
-                    output.data[i] = std::fmod(output.data[i], other.data[i]); // NOLINT
+                    output.data[i] =
+                        std::fmod(output.data[i], other.data[i]); // NOLINT
                 }
             }
 
@@ -344,7 +356,8 @@ namespace util
             {
                 if consteval
                 {
-                    output.data[i] = gcem::fmod(output.data[i], value); // NOLINT
+                    output.data[i] =
+                        gcem::fmod(output.data[i], value); // NOLINT
                 }
                 else
                 {
@@ -479,7 +492,8 @@ namespace util
 
         [[nodiscard]] constexpr T angleTo(const Vector& other) const noexcept
         {
-            const T intermediate = (this->dot(other)) / (this->magnitude() * other.magnitude());
+            const T intermediate =
+                (this->dot(other)) / (this->magnitude() * other.magnitude());
             if consteval
             {
                 return gcem::acos(intermediate);
@@ -497,12 +511,14 @@ namespace util
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator begin() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator
+        begin() const noexcept
         {
             return this->data.cbegin();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator cbegin() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator
+        cbegin() const noexcept
         {
             return this->data.cbegin();
         }
@@ -512,14 +528,32 @@ namespace util
             return this->data.end();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator end() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator
+        end() const noexcept
         {
             return this->data.cend();
         }
 
-        [[nodiscard]] constexpr std::array<T, N>::const_iterator cend() const noexcept
+        [[nodiscard]] constexpr std::array<T, N>::const_iterator
+        cend() const noexcept
         {
             return this->data.cend();
+        }
+
+        explicit operator std::string ()
+        {
+            std::string output {"util::Vector {"};
+
+            for (const T& t : this->data)
+            {
+                output += std::format("{}, ", t);
+            }
+
+            output.pop_back();
+            output.pop_back();
+            output.push_back('}');
+
+            return output;
         }
 
     private:
@@ -762,7 +796,8 @@ namespace util
             constexpr util::Vector<float, 3> vec0 {1.0f, 0.0f, 0.0f};
             constexpr util::Vector<float, 3> vec1 {0.0f, 1.0f, 0.0f};
 
-            static_assert(vec0.cross(vec1) == util::Vector<float, 3> {0.0f, 0.0f, 1.0f});
+            static_assert(
+                vec0.cross(vec1) == util::Vector<float, 3> {0.0f, 0.0f, 1.0f});
         }
 
         // magnitude

@@ -1,7 +1,6 @@
 #ifndef SRC_GFX_VULKAN_RENDER__PASS_HPP
 #define SRC_GFX_VULKAN_RENDER__PASS_HPP
 
-#include <memory>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
