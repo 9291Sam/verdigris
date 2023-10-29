@@ -67,6 +67,7 @@ add_executable(verdigris
     src/gfx/vulkan/device.cpp
     src/gfx/vulkan/image.cpp
     src/gfx/vulkan/instance.cpp
+    src/gfx/vulkan/render_pass.cpp
     src/gfx/vulkan/swapchain.cpp
 
     src/gfx/renderer.cpp
@@ -98,7 +99,7 @@ endif()
 
 
 
-# Compiler flags
+# Compiler flags TODO: prettify
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")

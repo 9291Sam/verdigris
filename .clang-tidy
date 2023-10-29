@@ -15,6 +15,7 @@ Checks: >
   -readability-uppercase-literal-suffix,
   -fuchsia-overloaded-operator,
   -readability-identifier-length,
+  -modernize-use-auto
   
 # WarningsAsErrors: "*"
 

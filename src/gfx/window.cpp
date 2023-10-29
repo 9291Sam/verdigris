@@ -7,7 +7,9 @@
 #include <util/log.hpp>
 #include <vulkan/vulkan.hpp>
 
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
+// NOLINTBEGIN clang-format off
+
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
@@ -19,13 +21,15 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
 
 #pragma clang diagnostic pop
 
-    namespace gfx
+// NOLINTEND clang-format on
+
+namespace gfx
 {
     using std::chrono_literals::operator""ms;
     using Order = std::memory_order;
 
     constexpr std::chrono::time_point<std::chrono::steady_clock> NullTime {};
-    constexpr std::chrono::duration<float> MaximumSingleFireTime {0.01ms};
+    constexpr std::chrono::duration<float>                       MaximumSingleFireTime {0.01ms};
 
     Window::Window(
         const std::map<Action, ActionInformation>& key_information_map,
@@ -50,8 +54,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
             "Error callback was set multiple times! Multiple windows were "
             "spawned!");
 
-        util::assertFatal(
-            glfwInit() == GLFW_TRUE, "Failed to initialize GLFW!");
+        util::assertFatal(glfwInit() == GLFW_TRUE, "Failed to initialize GLFW!");
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
@@ -62,21 +65,18 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
             nullptr,
             nullptr);
 
-        util::assertFatal(
-            this->window != nullptr, "Failed to create GLFW window!");
+        util::assertFatal(this->window != nullptr, "Failed to create GLFW window!");
 
         // populate key maps
         for (const auto [action, information] : key_information_map)
         {
             this->key_to_actions_map[information.key].push_back(action);
-            this->action_to_maybe_active_time_map[action].store(
-                NullTime, Order::release);
+            this->action_to_maybe_active_time_map[action].store(NullTime, Order::release);
             this->action_interaction_map[action] = information.method;
         }
 
         util::assertFatal(
-            key_information_map.size()
-                == static_cast<std::size_t>(Action::MaxEnumValue) - 1,
+            key_information_map.size() == static_cast<std::size_t>(Action::MaxEnumValue) - 1,
             "Not all keys populated! {} {}",
             key_information_map.size(),
             std::to_underlying(Action::MaxEnumValue) - 1);
@@ -84,17 +84,14 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         // update other callbacks
         glfwSetWindowUserPointer(this->window, static_cast<void*>(this));
 
-        std::ignore = glfwSetFramebufferSizeCallback(
-            this->window, Window::frameBufferResizeCallback);
-
         std::ignore =
-            glfwSetKeyCallback(this->window, Window::keypressCallback);
+            glfwSetFramebufferSizeCallback(this->window, Window::frameBufferResizeCallback);
 
-        std::ignore = glfwSetWindowFocusCallback(
-            this->window, Window::windowFocusCallback);
+        std::ignore = glfwSetKeyCallback(this->window, Window::keypressCallback);
 
-        std::ignore = glfwSetMouseButtonCallback(
-            this->window, Window::mouseButtonCallback);
+        std::ignore = glfwSetWindowFocusCallback(this->window, Window::windowFocusCallback);
+
+        std::ignore = glfwSetMouseButtonCallback(this->window, Window::mouseButtonCallback);
 
         // the requested framebuffer size may be different than the window size
         int width  = -1;
@@ -102,9 +99,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         glfwGetFramebufferSize(this->window, &width, &height);
 
         this->framebuffer_size.store(
-            vk::Extent2D {
-                static_cast<std::uint32_t>(width),
-                static_cast<std::uint32_t>(height)},
+            vk::Extent2D {static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)},
             Order::release);
 
         util::logTrace("Initalized window");
@@ -121,16 +116,12 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         if (this->is_cursor_attached.load(Order::acquire)
             && this->ignore_frames.load(Order::acquire) == 0)
         {
-            const vk::Extent2D FramebufferSizePixels =
-                this->framebuffer_size.load(Order::acquire);
-            const Delta MouseDeltaPixels =
-                this->mouse_delta_pixels.load(Order::acquire);
+            const vk::Extent2D FramebufferSizePixels = this->framebuffer_size.load(Order::acquire);
+            const Delta        MouseDeltaPixels = this->mouse_delta_pixels.load(Order::acquire);
 
             return Delta {
-                .x {MouseDeltaPixels.x
-                    / static_cast<float>(FramebufferSizePixels.width)},
-                .y {MouseDeltaPixels.y
-                    / static_cast<float>(FramebufferSizePixels.height)},
+                .x {MouseDeltaPixels.x / static_cast<float>(FramebufferSizePixels.width)},
+                .y {MouseDeltaPixels.y / static_cast<float>(FramebufferSizePixels.height)},
             };
         }
         else
@@ -143,8 +134,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
     {
         if (ignoreCursorAttached)
         {
-            return this->action_to_maybe_active_time_map.at(action).load(
-                       Order::acquire)
+            return this->action_to_maybe_active_time_map.at(action).load(Order::acquire)
                 != NullTime;
         }
         else
@@ -154,8 +144,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
                 return false;
             }
 
-            return this->action_to_maybe_active_time_map.at(action).load(
-                       Order::acquire)
+            return this->action_to_maybe_active_time_map.at(action).load(Order::acquire)
                 != NullTime;
         }
     }
@@ -175,18 +164,14 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         VkSurfaceKHR maybeSurface = nullptr;
 
         const VkResult result = glfwCreateWindowSurface(
-            static_cast<VkInstance>(instance),
-            this->window,
-            nullptr,
-            &maybeSurface);
+            static_cast<VkInstance>(instance), this->window, nullptr, &maybeSurface);
 
         util::assertFatal(
             result == VK_SUCCESS,
             "Failed to create window surface | {}",
             vk::to_string(vk::Result {result}));
 
-        util::assertFatal(
-            static_cast<bool>(maybeSurface), "Returned surface was a nullptr!");
+        util::assertFatal(static_cast<bool>(maybeSurface), "Returned surface was a nullptr!");
 
         return vk::UniqueSurfaceKHR {vk::SurfaceKHR {maybeSurface}, instance};
     }
@@ -217,24 +202,21 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
 
     void Window::detachCursor()
     {
-        const vk::Extent2D currentSize =
-            this->framebuffer_size.load(Order::acquire);
+        const vk::Extent2D currentSize = this->framebuffer_size.load(Order::acquire);
 
         glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         glfwSetCursorPos(
             this->window,
-            static_cast<double>(
-                currentSize.width / 2), // NOLINT: Desired behavior
-            static_cast<double>(
-                currentSize.height / 2)); // NOLINT: Desired behavior
+            static_cast<double>(currentSize.width / 2),   // NOLINT: Desired behavior
+            static_cast<double>(currentSize.height / 2)); // NOLINT: Desired behavior
 
         this->is_cursor_attached.store(false, Order::release);
     }
 
     void Window::endFrame()
     {
-        const std::chrono::time_point<std::chrono::steady_clock>
-            StartEndFrameTime = std::chrono::steady_clock::now();
+        const std::chrono::time_point<std::chrono::steady_clock> StartEndFrameTime =
+            std::chrono::steady_clock::now();
 
         // cull InteractionMethod::SinglePress that exist for more than the
         // Frame time
@@ -264,42 +246,36 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         std::pair<double, double> currentMousePositionDoubles {NAN, NAN};
 
         glfwGetCursorPos(
-            this->window,
-            &currentMousePositionDoubles.first,
-            &currentMousePositionDoubles.second);
+            this->window, &currentMousePositionDoubles.first, &currentMousePositionDoubles.second);
 
         const Delta CurrentMousePosition {
             static_cast<float>(currentMousePositionDoubles.first),
             static_cast<float>(currentMousePositionDoubles.second)};
-        const Delta PreviousMousePosition {
-            this->previous_mouse_position.load(Order::acquire)};
+        const Delta PreviousMousePosition {this->previous_mouse_position.load(Order::acquire)};
 
         this->mouse_delta_pixels.store(
             {CurrentMousePosition.x - PreviousMousePosition.x,
              CurrentMousePosition.y - PreviousMousePosition.y},
             Order::release);
 
-        this->previous_mouse_position.store(
-            CurrentMousePosition, Order::release);
+        this->previous_mouse_position.store(CurrentMousePosition, Order::release);
 
         // Delta time processing
         const auto currentTime = std::chrono::steady_clock::now();
 
-        this->last_frame_duration.store(
-            currentTime - this->last_frame_end_time, Order::release);
+        this->last_frame_duration.store(currentTime - this->last_frame_end_time, Order::release);
 
         this->last_frame_end_time = currentTime;
     }
 
     void Window::keypressCallback(
-        GLFWwindow * glfwWindow,
-        int                  key,
-        [[maybe_unused]] int scancode,
-        int                  inputAction,
-        [[maybe_unused]] int mods)
+        GLFWwindow*          glfwWindow,
+        int                  key,         // NOLINT
+        [[maybe_unused]] int scancode,    // NOLINT
+        int                  inputAction, // NOLINT
+        [[maybe_unused]] int mods)        // NOLINT
     {
-        gfx::Window* window =
-            static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
+        gfx::Window* const window = static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
 
         if (!window->key_to_actions_map.contains(key))
         {
@@ -307,16 +283,14 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
             return;
         }
 
-        std::span<const Action> actionsFromKey =
-            window->key_to_actions_map.at(key);
+        std::span<const Action> actionsFromKey = window->key_to_actions_map.at(key);
 
         switch (inputAction)
         {
         case GLFW_RELEASE:
             for (Action a : actionsFromKey)
             {
-                window->action_to_maybe_active_time_map.at(a).store(
-                    NullTime, Order::release);
+                window->action_to_maybe_active_time_map.at(a).store(NullTime, Order::release);
             }
 
             break;
@@ -337,11 +311,9 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         }
     }
 
-    void Window::frameBufferResizeCallback(
-        GLFWwindow * glfwWindow, int newWidth, int newHeight)
+    void Window::frameBufferResizeCallback(GLFWwindow* glfwWindow, int newWidth, int newHeight)
     {
-        gfx::Window* window =
-            static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
+        gfx::Window* window = static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
 
         window->framebuffer_size.store(
             vk::Extent2D {
@@ -351,14 +323,12 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
     }
 
     void Window::mouseButtonCallback(
-        GLFWwindow * glfwWindow, int button, int action, int)
+        GLFWwindow* glfwWindow, int button, int action, [[maybe_unused]] int modifiers) // NOLINT
     {
-        gfx::Window* window =
-            static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
+        gfx::Window* window = static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
 
         std::atomic<bool>& buttonToModify =
-            window->mouse_buttons_pressed_state.at(
-                static_cast<std::size_t>(button));
+            window->mouse_buttons_pressed_state.at(static_cast<std::size_t>(button));
 
         switch (action)
         {
@@ -385,12 +355,11 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE // NOLINT
         }
     }
 
-    void Window::windowFocusCallback(GLFWwindow * glfwWindow, int isFocused)
+    void Window::windowFocusCallback(GLFWwindow* glfwWindow, int isFocused)
     {
-        gfx::Window* window =
-            static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
+        gfx::Window* window = static_cast<gfx::Window*>(glfwGetWindowUserPointer(glfwWindow));
 
-        if (isFocused)
+        if (static_cast<bool>(isFocused))
         {
             window->attachCursor();
         }

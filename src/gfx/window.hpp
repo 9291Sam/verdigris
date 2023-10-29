@@ -59,9 +59,7 @@ namespace gfx
     public:
 
         Window(
-            const std::map<Action, ActionInformation>&,
-            vk::Extent2D windowSize,
-            const char*  name);
+            const std::map<Action, ActionInformation>&, vk::Extent2D windowSize, const char* name);
         ~Window();
 
         Window(const Window&)             = delete;
@@ -69,8 +67,7 @@ namespace gfx
         Window& operator= (const Window&) = delete;
         Window& operator= (Window&&)      = delete;
 
-        [[nodiscard]] bool
-        isActionActive(Action, bool IgnoreCursorAttached = false) const;
+        [[nodiscard]] bool         isActionActive(Action, bool IgnoreCursorAttached = false) const;
         [[nodiscard]] Delta        getScreenSpaceMouseDelta() const;
         [[nodiscard]] float        getDeltaTimeSeconds() const;
         [[nodiscard]] vk::Extent2D getFramebufferSize() const;
@@ -101,12 +98,10 @@ namespace gfx
         std::atomic<Delta> screen_space_mouse_delta;
 
         std::map<GlfwKeyType, std::vector<Action>> key_to_actions_map;
-        std::map<
-            Action,
-            std::atomic<std::chrono::time_point<std::chrono::steady_clock>>>
+        std::map<Action, std::atomic<std::chrono::time_point<std::chrono::steady_clock>>>
                                             action_to_maybe_active_time_map;
         std::map<Action, InteractionMethod> action_interaction_map;
-        std::array<std::atomic<bool>, 8>    mouse_buttons_pressed_state;
+        std::array<std::atomic<bool>, 8>    mouse_buttons_pressed_state; // NOLINT
 
         std::chrono::time_point<std::chrono::steady_clock> last_frame_end_time;
         std::atomic<std::chrono::duration<float>>          last_frame_duration;

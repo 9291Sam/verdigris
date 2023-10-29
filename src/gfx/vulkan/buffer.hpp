@@ -1,7 +1,6 @@
 #ifndef SRC_GFX_VULKAN_BUFFER
 #define SRC_GFX_VULKAN_BUFFER
 
-#include <cstdint>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 

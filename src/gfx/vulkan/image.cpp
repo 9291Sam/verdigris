@@ -1,6 +1,5 @@
 #include "image.hpp"
 #include "allocator.hpp"
-#include "device.hpp"
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
 

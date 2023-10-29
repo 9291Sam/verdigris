@@ -3,6 +3,7 @@
 #include "vulkan/device.hpp"
 #include "vulkan/image.hpp"
 #include "vulkan/instance.hpp"
+#include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
 #include "window.hpp"
 #include <GLFW/glfw3.h>
@@ -15,39 +16,57 @@ namespace gfx
 
     Renderer::Renderer()
         : window {std::make_unique<Window>(
-            []
-            {
-                std::map<gfx::Window::Action, gfx::Window::ActionInformation> workingMap;
-                using enum gfx::Window::Action;
-                using enum gfx::Window::InteractionMethod;
-                using ActionInformation = gfx::Window::ActionInformation;
+            std::map<gfx::Window::Action, gfx::Window::ActionInformation> {
+                {gfx::Window::Action::PlayerMoveForward,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_W},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
 
-                workingMap[PlayerMoveForward] =
-                    ActionInformation {.key {GLFW_KEY_W}, .method {EveryFrame}};
-                workingMap[PlayerMoveBackward] =
-                    ActionInformation {.key {GLFW_KEY_S}, .method {EveryFrame}};
-                workingMap[PlayerMoveLeft] =
-                    ActionInformation {.key {GLFW_KEY_A}, .method {EveryFrame}};
-                workingMap[PlayerMoveRight] =
-                    ActionInformation {.key {GLFW_KEY_D}, .method {EveryFrame}};
-                workingMap[PlayerMoveUp] =
-                    ActionInformation {.key {GLFW_KEY_SPACE}, .method {EveryFrame}};
-                workingMap[PlayerMoveDown] =
-                    ActionInformation {.key {GLFW_KEY_LEFT_CONTROL}, .method {EveryFrame}};
-                workingMap[PlayerSprint] =
-                    ActionInformation {.key {GLFW_KEY_LEFT_SHIFT}, .method {EveryFrame}};
-                workingMap[ToggleConsole] =
-                    ActionInformation {.key {GLFW_KEY_GRAVE_ACCENT}, .method {SinglePress}};
+                {gfx::Window::Action::PlayerMoveBackward,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_S},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
 
-                return workingMap;
-            }(),
+                {gfx::Window::Action::PlayerMoveLeft,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_A},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+
+                {gfx::Window::Action::PlayerMoveRight,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_D},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+
+                {gfx::Window::Action::PlayerMoveUp,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_SPACE},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+
+                {gfx::Window::Action::PlayerMoveDown,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_LEFT_CONTROL},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+
+                {gfx::Window::Action::PlayerSprint,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_LEFT_SHIFT},
+                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+
+                {gfx::Window::Action::ToggleConsole,
+                 gfx::Window::ActionInformation {
+                     .key {GLFW_KEY_GRAVE_ACCENT},
+                     .method {gfx::Window::InteractionMethod::SinglePress}}},
+
+            },
             vk::Extent2D {1920, 1080}, // NOLINT
             "Verdigris")}
         , instance {std::make_unique<vulkan::Instance>()}
         , surface {std::make_unique<vk::UniqueSurfaceKHR>(
               this->window->createSurface(**this->instance))}
-        , device {std::make_unique<vulkan::Device>(**this->instance, **this->surface)}
-        , allocator {std::make_unique<vulkan::Allocator>(*this->instance, *this->device)}
+        , device {std::make_unique<vulkan::Device>(
+              **this->instance, **this->surface)}
+        , allocator {std::make_unique<vulkan::Allocator>(
+              *this->instance, *this->device)}
     {
         this->initializeRenderer();
     }
@@ -78,5 +97,10 @@ namespace gfx
             vk::ImageAspectFlagBits::eDepth,
             vk::ImageTiling::eOptimal,
             vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+        this->render_pass = std::make_unique<vulkan::RenderPass>(
+            this->device->asLogicalDevice(),
+            *this->swapchain,
+            *this->depth_buffer);
     }
 } // namespace gfx

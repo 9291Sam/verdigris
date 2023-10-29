@@ -12,18 +12,20 @@
 namespace util
 {
     // TODO: rotors && special matricies
-    template<Arithmetic T, std::size_t N>
-    class alignas(8) Vector final // NOLINT
+    template<Arithmetic T, std::size_t N, std::size_t ALIGN = 8> // NOLINT
+    class alignas(ALIGN) Vector final
     {
     public:
+        static constexpr T           InvalidT = std::numeric_limits<T>::quiet_NaN();
         static constexpr std::size_t Length {N};
+
         using ElementType = T;
     public:
 
-        [[nodiscard]] constexpr Vector() noexcept
+        [[nodiscard]] constexpr explicit Vector(T fillData = InvalidT) noexcept
             : data {}
         {
-            std::fill(this->data.begin(), this->data.end(), static_cast<T>(INFINITY));
+            std::fill(this->data.begin(), this->data.end(), fillData);
         }
         [[nodiscard]] constexpr explicit Vector(std::same_as<T> auto... args) noexcept
             requires (sizeof...(args) == N)
@@ -354,8 +356,7 @@ namespace util
         }
 
         ///
-        /// Arethemetic Assignment operators
-        /// TODO: tests
+        /// Arithmetic Assignment operators
         ///
 
         constexpr Vector& operator+= (const Vector& other) noexcept
@@ -461,7 +462,14 @@ namespace util
                 output += (this->data[i] * this->data[i]); // NOLINT
             }
 
-            return gcem::sqrt(output);
+            if consteval
+            {
+                return gcem::sqrt(output);
+            }
+            else
+            {
+                return std::sqrt(output);
+            }
         }
 
         [[nodiscard]] constexpr Vector normalize() const noexcept
@@ -491,12 +499,12 @@ namespace util
 
         [[nodiscard]] constexpr std::array<T, N>::const_iterator begin() const noexcept
         {
-            return this->data.begin();
+            return this->data.cbegin();
         }
 
         [[nodiscard]] constexpr std::array<T, N>::const_iterator cbegin() const noexcept
         {
-            return this->data.begin();
+            return this->data.cbegin();
         }
 
         [[nodiscard]] constexpr std::array<T, N>::iterator end() noexcept
