@@ -6,70 +6,6 @@
 namespace gfx::vulkan
 {
 
-    std::shared_ptr<DescriptorSetLayout> getDescriptorSetLayout(
-        DescriptorSetType type, std::shared_ptr<Device> device)
-    {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wexit-time-destructors"
-        static std::map<DescriptorSetType, std::shared_ptr<DescriptorSetLayout>>
-            cache;
-#pragma clang diagnostic pop
-
-        if (cache.contains(type))
-        {
-            return cache[type];
-        }
-        else
-        {
-            switch (type)
-            {
-            case DescriptorSetType::None:
-                util::panic(
-                    "Tried to find the layout of a DescriptorSetType::None!");
-                break;
-            case DescriptorSetType::Voxel:
-
-                std::array<vk::DescriptorSetLayoutBinding, 3> bindings {
-                    vk::DescriptorSetLayoutBinding {
-                        .binding {0},
-                        .descriptorType {vk::DescriptorType::eStorageBuffer},
-                        .descriptorCount {1},
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                        .pImmutableSamplers {nullptr},
-                    },
-                    vk::DescriptorSetLayoutBinding {
-                        .binding {1},
-                        .descriptorType {vk::DescriptorType::eStorageBuffer},
-                        .descriptorCount {1},
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                        .pImmutableSamplers {nullptr},
-                    },
-                    vk::DescriptorSetLayoutBinding {
-                        .binding {2},
-                        .descriptorType {vk::DescriptorType::eStorageBuffer},
-                        .descriptorCount {1},
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                        .pImmutableSamplers {nullptr},
-                    }};
-
-                cache[type] = std::make_shared<DescriptorSetLayout>(
-                    std::move(device),
-                    vk::DescriptorSetLayoutCreateInfo {
-                        .sType {
-                            vk::StructureType::eDescriptorSetLayoutCreateInfo},
-                        .pNext {nullptr},
-                        .flags {},
-                        .bindingCount {
-                            static_cast<std::uint32_t>(bindings.size())},
-                        .pBindings {bindings.data()},
-                    });
-                break;
-            }
-
-            return cache[type];
-        }
-    }
-
     DescriptorState::DescriptorState()
         : descriptors {{
             DescriptorSetType::None,
@@ -142,7 +78,6 @@ namespace gfx::vulkan
         , pool {nullptr}
         , inital_descriptors {capacity}
         , available_descriptors {std::move(capacity)}
-        , descriptor_layout_cache {{}}
     {
         std::vector<vk::DescriptorPoolSize> requestedPoolMembers {};
         requestedPoolMembers.reserve(this->available_descriptors.size());
@@ -185,6 +120,64 @@ namespace gfx::vulkan
                         vk::to_string(initalDescriptorType));
                 }
             }
+        }
+    }
+
+    DescriptorSetLayout&
+    DescriptorPool::lookupOrAddLayoutFromCache(DescriptorSetType typeToGet)
+    {
+        if (this->descriptor_layout_cache.contains(typeToGet))
+        {
+            return this->descriptor_layout_cache[typeToGet];
+        }
+        else
+        {
+            switch (typeToGet)
+            {
+            case DescriptorSetType::None:
+                util::panic(
+                    "Tried to find the layout of a DescriptorSetType::None!");
+                break;
+            case DescriptorSetType::Voxel:
+
+                std::array<vk::DescriptorSetLayoutBinding, 3> bindings {
+                    vk::DescriptorSetLayoutBinding {
+                        .binding {0},
+                        .descriptorType {vk::DescriptorType::eStorageBuffer},
+                        .descriptorCount {1},
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .pImmutableSamplers {nullptr},
+                    },
+                    vk::DescriptorSetLayoutBinding {
+                        .binding {1},
+                        .descriptorType {vk::DescriptorType::eStorageBuffer},
+                        .descriptorCount {1},
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .pImmutableSamplers {nullptr},
+                    },
+                    vk::DescriptorSetLayoutBinding {
+                        .binding {2},
+                        .descriptorType {vk::DescriptorType::eStorageBuffer},
+                        .descriptorCount {1},
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .pImmutableSamplers {nullptr},
+                    }};
+
+                this->descriptor_layout_cache[typeToGet] = DescriptorSetLayout {
+                    device,
+                    vk::DescriptorSetLayoutCreateInfo {
+                        .sType {
+                            vk::StructureType::eDescriptorSetLayoutCreateInfo},
+                        .pNext {nullptr},
+                        .flags {},
+                        .bindingCount {
+                            static_cast<std::uint32_t>(bindings.size())},
+                        .pBindings {bindings.data()},
+                    }};
+                break;
+            }
+
+            return this->descriptor_layout_cache[typeToGet];
         }
     }
 

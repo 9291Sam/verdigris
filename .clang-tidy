@@ -15,7 +15,14 @@ Checks: >
   -readability-uppercase-literal-suffix,
   -fuchsia-overloaded-operator,
   -readability-identifier-length,
-  -modernize-use-auto
+  -modernize-use-auto,
+
+CheckOptions:
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: true
+
+# misc-non-private-member-variables-in-classes
+# IgnoreClassesWithAllMemberVariablesBeingPublic
   
 # WarningsAsErrors: "*"
 

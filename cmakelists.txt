@@ -25,18 +25,27 @@ FetchContent_Declare(concurrentqueue
 FetchContent_MakeAvailable(concurrentqueue)
 
 FetchContent_Declare(glfw
-        GIT_REPOSITORY https://github.com/glfw/glfw
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-        )
+    GIT_REPOSITORY https://github.com/glfw/glfw
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(glfw)
 
 FetchContent_Declare(gcem
-        GIT_REPOSITORY https://github.com/kthohr/gcem
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-        )
+    GIT_REPOSITORY https://github.com/kthohr/gcem
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
 FetchContent_MakeAvailable(gcem)
+
+FetchContent_Declare(magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(magic_enum)
+
+
 
 # Vulkan memory Allocator
 execute_process(
@@ -86,7 +95,9 @@ add_executable(verdigris
 
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp
+    src/gfx/vulkan/descriptors.cpp
     src/gfx/vulkan/device.cpp
+    src/gfx/vulkan/pipelines.cpp
     src/gfx/vulkan/image.cpp
     src/gfx/vulkan/instance.cpp
     src/gfx/vulkan/render_pass.cpp
@@ -100,7 +111,7 @@ add_executable(verdigris
     src/util/misc.cpp
     src/util/uuid.cpp
 )
-target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem VulkanMemoryAllocator imgui)
+target_link_libraries(verdigris PUBLIC fmt::fmt concurrentqueue glfw gcem VulkanMemoryAllocator imgui magic_enum)
 
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src ${Vulkan_INCLUDE_DIRS})
 
@@ -199,3 +210,39 @@ else ()
     message(FATAL_ERROR "Unknown and Unsupported compiler")
 endif ()
 
+
+
+find_package(Vulkan COMPONENTS glslc)
+find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
+if (APPLE)
+    target_link_libraries(verdigris PUBLIC "-framework Cocoa -framework IOKit")
+endif ()
+
+function(compile_shader target)
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT" "SOURCES")
+    foreach (source ${arg_SOURCES})
+        add_custom_command(
+                OUTPUT ${source}.${arg_FORMAT}
+                DEPENDS ${source}
+                DEPFILE ${source}.d
+                COMMAND
+                ${glslc_executable}
+                $<$<BOOL:${arg_ENV}>:--target-env=${arg_ENV}>
+                $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
+                -MD -MF ${source}.d
+                -o ${source}.${arg_FORMAT}
+                ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+        )
+        target_sources(${target} PRIVATE ${source}.${arg_FORMAT})
+    endforeach ()
+endfunction()
+
+compile_shader(verdigris
+        ENV vulkan1.0
+        FORMAT bin
+        SOURCES
+        src/gfx/vulkan/shaders/flat_pipeline.vert
+        src/gfx/vulkan/shaders/flat_pipeline.frag
+        src/gfx/vulkan/shaders/voxel.vert
+        src/gfx/vulkan/shaders/voxel.frag
+        )

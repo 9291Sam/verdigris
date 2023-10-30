@@ -201,6 +201,9 @@ namespace util
 
         return ~out;
     }
+
+    template<class Func>
+    using Fn = Func*;
 } // namespace util
 
 #endif // SRC_UTIL_MISC_HPP

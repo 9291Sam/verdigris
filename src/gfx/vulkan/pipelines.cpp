@@ -1,163 +1,18 @@
 #include "pipelines.hpp"
+#include "allocator.hpp"
 #include "descriptors.hpp"
 #include "device.hpp"
-#include "gpu_data.hpp"
+#include "gpu_structures.hpp"
 #include "render_pass.hpp"
 #include "swapchain.hpp"
 #include "util/log.hpp"
 #include <fstream>
 #include <memory>
-#include <set>
-#include <typeinfo>
 
-namespace gfx::vulkan
+namespace
 {
-    Pipeline createPipeline(
-        PipelineType                pipeline,
-        std::shared_ptr<Device>     device,
-        std::shared_ptr<RenderPass> renderPass,
-        std::shared_ptr<Swapchain>  swapchain)
-    {
-        switch (pipeline)
-        {
-        case PipelineType::None:
-            util::panic("Tried to allocate Pipeline::None");
-            break;
-
-        case PipelineType::Flat: {
-            vk::UniqueShaderModule fragmentShader =
-                vulkan::Pipeline::createShaderFromFile(
-                    device->asLogicalDevice(),
-                    "src/gfx/vulkan/shaders/flat_pipeline.frag.bin");
-
-            vk::UniqueShaderModule vertexShader =
-                vulkan::Pipeline::createShaderFromFile(
-                    device->asLogicalDevice(),
-                    "src/gfx/vulkan/shaders/flat_pipeline.vert.bin");
-
-            std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages {
-                vk::PipelineShaderStageCreateInfo {
-                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .stage {vk::ShaderStageFlagBits::eVertex},
-                    .module {*vertexShader},
-                    .pName {"main"},
-                    .pSpecializationInfo {},
-                },
-                vk::PipelineShaderStageCreateInfo {
-                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .stage {vk::ShaderStageFlagBits::eFragment},
-                    .module {*fragmentShader},
-                    .pName {"main"},
-                    .pSpecializationInfo {},
-                },
-            };
-
-            return Pipeline::create(
-                PipelineVertexType::Normal,
-                device,
-                renderPass,
-                swapchain,
-                shaderStages,
-                vk::PrimitiveTopology::eTriangleList,
-                [&] // -> vk::UniquePipelineLayout
-                {
-                    const vk::PushConstantRange pushConstantsInformation {
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                        .offset {0},
-                        .size {sizeof(vulkan::PushConstants)},
-                    };
-
-                    return device->asLogicalDevice().createPipelineLayoutUnique(
-                        vk::PipelineLayoutCreateInfo {
-                            .sType {
-                                vk::StructureType::ePipelineLayoutCreateInfo},
-                            .pNext {nullptr},
-                            .flags {},
-                            .setLayoutCount {0},
-                            .pSetLayouts {nullptr},
-                            .pushConstantRangeCount {1},
-                            .pPushConstantRanges {&pushConstantsInformation},
-                        });
-                }());
-        }
-
-        case PipelineType::Voxel: {
-            vk::UniqueShaderModule fragmentShader =
-                vulkan::Pipeline::createShaderFromFile(
-                    device->asLogicalDevice(),
-                    "src/gfx/vulkan/shaders/voxel.frag.bin");
-
-            vk::UniqueShaderModule vertexShader =
-                vulkan::Pipeline::createShaderFromFile(
-                    device->asLogicalDevice(),
-                    "src/gfx/vulkan/shaders/voxel.vert.bin");
-
-            std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages {
-                vk::PipelineShaderStageCreateInfo {
-                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .stage {vk::ShaderStageFlagBits::eVertex},
-                    .module {*vertexShader},
-                    .pName {"main"},
-                    .pSpecializationInfo {},
-                },
-                vk::PipelineShaderStageCreateInfo {
-                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .stage {vk::ShaderStageFlagBits::eFragment},
-                    .module {*fragmentShader},
-                    .pName {"main"},
-                    .pSpecializationInfo {},
-                },
-            };
-
-            return Pipeline::create(
-                PipelineVertexType::None,
-                device,
-                renderPass,
-                swapchain,
-                shaderStages,
-                vk::PrimitiveTopology::eTriangleStrip,
-                [&] //  -> vk::UniquePipelineLayout
-                {
-                    const vk::PushConstantRange pushConstantsInformation {
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                        .offset {0},
-                        .size {sizeof(vulkan::PushConstants)},
-                    };
-
-                    std::shared_ptr<vulkan::DescriptorSetLayout>
-                        descriptorSetLayout = vulkan::getDescriptorSetLayout(
-                            vulkan::DescriptorSetType::Voxel, device);
-
-                    return device->asLogicalDevice().createPipelineLayoutUnique(
-                        vk::PipelineLayoutCreateInfo {
-                            .sType {
-                                vk::StructureType::ePipelineLayoutCreateInfo},
-                            .pNext {nullptr},
-                            .flags {},
-                            .setLayoutCount {1},
-                            .pSetLayouts {**descriptorSetLayout},
-                            .pushConstantRangeCount {1},
-                            .pPushConstantRanges {&pushConstantsInformation},
-                        });
-                }());
-        }
-        }
-
-        util::panic(
-            "Unimplemented pipeline creation! {}", static_cast<int>(pipeline));
-        util::unreachable();
-    }
-
     vk::UniqueShaderModule
-    Pipeline::createShaderFromFile(vk::Device device, const char* filePath)
+    createShaderFromFile(vk::Device device, const char* filePath)
     {
         std::ifstream fileStream {
             filePath, std::ios::in | std::ios::binary | std::ios::ate};
@@ -172,7 +27,8 @@ namespace gfx::vulkan
         fileStream.read(
             charBuffer.data(), static_cast<std::streamsize>(charBuffer.size()));
 
-        // intellectual exercise :)
+        // intellectual exercise :) ((actually required, this UB as a
+        // problem...))
         std::vector<std::uint32_t> u32Buffer {};
         u32Buffer.resize((charBuffer.size() / 4) + 1);
 
@@ -188,30 +44,181 @@ namespace gfx::vulkan
 
         return device.createShaderModuleUnique(shaderCreateInfo);
     }
+} // namespace
 
-    Pipeline Pipeline::create(
-        PipelineVertexType                           vertexType,
-        std::shared_ptr<Device>                      device,
-        std::shared_ptr<RenderPass>                  renderPass,
-        std::shared_ptr<Swapchain>                   swapchain,
+namespace gfx::vulkan
+{
+    PipelineManager::PipelineManager(
+        vk::Device     device_,
+        vk::RenderPass renderPass,
+        Swapchain*     swapchain_,
+        Allocator*     allocator_)
+        : device {device_}
+        , render_pass {renderPass}
+        , swapchain {swapchain_}
+        , allocator {allocator_}
+    {}
+
+    Pipeline& PipelineManager::getPipeline(PipelineType pipelineToGet)
+    {
+        if (!this->cache.contains(pipelineToGet))
+        {
+            this->cache[pipelineToGet] = this->createPipeline(pipelineToGet);
+        }
+
+        return this->cache[pipelineToGet];
+    }
+
+    Pipeline PipelineManager::createPipeline(PipelineType typeToCreate)
+    {
+        switch (typeToCreate)
+        {
+        case gfx::vulkan::PipelineType::Flat: {
+            // TODO: replace with #embed
+            vk::UniqueShaderModule fragmentShader = createShaderFromFile(
+                device, "src/gfx/vulkan/shaders/flat_pipeline.frag.bin");
+
+            vk::UniqueShaderModule vertexShader = createShaderFromFile(
+                device, "src/gfx/vulkan/shaders/flat_pipeline.vert.bin");
+
+            std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages {
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eVertex},
+                    .module {*vertexShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eFragment},
+                    .module {*fragmentShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+            };
+
+            return Pipeline {
+                Pipeline::VertexType::Normal,
+                this->device,
+                this->render_pass,
+                *this->swapchain,
+                shaderStages,
+                vk::PrimitiveTopology::eTriangleList,
+                [&] // -> vk::UniquePipelineLayout
+                {
+                    const vk::PushConstantRange pushConstantsInformation {
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .offset {0},
+                        .size {sizeof(vulkan::PushConstants)},
+                    };
+
+                    return this->device.createPipelineLayoutUnique(
+                        vk::PipelineLayoutCreateInfo {
+                            .sType {
+                                vk::StructureType::ePipelineLayoutCreateInfo},
+                            .pNext {nullptr},
+                            .flags {},
+                            .setLayoutCount {0},
+                            .pSetLayouts {nullptr},
+                            .pushConstantRangeCount {1},
+                            .pPushConstantRanges {&pushConstantsInformation},
+                        });
+                }()};
+        }
+
+        case PipelineType::Voxel: {
+            vk::UniqueShaderModule fragmentShader = createShaderFromFile(
+                this->device, "src/gfx/vulkan/shaders/voxel.frag.bin");
+
+            vk::UniqueShaderModule vertexShader = createShaderFromFile(
+                this->device, "src/gfx/vulkan/shaders/voxel.vert.bin");
+
+            std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages {
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eVertex},
+                    .module {*vertexShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eFragment},
+                    .module {*fragmentShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+            };
+
+            return Pipeline {
+                Pipeline::VertexType::None,
+                this->device,
+                this->render_pass,
+                *this->swapchain,
+                shaderStages,
+                vk::PrimitiveTopology::eTriangleStrip,
+                [&] //  -> vk::UniquePipelineLayout
+                {
+                    const vk::PushConstantRange pushConstantsInformation {
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .offset {0},
+                        .size {sizeof(vulkan::PushConstants)},
+                    };
+
+                    return this->device.createPipelineLayoutUnique(
+                        vk::PipelineLayoutCreateInfo {
+                            .sType {
+                                vk::StructureType::ePipelineLayoutCreateInfo},
+                            .pNext {nullptr},
+                            .flags {},
+                            .setLayoutCount {1},
+                            .pSetLayouts {
+                                *this->allocator->getDescriptorSetLayout(
+                                    DescriptorSetType::Voxel)},
+                            .pushConstantRangeCount {1},
+                            .pPushConstantRanges {&pushConstantsInformation},
+                        });
+                }()};
+        }
+        }
+        util::panic(
+            "Unimplemented pipeline creation! {}",
+            std::to_underlying(typeToCreate));
+    }
+
+    Pipeline::Pipeline(
+        VertexType                                   vertexType,
+        vk::Device                                   device,
+        vk::RenderPass                               renderPass,
+        const Swapchain&                             swapchain,
         std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
         vk::PrimitiveTopology                        topology,
         vk::UniquePipelineLayout                     layout_)
+        : Pipeline {}
     {
         const vk::Viewport viewport {
             .x {0.0f},
             .y {0.0f},
-            .width {static_cast<float>(swapchain->getExtent().width)},
-            .height {static_cast<float>(swapchain->getExtent().height)},
+            .width {static_cast<float>(swapchain.getExtent().width)},
+            .height {static_cast<float>(swapchain.getExtent().height)},
             .minDepth {0.0f},
             .maxDepth {1.0f},
         };
 
         const vk::Rect2D scissor {
-            .offset {0, 0}, .extent {swapchain->getExtent()}};
+            .offset {0, 0}, .extent {swapchain.getExtent()}};
 
         const vk::PipelineColorBlendAttachmentState colorBlendAttachment {
-            .blendEnable {true},
+            .blendEnable {static_cast<vk::Bool32>(true)},
             .srcColorBlendFactor {vk::BlendFactor::eSrcAlpha},
             .dstColorBlendFactor {vk::BlendFactor::eOneMinusSrcAlpha},
             .colorBlendOp {vk::BlendOp::eAdd},
@@ -228,7 +235,7 @@ namespace gfx::vulkan
 
         switch (vertexType)
         {
-        case PipelineVertexType::Normal:
+        case VertexType::Normal:
             vertexInputState = vk::PipelineVertexInputStateCreateInfo {
                 .sType {vk::StructureType::ePipelineVertexInputStateCreateInfo},
                 .pNext {nullptr},
@@ -241,7 +248,7 @@ namespace gfx::vulkan
                     Vertex::getAttributeDescriptions()->data()},
             };
             break;
-        case PipelineVertexType::None:
+        case VertexType::None:
             vertexInputState = vk::PipelineVertexInputStateCreateInfo {
                 .sType {vk::StructureType::ePipelineVertexInputStateCreateInfo},
                 .pNext {nullptr},
@@ -254,10 +261,9 @@ namespace gfx::vulkan
             break;
         }
 
-        return Pipeline {
-            std::move(device),
-            std::move(renderPass),
-            std::move(swapchain),
+        (*this) = Pipeline {
+            device,
+            renderPass,
             shaderStages,
             vertexInputState,
             vk::PipelineInputAssemblyStateCreateInfo {
@@ -266,7 +272,7 @@ namespace gfx::vulkan
                 .pNext {},
                 .flags {},
                 .topology {topology},
-                .primitiveRestartEnable {false},
+                .primitiveRestartEnable {static_cast<vk::Bool32>(false)},
             },
             std::nullopt,
             vk::PipelineViewportStateCreateInfo {
@@ -283,12 +289,12 @@ namespace gfx::vulkan
                     vk::StructureType::ePipelineRasterizationStateCreateInfo},
                 .pNext {nullptr},
                 .flags {},
-                .depthClampEnable {false},
-                .rasterizerDiscardEnable {false},
+                .depthClampEnable {static_cast<vk::Bool32>(false)},
+                .rasterizerDiscardEnable {static_cast<vk::Bool32>(false)},
                 .polygonMode {vk::PolygonMode::eFill},
                 .cullMode {vk::CullModeFlagBits::eNone},
                 .frontFace {vk::FrontFace::eCounterClockwise},
-                .depthBiasEnable {false},
+                .depthBiasEnable {static_cast<vk::Bool32>(false)},
                 .depthBiasConstantFactor {0.0f},
                 .depthBiasClamp {0.0f},
                 .depthBiasSlopeFactor {0.0f},
@@ -299,22 +305,22 @@ namespace gfx::vulkan
                 .pNext {nullptr},
                 .flags {},
                 .rasterizationSamples {vk::SampleCountFlagBits::e1},
-                .sampleShadingEnable {false},
+                .sampleShadingEnable {static_cast<vk::Bool32>(false)},
                 .minSampleShading {1.0f},
                 .pSampleMask {nullptr},
-                .alphaToCoverageEnable {false},
-                .alphaToOneEnable {false},
+                .alphaToCoverageEnable {static_cast<vk::Bool32>(false)},
+                .alphaToOneEnable {static_cast<vk::Bool32>(false)},
             },
             vk::PipelineDepthStencilStateCreateInfo {
                 .sType {
                     vk::StructureType::ePipelineDepthStencilStateCreateInfo},
                 .pNext {nullptr},
                 .flags {},
-                .depthTestEnable {true},
-                .depthWriteEnable {true},
+                .depthTestEnable {static_cast<vk::Bool32>(true)},
+                .depthWriteEnable {static_cast<vk::Bool32>(true)},
                 .depthCompareOp {vk::CompareOp::eLess},
-                .depthBoundsTestEnable {false},
-                .stencilTestEnable {false},
+                .depthBoundsTestEnable {static_cast<vk::Bool32>(false)},
+                .stencilTestEnable {static_cast<vk::Bool32>(false)},
                 .front {},
                 .back {},
                 .minDepthBounds {0.0f},
@@ -324,7 +330,7 @@ namespace gfx::vulkan
                 .sType {vk::StructureType::ePipelineColorBlendStateCreateInfo},
                 .pNext {nullptr},
                 .flags {},
-                .logicOpEnable {false},
+                .logicOpEnable {static_cast<vk::Bool32>(false)},
                 .logicOp {vk::LogicOp::eCopy},
                 .attachmentCount {1},
                 .pAttachments {&colorBlendAttachment},
@@ -333,18 +339,9 @@ namespace gfx::vulkan
             std::move(layout_)};
     }
 
-    Pipeline::Pipeline()
-        : device {nullptr}
-        , render_pass {nullptr}
-        , swapchain {nullptr}
-        , layout {nullptr}
-        , pipeline {nullptr}
-    {}
-
     Pipeline::Pipeline(
-        std::shared_ptr<Device>                      device_,
-        std::shared_ptr<RenderPass>                  renderPass,
-        std::shared_ptr<Swapchain>                   swapchain_,
+        vk::Device                                   device,
+        vk::RenderPass                               renderPass,
         std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
         vk::PipelineVertexInputStateCreateInfo       vertexInputState,
         std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly,
@@ -355,14 +352,13 @@ namespace gfx::vulkan
         std::optional<vk::PipelineDepthStencilStateCreateInfo> depthState,
         std::optional<vk::PipelineColorBlendStateCreateInfo>   colorBlendState,
         vk::UniquePipelineLayout                               layout_)
-        : device {std::move(device_)}
-        , render_pass {std::move(renderPass)}
-        , swapchain {std::move(swapchain_)}
-        , layout {std::move(layout_)}
+        : layout {std::move(layout_)}
         , pipeline {nullptr}
     {
-#define GET_VALUE_OR_NULLPTR(optional)                                         \
-    (optional.has_value() ? &*optional : nullptr)
+        auto getValueOrNullptr = []<class T>(const std::optional<T>& o)
+        {
+            return (o.has_value() ? &*o : nullptr);
+        };
 
         const vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo {
             .sType {vk::StructureType::eGraphicsPipelineCreateInfo},
@@ -371,33 +367,29 @@ namespace gfx::vulkan
             .stageCount {static_cast<std::uint32_t>(shaderStages.size())},
             .pStages {shaderStages.data()},
             .pVertexInputState {&vertexInputState},
-            .pInputAssemblyState {GET_VALUE_OR_NULLPTR(inputAssembly)},
-            .pTessellationState {GET_VALUE_OR_NULLPTR(tesselationInfo)},
-            .pViewportState {GET_VALUE_OR_NULLPTR(viewportState)},
-            .pRasterizationState {GET_VALUE_OR_NULLPTR(rasterization)},
-            .pMultisampleState {GET_VALUE_OR_NULLPTR(multiSampleState)},
-            .pDepthStencilState {GET_VALUE_OR_NULLPTR(depthState)},
-            .pColorBlendState {GET_VALUE_OR_NULLPTR(colorBlendState)},
+            .pInputAssemblyState {getValueOrNullptr(inputAssembly)},
+            .pTessellationState {getValueOrNullptr(tesselationInfo)},
+            .pViewportState {getValueOrNullptr(viewportState)},
+            .pRasterizationState {getValueOrNullptr(rasterization)},
+            .pMultisampleState {getValueOrNullptr(multiSampleState)},
+            .pDepthStencilState {getValueOrNullptr(depthState)},
+            .pColorBlendState {getValueOrNullptr(colorBlendState)},
             .pDynamicState {nullptr},
             .layout {*this->layout},
-            .renderPass {**this->render_pass},
+            .renderPass {renderPass},
             .subpass {0},
             .basePipelineHandle {nullptr},
             .basePipelineIndex {-1},
         };
 
-#undef GET_VALUE_OR_NULLPTR
-
-        auto [result, maybeGraphicsPipeline] =
-            this->device->asLogicalDevice().createGraphicsPipelineUnique(
-                nullptr, graphicsPipelineCreateInfo);
+        auto [result, maybePipeline] = device.createGraphicsPipelineUnique(
+            nullptr, graphicsPipelineCreateInfo);
 
         util::assertFatal(
             result == vk::Result::eSuccess,
-            "Failed to create graphics pipeline | Error: {}",
-            vk::to_string(result));
+            "Failed to create graphics pipeline");
 
-        this->pipeline = std::move(maybeGraphicsPipeline);
+        this->pipeline = std::move(maybePipeline); // NOLINT
     }
 
     vk::Pipeline Pipeline::operator* () const
@@ -419,10 +411,10 @@ namespace gfx::vulkan
     //         std::move(swapchain),
     //         PipelineBuilder {}
     //             .withVertexShader(vulkan::Pipeline::createShaderFromFile(
-    //                 device->asLogicalDevice(),
+    //                 this->device,
     //                 "src/gfx/vulkan/shaders/flat_pipeline.vert.bin"))
     //             .withFragmentShader(vulkan::Pipeline::createShaderFromFile(
-    //                 device->asLogicalDevice(),
+    //                 this->device,
     //                 "src/gfx/vulkan/shaders/flat_pipeline.frag.bin"))
     //             .withLayout()
     //             .transfer(),

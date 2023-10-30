@@ -3,10 +3,12 @@
 #include "vulkan/device.hpp"
 #include "vulkan/image.hpp"
 #include "vulkan/instance.hpp"
+#include "vulkan/pipelines.hpp"
 #include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
 #include "window.hpp"
 #include <GLFW/glfw3.h>
+#include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
@@ -102,5 +104,26 @@ namespace gfx
             this->device->asLogicalDevice(),
             *this->swapchain,
             *this->depth_buffer);
+
+        this->pipelines = std::make_unique<vulkan::PipelineManager>(
+            this->device->asLogicalDevice(),
+            **this->render_pass,
+            this->swapchain.get(),
+            this->allocator.get());
+
+        {
+            std::vector<std::future<void>> pipelineFutures {};
+
+            magic_enum::enum_for_each<vulkan::PipelineType>(
+                [&](vulkan::PipelineType type)
+                {
+                    pipelineFutures.push_back(std::async(
+                        std::launch::async,
+                        [this, type]
+                        {
+                            std::ignore = this->pipelines->getPipeline(type);
+                        }));
+                });
+        }
     }
 } // namespace gfx

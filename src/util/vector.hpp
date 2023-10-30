@@ -18,7 +18,7 @@ namespace util
     class alignas(ALIGN) Vector final
     {
     public:
-        static constexpr T InvalidT = std::numeric_limits<T>::quiet_NaN();
+        static constexpr T InvalidT = std::numeric_limits<T>::signaling_NaN();
         static constexpr std::size_t Length {N};
 
         using ElementType = T;

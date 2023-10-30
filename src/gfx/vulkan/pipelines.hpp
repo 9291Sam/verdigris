@@ -1,11 +1,10 @@
 #ifndef SRC_GFX_VULKAN_PIPELINE_HPP
 #define SRC_GFX_VULKAN_PIPELINE_HPP
 
-#include "includes.hpp"
-#include "util/log.hpp"
 #include <memory>
-#include <optional>
-#include <span>
+#include <unordered_map>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace gfx::vulkan
 {
@@ -13,20 +12,37 @@ namespace gfx::vulkan
     class RenderPass;
     class Swapchain;
     class Pipeline;
+    class Allocator;
 
     enum class PipelineType
     {
-        None,
         Flat,
         Voxel,
     };
 
-    constexpr std::size_t PipelineTypeNumberOfValidEntries = 2;
-
-    enum class PipelineVertexType
+    class PipelineManager
     {
-        Normal,
-        None,
+    public:
+
+        PipelineManager(vk::Device, vk::RenderPass, Swapchain*, Allocator*);
+        ~PipelineManager() = default;
+
+        PipelineManager(const PipelineManager&)             = delete;
+        PipelineManager(PipelineManager&&)                  = delete;
+        PipelineManager& operator= (const PipelineManager&) = delete;
+        PipelineManager& operator= (PipelineManager&&)      = delete;
+
+        Pipeline& getPipeline(PipelineType);
+
+    private:
+        Pipeline createPipeline(PipelineType);
+
+        vk::Device     device;
+        vk::RenderPass render_pass;
+        Swapchain*     swapchain;
+        Allocator*     allocator;
+
+        std::unordered_map<PipelineType, Pipeline> cache;
     };
 
     Pipeline createPipeline(
@@ -38,25 +54,30 @@ namespace gfx::vulkan
     class Pipeline
     {
     public:
-        static vk::UniqueShaderModule
-        createShaderFromFile(vk::Device, const char* filePath);
 
-        static Pipeline create(
-            PipelineVertexType,
-            std::shared_ptr<Device>,
-            std::shared_ptr<RenderPass>,
-            std::shared_ptr<Swapchain>,
+        enum class VertexType
+        {
+            Normal,
+            None,
+        };
+
+    public:
+
+        Pipeline() = default;
+        // "optimized" constructor, (shorter)
+        Pipeline(
+            VertexType,
+            vk::Device,
+            vk::RenderPass,
+            const Swapchain&,
             std::span<vk::PipelineShaderStageCreateInfo>,
             vk::PrimitiveTopology,
             vk::UniquePipelineLayout);
 
-    public:
-
-        Pipeline();
+        // manual constructor
         Pipeline(
-            std::shared_ptr<Device>,
-            std::shared_ptr<RenderPass>,
-            std::shared_ptr<Swapchain>,
+            vk::Device,
+            vk::RenderPass,
             std::span<vk::PipelineShaderStageCreateInfo>,
             vk::PipelineVertexInputStateCreateInfo,
             std::optional<vk::PipelineInputAssemblyStateCreateInfo>,
@@ -78,11 +99,8 @@ namespace gfx::vulkan
         [[nodiscard]] vk::PipelineLayout getLayout() const;
 
     private:
-        std::shared_ptr<Device>     device;
-        std::shared_ptr<RenderPass> render_pass;
-        std::shared_ptr<Swapchain>  swapchain;
-        vk::UniquePipelineLayout    layout;
-        vk::UniquePipeline          pipeline;
+        vk::UniquePipelineLayout layout;
+        vk::UniquePipeline       pipeline;
     };
 
 } // namespace gfx::vulkan

@@ -59,4 +59,10 @@ namespace gfx::vulkan
     {
         return this->pool.allocate(setType);
     }
+
+    DescriptorSetLayout&
+    Allocator::getDescriptorSetLayout(DescriptorSetType setType)
+    {
+        return this->pool.lookupOrAddLayoutFromCache(setType);
+    }
 } // namespace gfx::vulkan

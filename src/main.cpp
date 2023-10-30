@@ -1,6 +1,7 @@
 #include <future>
 #include <gfx/renderer.hpp>
 #include <util/log.hpp>
+#include <util/matrix.hpp>
 #include <util/vector.hpp>
 
 int main()
@@ -30,7 +31,8 @@ int main()
                 shouldStop.store(true, std::memory_order_release);
             });
 
-        while (renderer.continueTicking() && !shouldStop.load(std::memory_order_acquire))
+        while (renderer.continueTicking()
+               && !shouldStop.load(std::memory_order_acquire))
         {
             renderer.drawFrame();
         }

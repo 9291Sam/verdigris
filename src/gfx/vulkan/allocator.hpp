@@ -29,6 +29,10 @@ namespace gfx::vulkan
         VmaAllocator  operator* () const;
         DescriptorSet allocateDescriptorSet(DescriptorSetType);
 
+        // not the best place to put this, but whatever, it needs to be
+        // somewhere
+        DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetType);
+
     private:
         VmaAllocator   allocator;
         DescriptorPool pool;

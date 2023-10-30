@@ -23,9 +23,6 @@ namespace gfx::vulkan
         Voxel,
     };
 
-    std::shared_ptr<DescriptorSetLayout>
-        getDescriptorSetLayout(DescriptorSetType, std::shared_ptr<Device>);
-
     struct DescriptorState
     {
         DescriptorState();
@@ -62,9 +59,9 @@ namespace gfx::vulkan
         DescriptorPool& operator= (DescriptorPool&&)      = delete;
 
         [[nodiscard]] DescriptorSet allocate(DescriptorSetType);
+        DescriptorSetLayout& lookupOrAddLayoutFromCache(DescriptorSetType);
 
     private:
-        DescriptorSetLayout& lookupOrAddLayoutFromCache(DescriptorSetType);
 
         friend class DescriptorSet;
         void free(DescriptorSet&);
@@ -87,11 +84,11 @@ namespace gfx::vulkan
         DescriptorSetLayout(vk::Device, vk::DescriptorSetLayoutCreateInfo);
         ~DescriptorSetLayout() = default;
 
-        DescriptorSetLayout()                                       = delete;
+        DescriptorSetLayout()                                       = default;
         DescriptorSetLayout(const DescriptorSetLayout&)             = delete;
-        DescriptorSetLayout(DescriptorSetLayout&&)                  = delete;
+        DescriptorSetLayout(DescriptorSetLayout&&)                  = default;
         DescriptorSetLayout& operator= (const DescriptorSetLayout&) = delete;
-        DescriptorSetLayout& operator= (DescriptorSetLayout&&)      = delete;
+        DescriptorSetLayout& operator= (DescriptorSetLayout&&)      = default;
 
         [[nodiscard]] const vk::DescriptorSetLayout* operator* () const;
         [[nodiscard]] std::span<const vk::DescriptorSetLayoutBinding>

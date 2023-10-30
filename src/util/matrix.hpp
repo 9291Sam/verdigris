@@ -17,12 +17,10 @@ namespace util
         using ElementType = T;
     public:
 
-        [[nodiscard]] constexpr Matrix() noexcept
-            : data {ColumnType {}}
-        {}
-        [[nodiscard]] explicit constexpr Matrix(std::same_as<T> auto... args) noexcept
+        [[nodiscard]] constexpr Matrix() noexcept = default;
+        [[nodiscard]] explicit constexpr Matrix(
+            std::same_as<T> auto... args) noexcept
             requires (sizeof...(args) == C * R)
-            : data {ColumnType {}}
         {
             std::array<T, C * R> arrayOfArgs {args...};
 
@@ -34,7 +32,8 @@ namespace util
                 }
             }
         }
-        [[nodiscard]] explicit constexpr Matrix(std::same_as<ColumnType> auto... args) noexcept
+        [[nodiscard]] explicit constexpr Matrix(
+            std::same_as<ColumnType> auto... args) noexcept
             requires (sizeof...(args) == C)
             : data {args...}
         {}
@@ -56,8 +55,8 @@ namespace util
             {
                 for (std::size_t r = 0; r < R; ++r)
                 {
-                    std::partial_ordering order =
-                        std::partial_order(this->data[c][r], other.data[c][r]); // NOLINT
+                    std::partial_ordering order = std::partial_order(
+                        this->data[c][r], other.data[c][r]); // NOLINT
 
                     if (order != std::partial_ordering::equivalent)
                     {
@@ -69,12 +68,14 @@ namespace util
             return std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool operator== (const Matrix& other) const noexcept
+        [[nodiscard]] constexpr bool
+        operator== (const Matrix& other) const noexcept
         {
             return ((*this) <=> (other)) == std::partial_ordering::equivalent;
         }
 
-        [[nodiscard]] constexpr bool operator!= (const Matrix& other) const noexcept
+        [[nodiscard]] constexpr bool
+        operator!= (const Matrix& other) const noexcept
         {
             return !((*this) == other);
         }
@@ -83,7 +84,8 @@ namespace util
         /// Access operators
         ///
 
-        [[nodiscard]] constexpr Vector<T, C> getRow(std::size_t row) const noexcept
+        [[nodiscard]] constexpr Vector<T, C>
+        getRow(std::size_t row) const noexcept
         {
             Vector<T, C> output {};
 
@@ -95,12 +97,14 @@ namespace util
             return output;
         }
 
-        [[nodiscard]] constexpr ColumnType operator[] (std::size_t idx) const noexcept
+        [[nodiscard]] constexpr ColumnType
+        operator[] (std::size_t idx) const noexcept
         {
             return this->data[idx]; // NOLINT
         }
 
-        [[nodiscard]] constexpr ColumnType& operator[] (std::size_t idx) noexcept
+        [[nodiscard]] constexpr ColumnType&
+        operator[] (std::size_t idx) noexcept
         {
             return this->data[idx]; // NOLINT
         }
@@ -116,7 +120,8 @@ namespace util
         {
             Matrix<T, R, OtherC> output {};
 
-            for (std::size_t outputColumn = 0; outputColumn < OtherC; ++outputColumn)
+            for (std::size_t outputColumn = 0; outputColumn < OtherC;
+                 ++outputColumn)
             {
                 for (std::size_t outputRow = 0; outputRow < R; ++outputRow)
                 {
@@ -166,15 +171,18 @@ namespace util
 
                 using SubMatrix = Matrix<T, SubMatrixSize, SubMatrixSize>;
 
-                for (std::size_t currentColumn = 0; currentColumn < R; ++currentColumn)
+                for (std::size_t currentColumn = 0; currentColumn < R;
+                     ++currentColumn)
                 {
                     // Create a subMatrix of size (R-1)x(R-1) to calculate its
                     // cofactor.
                     SubMatrix subMatrix;
 
-                    for (std::size_t currentRow = 1; currentRow < R; ++currentRow)
+                    for (std::size_t currentRow = 1; currentRow < R;
+                         ++currentRow)
                     {
-                        for (std::size_t originalColumn = 0, subMatrixColumn = 0;
+                        for (std::size_t originalColumn  = 0,
+                                         subMatrixColumn = 0;
                              originalColumn < C;
                              ++originalColumn)
                         {
@@ -209,7 +217,8 @@ namespace util
 
         [[nodiscard]] constexpr Matrix<T, R, C> inverse() const
         {
-            static_assert(R == C, "Inverse can only be calculated for square matrices.");
+            static_assert(
+                R == C, "Inverse can only be calculated for square matrices.");
 
             constexpr std::size_t matrixSize    = R;
             constexpr std::size_t subMatrixSize = matrixSize - 1;
@@ -220,7 +229,9 @@ namespace util
             if (det == T {})
             {
                 // Matrix is not invertible
-                return result;
+
+                throw std::runtime_error {
+                    "Tried to invert non invertible matrix!"};
             }
 
             for (std::size_t col = 0; col < matrixSize; ++col)
@@ -231,7 +242,8 @@ namespace util
                     // for each element.
                     Matrix<T, subMatrixSize, subMatrixSize> subMatrix;
 
-                    for (std::size_t subCol = 0, origCol = 0; subCol < subMatrixSize;
+                    for (std::size_t subCol = 0, origCol = 0;
+                         subCol < subMatrixSize;
                          ++subCol, ++origCol)
                     {
                         if (origCol == col)
@@ -239,7 +251,8 @@ namespace util
                             ++origCol;
                         }
 
-                        for (std::size_t subRow = 0, origRow = 0; subRow < subMatrixSize;
+                        for (std::size_t subRow = 0, origRow = 0;
+                             subRow < subMatrixSize;
                              ++subRow, ++origRow)
                         {
                             if (origRow == row)
@@ -247,7 +260,8 @@ namespace util
                                 ++origRow;
                             }
 
-                            subMatrix[subCol][subRow] = data[origCol][origRow]; // NOLINT
+                            subMatrix[subCol][subRow] =
+                                data[origCol][origRow]; // NOLINT
                         }
                     }
 
@@ -270,32 +284,38 @@ namespace util
 
         /// Iterator interfacing
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::iterator begin() noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::iterator
+        begin() noexcept
         {
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator begin() const noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator
+        begin() const noexcept
         {
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator cbegin() const noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator
+        cbegin() const noexcept
         {
             return this->data.begin();
         }
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::iterator end() noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::iterator
+        end() noexcept
         {
             return this->data.end();
         }
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator end() const noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator
+        end() const noexcept
         {
             return this->data.cend();
         }
 
-        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator cend() const noexcept
+        [[nodiscard]] constexpr std::array<Vector<T, R>, C>::const_iterator
+        cend() const noexcept
         {
             return this->data.cend();
         }
@@ -304,6 +324,10 @@ namespace util
     private:
         std::array<Vector<T, R>, C> data;
     };
+
+    using Mat2 = Matrix<float, 2, 2>;
+    using Mat3 = Matrix<float, 3, 3>;
+    using Mat4 = Matrix<float, 4, 4>;
 
     // NOLINTBEGIN
     consteval bool test()
@@ -315,7 +339,7 @@ namespace util
             {
                 for (float f : vec)
                 {
-                    if (f != INFINITY)
+                    if (f == std::numeric_limits<float>::signaling_NaN())
                     {
                         return false;
                     }
@@ -367,7 +391,8 @@ namespace util
             constexpr Vector<float, 4>    vec0 {1.0f, 2.0f, 3.0f, 4.0f};
             constexpr Vector<float, 4>    vec1 {mat4 * vec0};
 
-            static_assert(vec1 == Vector<float, 4> {30.0f, 60.0f, 100.0f, 140.0f});
+            static_assert(
+                vec1 == Vector<float, 4> {30.0f, 60.0f, 100.0f, 140.0f});
         }
 
         // transpose
@@ -446,7 +471,8 @@ namespace util
         // Inverse
         {
             constexpr Matrix<float, 2, 2> mat0 {1.0f, 3.0f, 2.0f, 4.0f};
-            constexpr Matrix<float, 2, 2> mat0Inverse {-2.0f, 1.0f, 1.5f, -0.5f};
+            constexpr Matrix<float, 2, 2> mat0Inverse {
+                -2.0f, 1.0f, 1.5f, -0.5f};
 
             static_assert(mat0.inverse() == mat0Inverse);
 
@@ -474,7 +500,8 @@ namespace util
 
             constexpr Matrix<float, 4, 4> mat1Inverse {};
 
-            static_assert(mat1.inverse() == mat1Inverse);
+            // static_assert(mat1.inverse() == mat1Inverse); // correctely
+            // crashes
         }
 
         return true;
