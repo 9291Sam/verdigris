@@ -87,21 +87,14 @@ namespace gfx::vulkan
         }
     }
 
-    std::shared_ptr<DescriptorPool> DescriptorPool::create(
-        std::shared_ptr<Device>                               device,
-        std::unordered_map<vk::DescriptorType, std::uint32_t> capacity)
+    DescriptorSet DescriptorPool::allocate(DescriptorSetType typeToAllocate)
     {
-        // We need to access a private constructor, std::make_shared won't work
-        return std::shared_ptr<DescriptorPool>(
-            new DescriptorPool {std::move(device), std::move(capacity)});
-    }
+        DescriptorSetLayout& layout =
+            this->lookupOrAddLayoutFromCache(typeToAllocate);
 
-    DescriptorSet
-    DescriptorPool::allocate(std::shared_ptr<DescriptorSetLayout> layout)
-    {
         // ensure we have enough descriptors available for the desired
         // descriptor set
-        for (const auto& binding : layout->getLayoutBindings())
+        for (const auto& binding : layout.getLayoutBindings())
         {
             if (this->available_descriptors[binding.descriptorType]
                 < binding.descriptorCount)
@@ -116,7 +109,7 @@ namespace gfx::vulkan
         }
 
         // the allocation will succeed decrement internal counts
-        for (const auto& binding : layout->getLayoutBindings())
+        for (const auto& binding : layout.getLayoutBindings())
         {
             this->available_descriptors[binding.descriptorType] -=
                 binding.descriptorCount;
@@ -128,34 +121,31 @@ namespace gfx::vulkan
             .pNext {nullptr},
             .descriptorPool {*this->pool},
             .descriptorSetCount {1}, // TODO: add array function?
-            .pSetLayouts {**layout},
+            .pSetLayouts {*layout},
         };
 
         // TODO: create an array function to deal with multiple allocation
         std::vector<vk::DescriptorSet> allocatedDescriptors =
-            this->device->asLogicalDevice().allocateDescriptorSets(
-                descriptorAllocationInfo);
+            this->device.allocateDescriptorSets(descriptorAllocationInfo);
 
         util::assertFatal(
             allocatedDescriptors.size() == 1,
             "Invalid descriptor length returned");
 
-        return DescriptorSet {
-            this->shared_from_this(),
-            std::move(layout),
-            allocatedDescriptors.at(0)};
+        return DescriptorSet {allocatedDescriptors.at(0), this, &layout};
     }
 
     DescriptorPool::DescriptorPool(
-        std::shared_ptr<Device>                               device_,
+        vk::Device                                            device_,
         std::unordered_map<vk::DescriptorType, std::uint32_t> capacity)
-        : device {std::move(device_)}
-        , pool {nullptr} // , initial_descriptors {capacity}
+        : device {device_}
+        , pool {nullptr}
+        , inital_descriptors {capacity}
         , available_descriptors {std::move(capacity)}
+        , descriptor_layout_cache {{}}
     {
-        this->available_descriptors.rehash(32); // optimization
-
         std::vector<vk::DescriptorPoolSize> requestedPoolMembers {};
+        requestedPoolMembers.reserve(this->available_descriptors.size());
 
         for (auto& [descriptor, number] : this->available_descriptors)
         {
@@ -174,10 +164,31 @@ namespace gfx::vulkan
             .pPoolSizes {requestedPoolMembers.data()},
         };
 
-        this->pool = this->device->asLogicalDevice().createDescriptorPoolUnique(
-            poolCreateInfo);
+        this->pool = this->device.createDescriptorPoolUnique(poolCreateInfo);
     }
 
+    DescriptorPool::~DescriptorPool()
+    {
+        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        {
+            if (this->available_descriptors != this->inital_descriptors)
+            {
+                util::logWarn("All descriptors not returned!");
+
+                for (const auto [initalDescriptorType, initalNum] :
+                     this->inital_descriptors)
+                {
+                    util::logWarn(
+                        "Inital #{}, final #{} of type {}",
+                        initalNum,
+                        this->available_descriptors[initalDescriptorType],
+                        vk::to_string(initalDescriptorType));
+                }
+            }
+        }
+    }
+
+    // TODO: add array function
     void DescriptorPool::free(DescriptorSet& setToFree)
     {
         for (const auto& binding : setToFree.layout->getLayoutBindings())
@@ -187,16 +198,12 @@ namespace gfx::vulkan
         }
 
         // TODO: add array function
-        this->device->asLogicalDevice().freeDescriptorSets(
-            *this->pool, *setToFree);
+        this->device.freeDescriptorSets(*this->pool, *setToFree);
     }
 
     DescriptorSetLayout::DescriptorSetLayout(
-        std::shared_ptr<Device>           device_,
-        vk::DescriptorSetLayoutCreateInfo layoutCreateInfo)
-        : device {std::move(device_)}
-        , layout {nullptr}
-        , descriptors {}
+        vk::Device device, vk::DescriptorSetLayoutCreateInfo layoutCreateInfo)
+        : layout {nullptr}
     {
         this->descriptors.reserve(layoutCreateInfo.bindingCount);
 
@@ -204,13 +211,12 @@ namespace gfx::vulkan
         {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
-            this->descriptors.push_back(layoutCreateInfo.pBindings[i]);
+            this->descriptors.push_back(
+                layoutCreateInfo.pBindings[i]); // NOLINT
 #pragma clang diagnostic pop
         }
 
-        this->layout =
-            this->device->asLogicalDevice().createDescriptorSetLayoutUnique(
-                layoutCreateInfo);
+        this->layout = device.createDescriptorSetLayoutUnique(layoutCreateInfo);
     }
 
     const vk::DescriptorSetLayout* DescriptorSetLayout::operator* () const
@@ -226,41 +232,41 @@ namespace gfx::vulkan
 
     DescriptorSet::DescriptorSet()
         : set {nullptr}
+        , pool {nullptr}
         , layout {nullptr}
-        , pool {}
     {}
 
     DescriptorSet::~DescriptorSet()
     {
-        if (static_cast<bool>(this->set))
+        if (this->set != nullptr)
         {
             this->pool->free(*this);
         }
     }
 
-    DescriptorSet::DescriptorSet(DescriptorSet&& other)
+    DescriptorSet::DescriptorSet(DescriptorSet&& other) noexcept
         : set {other.set}
-        , layout {std::move(other.layout)}
-        , pool {std::move(other.pool)}
+        , pool {other.pool}
+        , layout {other.layout}
     {
-        other.pool   = nullptr;
         other.set    = nullptr;
+        other.pool   = nullptr;
         other.layout = nullptr;
     }
 
-    DescriptorSet& DescriptorSet::operator= (DescriptorSet&& other)
+    DescriptorSet& DescriptorSet::operator= (DescriptorSet&& other) noexcept
     {
-        if (&other == this)
+        if (this == &other)
         {
             return *this;
         }
 
-        this->pool   = std::move(other.pool);
-        this->layout = std::move(other.layout);
-        this->set    = std::move(other.set);
+        this->set    = other.set;
+        this->pool   = other.pool;
+        this->layout = other.layout;
 
-        other.pool   = nullptr;
         other.set    = nullptr;
+        other.pool   = nullptr;
         other.layout = nullptr;
 
         return *this;
@@ -272,11 +278,11 @@ namespace gfx::vulkan
     }
 
     DescriptorSet::DescriptorSet(
-        std::shared_ptr<DescriptorPool>      pool_,
-        std::shared_ptr<DescriptorSetLayout> layout_,
-        vk::DescriptorSet                    set_)
+        vk::DescriptorSet    set_,
+        DescriptorPool*      pool_,
+        DescriptorSetLayout* layout_)
         : set {set_}
-        , layout {std::move(layout_)}
-        , pool {std::move(pool_)}
+        , pool {pool_}
+        , layout {layout_}
     {}
 } // namespace gfx::vulkan

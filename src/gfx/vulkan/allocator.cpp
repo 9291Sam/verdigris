@@ -6,12 +6,21 @@
 
 namespace gfx::vulkan
 {
-    Allocator::Allocator(const vulkan::Instance& instance, const vulkan::Device& device)
+    Allocator::Allocator(
+        const vulkan::Instance& instance, const vulkan::Device& device)
         : allocator {nullptr}
+        , pool {
+              device.asLogicalDevice(),
+              std::unordered_map<vk::DescriptorType, std::uint32_t> {
+                  {vk::DescriptorType::eStorageBuffer, 3},
+                  {vk::DescriptorType::eUniformBuffer, 3},
+              }}
     {
         VmaVulkanFunctions vulkanFunctions {};
-        vulkanFunctions.vkGetInstanceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr;
-        vulkanFunctions.vkGetDeviceProcAddr   = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr;
+        vulkanFunctions.vkGetInstanceProcAddr =
+            VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr;
+        vulkanFunctions.vkGetDeviceProcAddr =
+            VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr;
 
         const VmaAllocatorCreateInfo allocatorCreateInfo {
             .flags {},
@@ -27,7 +36,8 @@ namespace gfx::vulkan
             .pTypeExternalMemoryHandleTypes {nullptr},
         };
 
-        const vk::Result result {::vmaCreateAllocator(&allocatorCreateInfo, &this->allocator)};
+        const vk::Result result {
+            ::vmaCreateAllocator(&allocatorCreateInfo, &this->allocator)};
 
         util::assertFatal(
             result == vk::Result::eSuccess,
@@ -43,5 +53,10 @@ namespace gfx::vulkan
     VmaAllocator Allocator::operator* () const
     {
         return this->allocator;
+    }
+
+    DescriptorSet Allocator::allocateDescriptorSet(DescriptorSetType setType)
+    {
+        return this->pool.allocate(setType);
     }
 } // namespace gfx::vulkan

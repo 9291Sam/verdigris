@@ -1,11 +1,12 @@
 #ifndef SRC_GFX_VULKAN_DESCRIPTORS_HPP
 #define SRC_GFX_VULKAN_DESCRIPTORS_HPP
 
-#include "includes.hpp"
-// #include <expected>
+#include <expected>
 #include <memory>
 #include <span>
 #include <unordered_map>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
 namespace gfx::vulkan
 {
@@ -28,38 +29,17 @@ namespace gfx::vulkan
     struct DescriptorState
     {
         DescriptorState();
-        DescriptorState(auto... d)
+        explicit DescriptorState(auto... d)
             : descriptors {d...}
         {}
 
         void reset();
 
-        std::array<DescriptorSetType, 4> descriptors;
+        std::array<DescriptorSetType, 4> descriptors; // NOLINT
     };
 
-    // class DynamicDescriptorPool
-    // {
-    // public:
-
-    //     DynamicDescriptorPool(std::shared_ptr<Device>);
-
-    //     DynamicDescriptorPool(const DynamicDescriptorPool&) = delete;
-    //     DynamicDescriptorPool(DynamicDescriptorPool&&)      = delete;
-    //     DynamicDescriptorPool&
-    //     operator= (const DynamicDescriptorPool&)                   = delete;
-    //     DynamicDescriptorPool& operator= (DynamicDescriptorPool&&) = delete;
-
-    //     [[nodiscard]] DescriptorSet
-    //         allocate(std::shared_ptr<DescriptorSetLayout>);
-
-    // private:
-    //     std::shared_ptr<Device> device;
-
-    //     std::shared_ptr<DescriptorPool> current_pool;
-    // };
-
     // TODO: add proper atomics to this
-    class DescriptorPool : public std::enable_shared_from_this<DescriptorPool>
+    class DescriptorPool
     {
     public:
         struct AllocationFailure
@@ -67,15 +47,13 @@ namespace gfx::vulkan
             std::size_t        tried_to_allocate;
             vk::DescriptorType type;
             std::size_t        number_available;
-
-            // TODO: operator std::string
         };
     public:
 
-        [[nodiscard]] static std::shared_ptr<DescriptorPool> create(
-            std::shared_ptr<Device>,
+        DescriptorPool(
+            vk::Device,
             std::unordered_map<vk::DescriptorType, std::uint32_t> capacity);
-        ~DescriptorPool() = default;
+        ~DescriptorPool();
 
         DescriptorPool()                                  = delete;
         DescriptorPool(const DescriptorPool&)             = delete;
@@ -83,33 +61,30 @@ namespace gfx::vulkan
         DescriptorPool& operator= (const DescriptorPool&) = delete;
         DescriptorPool& operator= (DescriptorPool&&)      = delete;
 
-        // [[nodiscard]] std::expected<DescriptorSet, AllocationFailure>
-        [[nodiscard]] DescriptorSet
-            allocate(std::shared_ptr<DescriptorSetLayout>);
+        [[nodiscard]] DescriptorSet allocate(DescriptorSetType);
 
     private:
-
-        DescriptorPool(
-            std::shared_ptr<Device>,
-            std::unordered_map<vk::DescriptorType, std::uint32_t> capacity);
+        DescriptorSetLayout& lookupOrAddLayoutFromCache(DescriptorSetType);
 
         friend class DescriptorSet;
         void free(DescriptorSet&);
 
-        std::shared_ptr<Device>  device;
+        vk::Device               device;
         vk::UniqueDescriptorPool pool;
-        // std::unordered_map<vk::DescriptorType, std::uint32_t>
-        //     initial_descriptors;
+        std::unordered_map<vk::DescriptorType, std::uint32_t>
+            inital_descriptors;
         std::unordered_map<vk::DescriptorType, std::uint32_t>
             available_descriptors;
+
+        std::unordered_map<DescriptorSetType, DescriptorSetLayout>
+            descriptor_layout_cache;
     }; // class DescriptorPool
 
     class DescriptorSetLayout
     {
     public:
 
-        DescriptorSetLayout(
-            std::shared_ptr<Device>, vk::DescriptorSetLayoutCreateInfo);
+        DescriptorSetLayout(vk::Device, vk::DescriptorSetLayoutCreateInfo);
         ~DescriptorSetLayout() = default;
 
         DescriptorSetLayout()                                       = delete;
@@ -123,12 +98,10 @@ namespace gfx::vulkan
         getLayoutBindings() const;
 
     private:
-        std::shared_ptr<Device>                     device;
         vk::UniqueDescriptorSetLayout               layout;
         std::vector<vk::DescriptorSetLayoutBinding> descriptors;
     };
 
-    // RAII wrapper around a vulkan descriptor set
     class DescriptorSet
     {
     public:
@@ -137,22 +110,19 @@ namespace gfx::vulkan
         ~DescriptorSet();
 
         DescriptorSet(const DescriptorSet&) = delete;
-        DescriptorSet(DescriptorSet&&);
+        DescriptorSet(DescriptorSet&&) noexcept;
         DescriptorSet& operator= (const DescriptorSet&) = delete;
-        DescriptorSet& operator= (DescriptorSet&&);
+        DescriptorSet& operator= (DescriptorSet&&) noexcept;
 
         [[nodiscard]] vk::DescriptorSet operator* () const;
 
     private:
         friend class DescriptorPool;
-        DescriptorSet(
-            std::shared_ptr<DescriptorPool>,
-            std::shared_ptr<DescriptorSetLayout>,
-            vk::DescriptorSet);
+        DescriptorSet(vk::DescriptorSet, DescriptorPool*, DescriptorSetLayout*);
 
-        vk::DescriptorSet                    set;
-        std::shared_ptr<DescriptorSetLayout> layout;
-        std::shared_ptr<DescriptorPool>      pool;
+        vk::DescriptorSet    set;
+        DescriptorPool*      pool;
+        DescriptorSetLayout* layout;
     };
 
 } // namespace gfx::vulkan

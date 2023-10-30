@@ -1,6 +1,8 @@
 #ifndef SRC_GFX_VULKAN_ALLOCATOR_HPP
 #define SRC_GFX_VULKAN_ALLOCATOR_HPP
 
+#include "descriptors.hpp"
+#include <vk_mem_alloc.h>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -10,6 +12,7 @@ namespace gfx::vulkan
 {
     class Instance;
     class Device;
+    class DescriptorPool;
 
     class Allocator
     {
@@ -23,10 +26,12 @@ namespace gfx::vulkan
         Allocator& operator= (const Allocator&) = delete;
         Allocator& operator= (Allocator&&)      = delete;
 
-        VmaAllocator operator* () const;
+        VmaAllocator  operator* () const;
+        DescriptorSet allocateDescriptorSet(DescriptorSetType);
 
     private:
-        VmaAllocator allocator;
+        VmaAllocator   allocator;
+        DescriptorPool pool;
     };
 
 } // namespace gfx::vulkan
