@@ -16,6 +16,7 @@ namespace gfx::vulkan
 
     enum class PipelineType
     {
+        NoPipeline,
         Flat,
         Voxel,
     };

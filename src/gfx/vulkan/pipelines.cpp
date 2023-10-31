@@ -70,6 +70,9 @@ namespace gfx::vulkan
     {
         switch (typeToCreate)
         {
+        case gfx::vulkan::PipelineType::NoPipeline:
+            util::panic("Tried to create a null pipeline!");
+
         case gfx::vulkan::PipelineType::Flat: {
             // TODO: replace with #embed
             vk::UniqueShaderModule fragmentShader = createShaderFromFile(

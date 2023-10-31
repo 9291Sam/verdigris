@@ -116,8 +116,13 @@ namespace gfx
         {
             if (std::shared_ptr<const Object> obj = weakRenderable.lock())
             {
-                rawObjects.push_back(obj.get());
-                strongObjects.push_back(std::move(obj));
+                obj->updateFrameState();
+
+                if (obj->shouldDraw())
+                {
+                    rawObjects.push_back(obj.get());
+                    strongObjects.push_back(std::move(obj));
+                }
             }
         }
 
@@ -172,6 +177,11 @@ namespace gfx
             magic_enum::enum_for_each<vulkan::PipelineType>(
                 [&](vulkan::PipelineType type)
                 {
+                    if (type == vulkan::PipelineType::NoPipeline)
+                    {
+                        return;
+                    }
+
                     pipelineFutures.push_back(std::async(
                         std::launch::async,
                         [this, type]

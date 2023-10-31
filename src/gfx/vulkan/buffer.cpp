@@ -136,8 +136,8 @@ namespace gfx::vulkan
                 vk::to_string(vk::Result {result}));
 
             util::assertFatal(
-                this->mapped_memory != nullptr,
-                "Mapped ptr was nullptr! | ",
+                outputMappedMemory != nullptr,
+                "Mapped ptr was nullptr! | {}",
                 vk::to_string(vk::Result {result}));
 
             this->mapped_memory.store(
