@@ -2,6 +2,7 @@
 #define SRC_GFX_RENDERER_HPP
 
 #include "camera.hpp"
+#include "window.hpp"
 #include <memory>
 #include <util/registrar.hpp>
 #include <util/uuid.hpp>
@@ -36,10 +37,15 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
+        [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
+        [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
+
+        [[nodiscard]] bool  isActionActive(Window::Action) const;
         [[nodiscard]] float getFovYRadians() const;
         [[nodiscard]] float getFovXRadians() const;
         [[nodiscard]] float getAspectRatio() const;
 
+        void               setCamera(Camera) const;
         [[nodiscard]] bool continueTicking();
         void               drawFrame();
 

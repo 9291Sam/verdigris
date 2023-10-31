@@ -20,7 +20,12 @@ Checks: >
   -cppcoreguidelines-non-private-member-variables-in-classes,
   -hicpp-special-member-functions,
   -readability-named-parameter,
-  -hicpp-named-parameter
+  -hicpp-named-parameter,
+  -hicpp-use-auto,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers
+
+#probablly should renable the magic number lints eventually
 
 # CheckOptions:
 #   - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic

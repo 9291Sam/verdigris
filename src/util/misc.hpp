@@ -1,6 +1,7 @@
 #ifndef SRC_UTIL_MISC_HPP
 #define SRC_UTIL_MISC_HPP
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -202,8 +203,50 @@ namespace util
         return ~out;
     }
 
+    template<Integer I>
+    constexpr inline I log2(I number)
+    {
+        return static_cast<I>(std::bit_width(number) - 1);
+    }
+
     template<class Func>
     using Fn = Func*;
+
+    template<Integer I>
+    constexpr inline I exp(I base, I exp)
+    {
+        constexpr I Zero = static_cast<I>(0);
+        constexpr I One  = static_cast<I>(1);
+
+        switch (exp)
+        {
+        case Zero:
+            return One;
+        case One:
+            return base;
+        default:
+            return base * ::util::exp(base, exp - 1);
+        }
+    }
+
+    template<std::floating_point F>
+    constexpr inline std::uint8_t convertLinearToSRGB(F value) noexcept
+    {
+        const F ClampedValue =
+            std::clamp<F>(value, static_cast<F>(0.0), static_cast<F>(1.0));
+
+        return static_cast<uint8_t>(
+            255.0f * std::pow(ClampedValue, 1.0f / 2.4f));
+    }
+
+    constexpr inline float convertSRGBToLinear(std::uint8_t integer) noexcept
+    {
+        const float IntegerAsFloatNormalized =
+            static_cast<float>(integer)
+            / static_cast<float>(std::numeric_limits<std::uint8_t>::max());
+
+        return std::pow(IntegerAsFloatNormalized, 2.4f);
+    }
 } // namespace util
 
 #endif // SRC_UTIL_MISC_HPP

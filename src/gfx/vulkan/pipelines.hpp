@@ -52,7 +52,7 @@ namespace gfx::vulkan
         std::shared_ptr<RenderPass>,
         std::shared_ptr<Swapchain>);
 
-    class Pipeline
+    class Pipeline // GraphicsPipeline
     {
     public:
 

@@ -115,4 +115,43 @@ namespace gfx::vulkan
     };
 } // namespace gfx::vulkan
 
+// Vertex hash implementation
+namespace std
+{
+    template<>
+    struct hash<gfx::vulkan::Vertex>
+    {
+        [[nodiscard]] auto
+        operator() (const gfx::vulkan::Vertex& vertex) const noexcept -> size_t
+        {
+            std::size_t      seed {0};
+            std::hash<float> hasher;
+
+            auto hashCombine = [](std::size_t& seed_, std::size_t hash_)
+            {
+                hash_ += 0x9e3779b9 + (seed_ << 6) + (seed_ >> 2);
+                seed_ ^= hash_;
+            };
+
+            hashCombine(seed, hasher(vertex.position.x));
+            hashCombine(seed, hasher(vertex.position.y));
+            hashCombine(seed, hasher(vertex.position.z));
+
+            hashCombine(seed, hasher(vertex.color.x));
+            hashCombine(seed, hasher(vertex.color.y));
+            hashCombine(seed, hasher(vertex.color.z));
+
+            hashCombine(seed, hasher(vertex.normal.x));
+            hashCombine(seed, hasher(vertex.normal.y));
+            hashCombine(seed, hasher(vertex.normal.z));
+
+            hashCombine(seed, hasher(vertex.uv.x));
+            hashCombine(seed, hasher(vertex.uv.y));
+
+            return seed;
+        }
+    };
+
+} // namespace std
+
 #endif // SRC_GFX_VULKAN_GPU_STRUCTURES_HPP

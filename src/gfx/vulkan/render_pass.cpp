@@ -279,6 +279,9 @@ namespace gfx::vulkan
 
                 commandBuffer.begin(commandBufferBeginInfo);
 
+                constexpr std::array<float, 4> clearColor {
+                    0.01f, 0.03f, 0.04f, 1.0f};
+
                 // union initialization syntax my beloved :heart:
                 // clang-format off
                 std::array<vk::ClearValue, 2> clearValues
@@ -287,9 +290,7 @@ namespace gfx::vulkan
                     {
                         .color
                         {
-                            vk::ClearColorValue {
-                                std::array<float, 4> {0.01f, 0.3f, 0.4f, 1.0f}
-                            }
+                            vk::ClearColorValue {clearColor}
                         }
                     },
                     vk::ClearValue
@@ -371,7 +372,7 @@ namespace gfx::vulkan
                     VkResult result =
                         VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
                             static_cast<VkQueue>(queue),
-                            reinterpret_cast<const VkPresentInfoKHR*>(
+                            reinterpret_cast<const VkPresentInfoKHR*>( // NOLINT
                                 &presentInfo));
 
                     if (result == VK_ERROR_OUT_OF_DATE_KHR

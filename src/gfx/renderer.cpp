@@ -7,7 +7,6 @@
 #include "vulkan/pipelines.hpp"
 #include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
-#include "window.hpp"
 #include <GLFW/glfw3.h>
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
@@ -77,6 +76,29 @@ namespace gfx
 
     Renderer::~Renderer() = default;
 
+    float Renderer::getFrameDeltaTimeSeconds() const
+    {
+        return this->window->getDeltaTimeSeconds();
+    }
+
+    Window::Delta Renderer::getMouseDeltaRadians() const
+    {
+        // each value from -1.0 -> 1.0 representing how much it moved on the
+        // screen
+        const auto [nDeltaX, nDeltaY] =
+            this->window->getScreenSpaceMouseDelta();
+
+        const auto deltaRadiansX = (nDeltaX / 2) * this->getFovXRadians();
+        const auto deltaRadiansY = (nDeltaY / 2) * this->getFovYRadians();
+
+        return Window::Delta {.x {deltaRadiansX}, .y {deltaRadiansY}};
+    }
+
+    [[nodiscard]] bool Renderer::isActionActive(Window::Action a) const
+    {
+        return this->window->isActionActive(a);
+    }
+
     float
     gfx::Renderer::getFovYRadians() const // NOLINT: may change in the future
     {
@@ -98,6 +120,11 @@ namespace gfx
         const auto [width, height] = this->window->getFramebufferSize();
 
         return static_cast<float>(width) / static_cast<float>(height);
+    }
+
+    void Renderer::setCamera(Camera c) const
+    {
+        this->draw_camera = c;
     }
 
     bool Renderer::continueTicking()
