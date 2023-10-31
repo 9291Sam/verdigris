@@ -36,7 +36,7 @@ namespace gfx
         void               drawFrame();
 
     private:
-
+        void resize();
         void initializeRenderer();
 
         // Vulkan prelude objects
@@ -47,10 +47,9 @@ namespace gfx
         std::unique_ptr<vulkan::Allocator>    allocator;
 
         // Rendering objects
-        std::unique_ptr<vulkan::Swapchain>  swapchain;
-        std::unique_ptr<vulkan::Image2D>    depth_buffer;
-        std::unique_ptr<vulkan::RenderPass> render_pass;
-
+        std::unique_ptr<vulkan::Swapchain>       swapchain;
+        std::unique_ptr<vulkan::Image2D>         depth_buffer;
+        std::unique_ptr<vulkan::RenderPass>      render_pass;
         std::unique_ptr<vulkan::PipelineManager> pipelines;
     };
 } // namespace gfx

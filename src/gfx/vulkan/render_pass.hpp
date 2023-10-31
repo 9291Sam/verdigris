@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_RENDER__PASS_HPP
 #define SRC_GFX_VULKAN_RENDER__PASS_HPP
 
+#include <expected>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -9,12 +10,14 @@ namespace gfx::vulkan
     class Device;
     class Image2D;
     class Swapchain;
+    class Frame;
+    class PipelineManager;
 
     class RenderPass
     {
     public:
 
-        RenderPass(vk::Device, const Swapchain&, const Image2D& depthBuffer);
+        RenderPass(Device*, Swapchain*, const Image2D& depthBuffer);
         ~RenderPass() = default;
 
         RenderPass()                              = delete;
@@ -24,10 +27,57 @@ namespace gfx::vulkan
         RenderPass& operator= (RenderPass&&)      = delete;
 
         [[nodiscard]] vk::RenderPass operator* () const;
+        [[nodiscard]] Frame&         getNextFrame();
 
     private:
         vk::UniqueRenderPass render_pass;
+        Device*              device;
+
+        /// Because of how vulkan's image acquisition works, we're pigeonholed
+        /// into doing this design and there's not much you can do about it.
+        std::vector<vk::UniqueFramebuffer> framebuffers;
+        std::size_t                        next_frame_index;
+        std::vector<Frame>                 frames;
     }; // class RenderPass
+
+    class Frame
+    {
+    public:
+        struct ResizeNeeded
+        {};
+    public:
+
+        Frame();
+        Frame(
+            std::vector<vk::UniqueFramebuffer>*,
+            Device*,
+            Swapchain*,
+            vk::RenderPass);
+        ~Frame() = default;
+
+        Frame(const Frame&)                 = delete;
+        Frame(Frame&&) noexcept             = default;
+        Frame& operator= (const Frame&)     = delete;
+        Frame& operator= (Frame&&) noexcept = default;
+
+        // @return {true}, is resize needed
+        [[nodiscard]] std::expected<void, ResizeNeeded> render(
+            // Camera,
+            const vulkan::PipelineManager&
+            // std::span<const Object*>,
+            // std::optional<ImGuiMenu*> menu
+        );
+
+    private:
+        Device*                             device;
+        Swapchain*                          swapchain;
+        vk::RenderPass                      render_pass;
+        std::vector<vk::UniqueFramebuffer>* framebuffers;
+
+        vk::UniqueSemaphore image_available;
+        vk::UniqueSemaphore render_finished;
+        vk::UniqueFence     frame_in_flight;
+    };
 
 } // namespace gfx::vulkan
 

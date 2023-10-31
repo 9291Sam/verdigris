@@ -82,7 +82,27 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
+        vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
+
+        if (!currentFrame.render(*this->pipelines))
+        {
+            this->resize();
+        }
+
         this->window->endFrame();
+    }
+
+    void Renderer::resize()
+    {
+        this->window->blockThisThreadWhileMinimized();
+        this->device->asLogicalDevice().waitIdle(); // stall
+
+        this->pipelines.reset();
+        this->render_pass.reset();
+        this->depth_buffer.reset();
+        this->swapchain.reset();
+
+        this->initializeRenderer();
     }
 
     void Renderer::initializeRenderer()
@@ -101,9 +121,7 @@ namespace gfx
             vk::MemoryPropertyFlagBits::eDeviceLocal);
 
         this->render_pass = std::make_unique<vulkan::RenderPass>(
-            this->device->asLogicalDevice(),
-            *this->swapchain,
-            *this->depth_buffer);
+            this->device.get(), this->swapchain.get(), *this->depth_buffer);
 
         this->pipelines = std::make_unique<vulkan::PipelineManager>(
             this->device->asLogicalDevice(),
