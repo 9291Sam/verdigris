@@ -2,11 +2,9 @@
 #define SRC_GFX_OBJECT_HPP
 
 #include "camera.hpp"
-#include "gfx/vulkan/gpu_data.hpp"
 #include "vulkan/buffer.hpp"
-#include "vulkan/gpu_data.hpp"
+#include "vulkan/gpu_structures.hpp"
 #include "vulkan/pipelines.hpp"
-#include <boost/functional/hash.hpp>
 #include <memory>
 #include <optional>
 #include <util/threads.hpp>
@@ -66,9 +64,9 @@ namespace gfx
         bindAndDraw(vk::CommandBuffer, BindState&, const Camera&) const;
 
         std::strong_ordering operator<=> (const Object&) const;
-        explicit virtual operator std::string () const;
-        util::UUID getUUID() const;
-        bool       shouldDraw() const;
+        explicit virtual     operator std::string () const;
+        util::UUID           getUUID() const;
+        bool                 shouldDraw() const;
 
         util::Mutex<Transform>    transform;
         mutable std::atomic<bool> should_draw;
@@ -107,19 +105,25 @@ namespace gfx
             std::vector<vulkan::Index>);
         ~SimpleTriangulatedObject() override = default;
 
+        SimpleTriangulatedObject(const SimpleTriangulatedObject&) = delete;
+        SimpleTriangulatedObject(SimpleTriangulatedObject&&)      = delete;
+        SimpleTriangulatedObject&
+        operator= (const SimpleTriangulatedObject&) = delete;
+        SimpleTriangulatedObject&
+        operator= (SimpleTriangulatedObject&&) = delete;
+
         void updateFrameState() const override;
         void bindAndDraw(
             vk::CommandBuffer, BindState&, const Camera&) const override;
 
     private:
-        mutable std::optional<util::Future<vulkan::Buffer>>
-                                              future_vertex_buffer;
-        std::size_t                           number_of_vertices;
-        mutable std::optional<vulkan::Buffer> vertex_buffer;
+        mutable std::optional<std::future<vulkan::Buffer>> future_vertex_buffer;
+        std::size_t                                        number_of_vertices;
+        mutable std::optional<vulkan::Buffer>              vertex_buffer;
 
-        mutable std::optional<util::Future<vulkan::Buffer>> future_index_buffer;
-        std::size_t                                         number_of_indices;
-        mutable std::optional<vulkan::Buffer>               index_buffer;
+        mutable std::optional<std::future<vulkan::Buffer>> future_index_buffer;
+        std::size_t                                        number_of_indices;
+        mutable std::optional<vulkan::Buffer>              index_buffer;
 
         SimpleTriangulatedObject(
             const gfx::Renderer&,
