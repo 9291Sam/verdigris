@@ -2,7 +2,6 @@
 #define SRC_GFX_VULKAN_DESCRIPTORS_HPP
 
 #include <expected>
-#include <memory>
 #include <span>
 #include <unordered_map>
 #include <vulkan/vulkan_format_traits.hpp>

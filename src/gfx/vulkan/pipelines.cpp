@@ -1,14 +1,11 @@
 #include "pipelines.hpp"
 #include "allocator.hpp"
 #include "descriptors.hpp"
-#include "device.hpp"
 #include "gpu_structures.hpp"
 #include "render_pass.hpp"
 #include "swapchain.hpp"
 #include "util/log.hpp"
 #include <fstream>
-#include <memory>
-
 namespace
 {
     vk::UniqueShaderModule

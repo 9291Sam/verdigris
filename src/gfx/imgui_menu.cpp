@@ -9,6 +9,7 @@
 #include "window.hpp"
 #include <atomic>
 #include <cmath>
+#include <glm/gtx/string_cast.hpp>
 
 namespace
 {
@@ -27,7 +28,6 @@ gfx::ImGuiMenu::ImGuiMenu(
     const vulkan::Device& device,
     vk::RenderPass        renderPass)
     : pool {nullptr}
-    , player_position {util::Vec3 {}}
     , fps {std::numeric_limits<float>::signaling_NaN()}
     , string {"INVALID MESSAGE!"}
 {
@@ -194,7 +194,7 @@ gfx::ImGuiMenu::~ImGuiMenu() noexcept
     ImGui::DestroyContext();
 }
 
-void gfx::ImGuiMenu::setPlayerPosition(util::Vec3 pos) const
+void gfx::ImGuiMenu::setPlayerPosition(glm::vec3 pos) const
 {
     this->player_position.store(pos, std::memory_order_release);
 }
@@ -247,13 +247,13 @@ void gfx::ImGuiMenu::render()
             }
         }
 
-        const std::string PlayerPosition = static_cast<std::string>(
+        const std::string PlayerPosition = glm::to_string(
             this->player_position.load(std::memory_order_acquire));
         ImGui::TextWrapped( // NOLINT
             "Current Player Position %s",
             PlayerPosition.c_str());
 
-        const std::string Fps = static_cast<std::string>(
+        const std::string Fps = glm::to_string(
             this->player_position.load(std::memory_order_acquire));
         ImGui::TextWrapped("FPS: %f", this->fps.load()); // NOLINT
 

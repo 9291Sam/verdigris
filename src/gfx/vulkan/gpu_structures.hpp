@@ -1,7 +1,10 @@
 #ifndef SRC_GFX_VULKAN_GPU_STRUCTURES_HPP
 #define SRC_GFX_VULKAN_GPU_STRUCTURES_HPP
 
-#include <util/matrix.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -42,10 +45,10 @@ namespace gfx::vulkan
     /// corresponding structs in the shaders!
     struct Vertex
     {
-        util::Vec3 position;
-        util::Vec4 color;
-        util::Vec3 normal;
-        util::Vec2 uv;
+        glm::vec3 position;
+        glm::vec4 color;
+        glm::vec3 normal;
+        glm::vec2 uv;
 
         [[nodiscard]] static const vk::VertexInputBindingDescription*
         getBindingDescription()
@@ -59,8 +62,10 @@ namespace gfx::vulkan
             return &bindings;
         }
 
-        [[nodiscard]] static auto getAttributeDescriptions()
-            -> const std::array<vk::VertexInputAttributeDescription, 4>*
+        [[nodiscard]] static const std::
+            array<vk::VertexInputAttributeDescription, 4>*
+            getAttributeDescriptions()
+
         {
             // clang-format off
             static const std::array<vk::VertexInputAttributeDescription, 4>
@@ -100,13 +105,13 @@ namespace gfx::vulkan
         }
 
         [[nodiscard]] bool operator== (const Vertex&) const = default;
-        [[nodiscard]] std::partial_ordering
-        operator<=> (const Vertex& other) const = default;
+        // [[nodiscard]] std::partial_ordering
+        // operator<=> (const Vertex& other) const = default;
     };
 
     struct PushConstants
     {
-        util::Mat4 model_view_proj;
+        glm::mat4 model_view_proj;
     };
 } // namespace gfx::vulkan
 

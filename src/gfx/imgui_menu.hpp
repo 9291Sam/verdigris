@@ -1,8 +1,7 @@
 #ifndef SRC_GFX_IMGUI_MENU_HPP
 #define SRC_GFX_IMGUI_MENU_HPP
 
-#include <memory>
-#include <util/vector.hpp>
+#include <glm/vec3.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -28,7 +27,7 @@ namespace gfx
         ImGuiMenu& operator= (const ImGuiMenu&) = delete;
         ImGuiMenu& operator= (ImGuiMenu&&)      = delete;
 
-        void setPlayerPosition(util::Vec3) const;
+        void setPlayerPosition(glm::vec3) const;
         void setFps(float) const;
 
         void render();
@@ -39,9 +38,9 @@ namespace gfx
         vk::UniqueDescriptorPool pool;
 
         // menu items
-        mutable std::atomic<util::Vec3> player_position;
-        mutable std::atomic<float>      fps;
-        std::string                     string;
+        mutable std::atomic<glm::vec3> player_position;
+        mutable std::atomic<float>     fps;
+        std::string                    string;
     };
 } // namespace gfx
 

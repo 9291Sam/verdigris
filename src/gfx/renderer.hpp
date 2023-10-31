@@ -32,6 +32,10 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
+        [[nodiscard]] float getFovYRadians() const;
+        [[nodiscard]] float getFovXRadians() const;
+        [[nodiscard]] float getAspectRatio() const;
+
         [[nodiscard]] bool continueTicking();
         void               drawFrame();
 
