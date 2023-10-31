@@ -16,10 +16,21 @@ Checks: >
   -fuchsia-overloaded-operator,
   -readability-identifier-length,
   -modernize-use-auto,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -hicpp-special-member-functions,
+  -readability-named-parameter,
+  -hicpp-named-parameter
+
+# CheckOptions:
+#   - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+#     value: true
+
 
 CheckOptions:
-  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
     value: true
+
 
 # misc-non-private-member-variables-in-classes
 # IgnoreClassesWithAllMemberVariablesBeingPublic

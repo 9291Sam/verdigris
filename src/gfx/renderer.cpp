@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "object.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/image.hpp"
@@ -69,11 +70,35 @@ namespace gfx
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, *this->device)}
+        , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
     {
         this->initializeRenderer();
     }
 
     Renderer::~Renderer() = default;
+
+    float
+    gfx::Renderer::getFovYRadians() const // NOLINT: may change in the future
+    {
+        return glm::radians(70.f); // NOLINT
+    }
+
+    float gfx::Renderer::getFovXRadians() const
+    {
+        // assume that the window is never stretched with an image.
+        // i.e 100x pixels are 100y pixels if rotated
+        const auto [width, height] = this->window->getFramebufferSize();
+
+        return this->getFovYRadians() * static_cast<float>(width)
+             / static_cast<float>(height);
+    }
+
+    float gfx::Renderer::getAspectRatio() const
+    {
+        const auto [width, height] = this->window->getFramebufferSize();
+
+        return static_cast<float>(width) / static_cast<float>(height);
+    }
 
     bool Renderer::continueTicking()
     {
@@ -84,7 +109,19 @@ namespace gfx
     {
         vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
 
-        if (!currentFrame.render(*this->pipelines))
+        std::vector<std::shared_ptr<const Object>> strongObjects;
+        std::vector<const Object*>                 rawObjects;
+
+        for (const auto& [id, weakRenderable] : this->draw_objects.access())
+        {
+            if (std::shared_ptr<const Object> obj = weakRenderable.lock())
+            {
+                rawObjects.push_back(obj.get());
+                strongObjects.push_back(std::move(obj));
+            }
+        }
+
+        if (!currentFrame.render(this->draw_camera, rawObjects))
         {
             this->resize();
         }
@@ -143,5 +180,12 @@ namespace gfx
                         }));
                 });
         }
+    }
+
+    void Renderer::registerObject(
+        const std::shared_ptr<const Object>& objectToRegister) const
+    {
+        this->draw_objects.insert(
+            {objectToRegister->getUUID(), std::weak_ptr {objectToRegister}});
     }
 } // namespace gfx

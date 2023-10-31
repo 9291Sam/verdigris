@@ -5,11 +5,13 @@
 #include "vulkan/buffer.hpp"
 #include "vulkan/gpu_structures.hpp"
 #include "vulkan/pipelines.hpp"
+#include <future>
 #include <memory>
 #include <optional>
 #include <util/threads.hpp>
 #include <util/uuid.hpp>
 
+// TODO: can this be re-done so its not a steaming pile of shit?
 namespace gfx
 {
     class Renderer;
@@ -17,66 +19,59 @@ namespace gfx
     namespace vulkan
     {
         class Allocator;
-    }
+    } // namespace vulkan
 
     struct ObjectBoundDescriptor
     {
         std::optional<util::UUID> id;
 
-        [[nodiscard]] bool operator== (const ObjectBoundDescriptor&) const;
+        [[nodiscard]] bool
+        operator== (const ObjectBoundDescriptor&) const = default;
         [[nodiscard]] std::strong_ordering
-        operator<=> (const ObjectBoundDescriptor&) const;
+        operator<=> (const ObjectBoundDescriptor&) const = default;
     };
 
-    struct BindState // NOLINT: I want designated initialization
+    struct BindState
     {
-        vulkan::PipelineType                 pipeline;
+        vulkan::PipelineType pipeline = vulkan::PipelineType::Flat;
         std::array<ObjectBoundDescriptor, 4> descriptors;
 
-        [[nodiscard]] std::strong_ordering operator<=> (const BindState&) const;
+        [[nodiscard]] std::strong_ordering
+        operator<=> (const BindState&) const = default;
     };
 
     class Object : public std::enable_shared_from_this<Object>
     {
     public:
-
-        static std::shared_ptr<Object> create(
-            const gfx::Renderer&,
-            std::string name,
-            BindState   requiredBindState,
-            Transform,
-            bool shouldDraw);
-        virtual ~Object();
+        virtual ~Object() = default;
 
         Object(const Object&)             = delete;
         Object(Object&&)                  = delete;
         Object& operator= (const Object&) = delete;
         Object& operator= (Object&&)      = delete;
 
-        // Called every renderer frame
-        // useful for checking on asynchronous workloads
-        // Ex. check if buffers are uploaded
-        virtual void updateFrameState() const;
+        /// lightweight state update function, called on render thread
+        virtual void updateFrameState() const = 0;
 
-        // Handles all of the actions required to execute the draw call
-        // Descriptors, pipelines, push constants, and the draw call
+        /// Handles all of the actions required to execute the draw call
         virtual void
-        bindAndDraw(vk::CommandBuffer, BindState&, const Camera&) const;
+        bindAndDraw(vk::CommandBuffer, BindState&, const Camera&) const = 0;
 
+        // Misc. helper functions
         std::strong_ordering operator<=> (const Object&) const;
         explicit virtual     operator std::string () const;
-        util::UUID           getUUID() const;
         bool                 shouldDraw() const;
+        util::UUID           getUUID() const;
 
         util::Mutex<Transform>    transform;
         mutable std::atomic<bool> should_draw;
 
     protected:
-        // Some renderer internals need to be exposed
-        [[nodiscard]] std::shared_ptr<vulkan::Allocator>
-                                         getRendererAllocator() const;
+        // Some renderer internals need to be exposed so they're boxed in by
+        // these functions rather than making them public
+        [[nodiscard]] vulkan::Allocator& getRendererAllocator() const;
         [[nodiscard]] vk::PipelineLayout getCurrentPipelineLayout() const;
-        void                             addSelfToRenderList();
+        void                             registerSelf() const;
 
         void updateBindState(
             vk::CommandBuffer,
@@ -104,13 +99,6 @@ namespace gfx
             std::vector<vulkan::Vertex>,
             std::vector<vulkan::Index>);
         ~SimpleTriangulatedObject() override = default;
-
-        SimpleTriangulatedObject(const SimpleTriangulatedObject&) = delete;
-        SimpleTriangulatedObject(SimpleTriangulatedObject&&)      = delete;
-        SimpleTriangulatedObject&
-        operator= (const SimpleTriangulatedObject&) = delete;
-        SimpleTriangulatedObject&
-        operator= (SimpleTriangulatedObject&&) = delete;
 
         void updateFrameState() const override;
         void bindAndDraw(

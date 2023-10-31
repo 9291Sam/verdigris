@@ -2,6 +2,9 @@
 #define SRC_GFX_VULKAN_RENDER__PASS_HPP
 
 #include <expected>
+#include <gfx/camera.hpp>
+#include <gfx/object.hpp>
+#include <span>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -62,9 +65,7 @@ namespace gfx::vulkan
 
         // @return {true}, is resize needed
         [[nodiscard]] std::expected<void, ResizeNeeded> render(
-            // Camera,
-            const vulkan::PipelineManager&
-            // std::span<const Object*>,
+            Camera, std::span<const Object*>
             // std::optional<ImGuiMenu*> menu
         );
 

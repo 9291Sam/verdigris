@@ -45,7 +45,8 @@ namespace gfx::vulkan
         const VmaAllocationCreateInfo allocationCreateInfo {
             .flags {VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT},
             .usage {VMA_MEMORY_USAGE_AUTO},
-            .requiredFlags {static_cast<VkMemoryPropertyFlags>(memoryPropertyFlags)},
+            .requiredFlags {
+                static_cast<VkMemoryPropertyFlags>(memoryPropertyFlags)},
             .preferredFlags {},
             .memoryTypeBits {},
             .pool {nullptr},
@@ -82,7 +83,8 @@ namespace gfx::vulkan
         , buffer {other.buffer}
         , allocation {other.allocation}
         , size_bytes {other.size_bytes}
-        , mapped_memory {other.mapped_memory.exchange(nullptr, std::memory_order_seq_cst)}
+        , mapped_memory {
+              other.mapped_memory.exchange(nullptr, std::memory_order_seq_cst)}
     {
         other.allocator  = nullptr;
         other.buffer     = nullptr;
@@ -125,18 +127,22 @@ namespace gfx::vulkan
         {
             void* outputMappedMemory = nullptr;
 
-            vk::Result result {
-                ::vmaMapMemory(this->allocator, this->allocation, &outputMappedMemory)};
+            VkResult result = ::vmaMapMemory(
+                this->allocator, this->allocation, &outputMappedMemory);
 
             util::assertFatal(
-                result == vk::Result::eSuccess,
+                result == VK_SUCCESS,
                 "Failed to map buffer memory {}",
-                vk::to_string(result));
+                vk::to_string(vk::Result {result}));
 
-            util::assertFatal(this->mapped_memory != nullptr, "Mapped ptr was nullptr!");
+            util::assertFatal(
+                this->mapped_memory != nullptr,
+                "Mapped ptr was nullptr! | ",
+                vk::to_string(vk::Result {result}));
 
             this->mapped_memory.store(
-                static_cast<std::byte*>(outputMappedMemory), std::memory_order_seq_cst);
+                static_cast<std::byte*>(outputMappedMemory),
+                std::memory_order_seq_cst);
         }
 
         return this->mapped_memory;
@@ -154,28 +160,34 @@ namespace gfx::vulkan
 
         if (this->size_bytes < 1 * 1024 * 1024) // NOLINT | 1Mb
         {
-            std::memcpy(this->getMappedPtr(), byteSpan.data(), byteSpan.size_bytes());
+            std::memcpy(
+                this->getMappedPtr(), byteSpan.data(), byteSpan.size_bytes());
         }
         else
         {
-            util::threadedMemcpy(static_cast<std::byte*>(this->getMappedPtr()), byteSpan);
+            util::threadedMemcpy(
+                static_cast<std::byte*>(this->getMappedPtr()), byteSpan);
         }
 
-        vk::Result result {
-            vmaFlushAllocation(this->allocator, this->allocation, 0, this->size_bytes)};
+        vk::Result result {vmaFlushAllocation(
+            this->allocator, this->allocation, 0, this->size_bytes)};
 
         util::assertFatal(
-            result == vk::Result::eSuccess, "Failed to flush buffer {}", vk::to_string(result));
+            result == vk::Result::eSuccess,
+            "Failed to flush buffer {}",
+            vk::to_string(result));
 
         auto end = std::chrono::high_resolution_clock::now();
 
         util::logTrace(
             "Wrote buffer of size {} in {}us",
             this->size_bytes,
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+                .count());
     }
 
-    void Buffer::copyFrom(const Buffer& other, vk::CommandBuffer commandBuffer) const
+    void
+    Buffer::copyFrom(const Buffer& other, vk::CommandBuffer commandBuffer) const
     {
         util::assertFatal(
             this->size_bytes == other.size_bytes,
@@ -185,7 +197,8 @@ namespace gfx::vulkan
 
         // TODO: this should be things with the same memory pool
         // if not require the pcie extension and throw a warning because bro wtf
-        util::assertFatal(this->allocator == other.allocator, "Allocators were not the same");
+        util::assertFatal(
+            this->allocator == other.allocator, "Allocators were not the same");
 
         const vk::BufferCopy bufferCopyParameters {
             .srcOffset {0},
@@ -194,7 +207,8 @@ namespace gfx::vulkan
         };
 
         // SRC -> DST
-        commandBuffer.copyBuffer(other.buffer, this->buffer, bufferCopyParameters);
+        commandBuffer.copyBuffer(
+            other.buffer, this->buffer, bufferCopyParameters);
     }
 
     void Buffer::free()

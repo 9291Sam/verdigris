@@ -11,6 +11,7 @@ namespace gfx::vulkan
         Device* device_, Swapchain* swapchain, const Image2D& depthBuffer)
         : render_pass {nullptr}
         , device {device_}
+        , next_frame_index {static_cast<std::size_t>(-1)}
     {
         // Initialize render pass
         {
@@ -195,21 +196,21 @@ namespace gfx::vulkan
     }
 
     std::expected<void, Frame::ResizeNeeded>
-    Frame::render(const vulkan::PipelineManager& pipelineManager)
+    Frame::render(Camera camera, const std::span<const Object*> unsortedObjects)
     {
         std::optional<bool> shouldResize = std::nullopt;
 
-        // std::vector<const Object*> sortedObjects;
-        // sortedObjects.insert(
-        //     sortedObjects.cend(),
-        //     unsortedObjects.begin(),
-        //     unsortedObjects.end());
-        // std::ranges::sort(
-        //     sortedObjects,
-        //     [](const Object* l, const Object* r)
-        //     {
-        //         return *l < *r;
-        //     });
+        std::vector<const Object*> sortedObjects;
+        sortedObjects.insert(
+            sortedObjects.cend(),
+            unsortedObjects.begin(),
+            unsortedObjects.end());
+        std::ranges::sort(
+            sortedObjects,
+            [](const Object* l, const Object* r)
+            {
+                return *l < *r;
+            });
 
         this->device->accessQueue(
             vk::QueueFlagBits::eGraphics,
@@ -321,19 +322,17 @@ namespace gfx::vulkan
                 commandBuffer.beginRenderPass(
                     renderPassBeginInfo, vk::SubpassContents::eInline);
 
-                // BindState bindState {};
+                BindState bindState {};
 
-                // for (const Object* o : sortedObjects)
-                // {
-                //     o->bindAndDraw(commandBuffer, bindState, camera);
-                // }
+                for (const Object* o : sortedObjects)
+                {
+                    o->bindAndDraw(commandBuffer, bindState, camera);
+                }
 
                 // if (menu != std::nullopt)
                 // {
                 //     (*menu)->draw(commandBuffer);
                 // }
-
-                util::logWarn("TODO IMPLEMENT!");
 
                 commandBuffer.endRenderPass();
                 commandBuffer.end();

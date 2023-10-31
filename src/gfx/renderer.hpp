@@ -1,13 +1,17 @@
 #ifndef SRC_GFX_RENDERER_HPP
 #define SRC_GFX_RENDERER_HPP
 
+#include "camera.hpp"
 #include <memory>
+#include <util/registrar.hpp>
+#include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
 namespace gfx
 {
     class Window;
+    class Object;
 
     namespace vulkan
     {
@@ -43,6 +47,9 @@ namespace gfx
         void resize();
         void initializeRenderer();
 
+        friend Object;
+        void registerObject(const std::shared_ptr<const Object>&) const;
+
         // Vulkan prelude objects
         std::unique_ptr<Window>               window;
         std::unique_ptr<vulkan::Instance>     instance;
@@ -55,6 +62,11 @@ namespace gfx
         std::unique_ptr<vulkan::Image2D>         depth_buffer;
         std::unique_ptr<vulkan::RenderPass>      render_pass;
         std::unique_ptr<vulkan::PipelineManager> pipelines;
+
+        // Renderer state
+        util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
+
+        mutable std::atomic<Camera> draw_camera;
     };
 } // namespace gfx
 
