@@ -72,6 +72,12 @@ namespace gfx
         // Renderer state
         util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
 
+        // things to draw
+        // std::unique_ptr<VoxelComputeRenderer> voxel_renderer;
+        // poke into menu and get the image
+        // start with rendering a constant color image
+        // then try to do a simple ray trace of a fixed size like 1024
+
         mutable std::atomic<Camera> draw_camera;
     };
 } // namespace gfx
