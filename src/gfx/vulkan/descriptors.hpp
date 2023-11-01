@@ -19,8 +19,7 @@ namespace gfx::vulkan
     enum class DescriptorSetType
     {
         None,
-        Voxel,
-        ComputeRendererOutput,
+        Voxel
     };
 
     struct DescriptorState

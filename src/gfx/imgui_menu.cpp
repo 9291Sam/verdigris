@@ -284,7 +284,7 @@ namespace gfx
 
             ImGui::Image(
                 (ImTextureID)(this->image_descriptor), ImVec2(256, 256));
-            // std::reinterpret_pointer_cast();
+
             ImGui::End();
         }
 

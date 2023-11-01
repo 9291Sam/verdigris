@@ -10,3 +10,5 @@ when calculating a reflection since its all voxels anyway you can calculate "ref
 fix vsnsprintf warnings
 
 make player movement blessed so its responsive during game tick holds
+
+add views of system memory and gpu vram usage

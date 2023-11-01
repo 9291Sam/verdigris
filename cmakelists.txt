@@ -218,6 +218,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
         target_compile_options(verdigris PUBLIC -Wno-unknown-attributes)
         target_compile_options(verdigris PUBLIC -Wno-documentation-unknown-command)
         target_compile_options(verdigris PUBLIC -Wno-exit-time-destructors)
+        target_compile_options(glm INTERFACE -Wno-deprecated-declarations)
 
         # Windows edge case with the address sanitizer
         # https://github.com/llvm/llvm-project/issues/56300
@@ -286,4 +287,6 @@ compile_shader(verdigris
         src/gfx/vulkan/shaders/flat_pipeline.frag
         src/gfx/vulkan/shaders/voxel.vert
         src/gfx/vulkan/shaders/voxel.frag
+
+        src/gfx/vulkan/shaders/voxel/image_filler.comp
         )

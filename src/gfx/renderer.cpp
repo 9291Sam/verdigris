@@ -214,12 +214,6 @@ namespace gfx
             }
         }
 
-        VmaBudget b {};
-
-        vmaGetHeapBudgets(**this->allocator, &b);
-
-        util::logLog("{} | {}", b.usage, b.statistics.allocationBytes);
-
         this->window->endFrame();
     }
 
