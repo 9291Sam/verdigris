@@ -222,7 +222,7 @@ namespace gfx::vulkan
             {
                 const std::uint64_t timeout =
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
-                        std::chrono::duration<std::uint64_t> {1})
+                        std::chrono::duration<std::uint64_t> {5})
                         .count();
 
                 // TODO: should this synchronization be moved to the end so we
@@ -411,8 +411,10 @@ namespace gfx::vulkan
 
                 util::assertFatal(
                     result == vk::Result::eSuccess,
-                    "Failed to wait for frame to complete drawing {}",
-                    vk::to_string(result));
+                    "Failed to wait for frame to complete drawing {} | "
+                    "timeout(ns)",
+                    vk::to_string(result),
+                    timeout);
 
                 shouldResize = false;
                 return;

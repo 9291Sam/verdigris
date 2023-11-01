@@ -44,17 +44,37 @@ namespace game::world
         , chunks {}
     {
         // util::panic("update world to draw stuff");
-        this->chunks.insert(Chunk {Position {-511, 0, -511}, generationFunc});
-        this->chunks.insert(Chunk {Position {0, 0, -511}, generationFunc});
-        this->chunks.insert(Chunk {Position {511, 0, -511}, generationFunc});
+        // this->chunks.insert(Chunk {Position {-511, 0, -511},
+        // generationFunc}); this->chunks.insert(Chunk {Position {0, 0, -511},
+        // generationFunc}); this->chunks.insert(Chunk {Position {511, 0, -511},
+        // generationFunc});
 
-        this->chunks.insert(Chunk {Position {-511, 0, 0}, generationFunc});
-        this->chunks.insert(Chunk {Position {0, 0, 0}, generationFunc});
-        this->chunks.insert(Chunk {Position {511, 0, 0}, generationFunc});
+        // this->chunks.insert(Chunk {Position {-511, 0, 0}, generationFunc});
+        // this->chunks.insert(Chunk {Position {0, 0, 0}, generationFunc});
+        // this->chunks.insert(Chunk {Position {511, 0, 0}, generationFunc});
 
-        this->chunks.insert(Chunk {Position {-511, 0, 511}, generationFunc});
-        this->chunks.insert(Chunk {Position {0, 0, 511}, generationFunc});
-        this->chunks.insert(Chunk {Position {511, 0, 511}, generationFunc});
+        // this->chunks.insert(Chunk {Position {-511, 0, 511}, generationFunc});
+        // this->chunks.insert(Chunk {Position {0, 0, 511}, generationFunc});
+        // this->chunks.insert(Chunk {Position {511, 0, 511}, generationFunc});
+
+        // Define the radius
+        int radius = 3; // Change this to the desired radius
+
+        // Generate chunks within the specified radius
+        for (int x = -radius; x <= radius; x++)
+        {
+            for (int z = -radius; z <= radius; z++)
+            {
+                // Calculate the position for the chunk
+                int chunkX = x * 512;
+                int chunkZ = z * 512;
+
+                // Insert the chunk using the calculated position and generation
+                // function
+                this->chunks.insert(Chunk {
+                    Position {chunkX - x, 0, chunkZ - z}, generationFunc});
+            }
+        }
     }
 
     void World::updateChunkState()

@@ -3,6 +3,7 @@
 
 #include <future>
 #include <mutex>
+#include <shared_mutex>
 #include <span>
 #include <vector>
 
@@ -32,14 +33,6 @@ namespace util
             std::apply(func, this->tuple);
         }
 
-        // void lock(std::invocable<const T&...> auto func) const
-        //     noexcept(noexcept(std::apply(func, this->tuple)))
-        // {
-        //     std::unique_lock lock {this->mutex};
-
-        //     std::apply(func, this->tuple);
-        // }
-
         bool try_lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
@@ -55,22 +48,6 @@ namespace util
                 return false;
             }
         }
-
-        // bool try_lock(std::invocable<const T&...> auto func) const
-        //     noexcept(noexcept(std::apply(func, this->tuple)))
-        // {
-        //     std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
-
-        //     if (lock.try_lock())
-        //     {
-        //         std::apply(func, this->tuple);
-        //         return true;
-        //     }
-        //     else
-        //     {
-        //         return false;
-        //     }
-        // }
 
         std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
             requires (sizeof...(T) == 1)
@@ -91,6 +68,90 @@ namespace util
     private:
         mutable std::mutex       mutex;
         mutable std::tuple<T...> tuple;
+    }; // class Mutex
+
+    template<class... T>
+    class RwLock
+    {
+    public:
+
+        explicit RwLock(T&&... t) // NOLINT
+            : tuple {std::forward<T>(t)...}
+        {}
+        ~RwLock() = default;
+
+        RwLock(const RwLock&)                 = delete;
+        RwLock(RwLock&&) noexcept             = default;
+        RwLock& operator= (const RwLock&)     = delete;
+        RwLock& operator= (RwLock&&) noexcept = default;
+
+        void write_lock(std::invocable<T&...> auto func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+        {
+            std::unique_lock lock {this->rwlock};
+
+            std::apply(func, this->tuple);
+        }
+
+        bool try_write_lock(std::invocable<T&...> auto func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+        {
+            std::unique_lock lock {this->rwlock, std::defer_lock};
+
+            if (lock.try_lock())
+            {
+                std::apply(func, this->tuple);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        void read_lock(std::invocable<const T&...> auto func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+        {
+            std::shared_lock lock {this->rwlock};
+
+            std::apply(func, this->tuple);
+        }
+
+        bool try_read_lock(std::invocable<const T&...> auto func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+        {
+            std::shared_lock lock {this->rwlock, std::defer_lock};
+
+            if (lock.try_lock())
+            {
+                std::apply(func, this->tuple);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
+            requires (sizeof...(T) == 1)
+        {
+            using V = std::tuple_element_t<0, std::tuple<T...>>;
+
+            V output {};
+
+            this->read_lock(
+                [&](const V& data)
+                {
+                    output = data;
+                });
+
+            return output;
+        }
+
+    private:
+        mutable std::shared_mutex rwlock;
+        mutable std::tuple<T...>  tuple;
     }; // class Mutex
 
     inline std::byte*

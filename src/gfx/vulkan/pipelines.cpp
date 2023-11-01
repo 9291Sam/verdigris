@@ -54,19 +54,52 @@ namespace gfx::vulkan
         , render_pass {renderPass}
         , swapchain {swapchain_}
         , allocator {allocator_}
+        , cache {{}}
     {}
 
-    Pipeline& PipelineManager::getPipeline(PipelineType pipelineToGet)
+    const Pipeline&
+    PipelineManager::getPipeline(PipelineType pipelineToGet) const
     {
-        if (!this->cache.contains(pipelineToGet))
+        const Pipeline* maybePipeline = nullptr;
+
+        this->cache.read_lock(
+            [pipelineToGet, &maybePipeline](
+                const std::unordered_map<PipelineType, Pipeline>& cache)
+            {
+                if (cache.contains(pipelineToGet))
+                {
+                    maybePipeline = &cache.at(pipelineToGet);
+                }
+            });
+
+        if (maybePipeline != nullptr)
         {
-            this->cache[pipelineToGet] = this->createPipeline(pipelineToGet);
+            return *maybePipeline;
+        }
+        else // we probablly to create the pipeline
+        {
+            this->cache.write_lock(
+                [pipelineToGet, &maybePipeline, this](
+                    std::unordered_map<PipelineType, Pipeline>& cache)
+                {
+                    // Double check someone else hasn't already created the
+                    // pipeline
+                    if (cache.contains(pipelineToGet))
+                    {
+                        maybePipeline = &cache.at(pipelineToGet);
+                        return;
+                    }
+
+                    cache[pipelineToGet] = this->createPipeline(pipelineToGet);
+
+                    maybePipeline = &cache[pipelineToGet];
+                });
         }
 
-        return this->cache[pipelineToGet];
+        return *maybePipeline;
     }
 
-    Pipeline PipelineManager::createPipeline(PipelineType typeToCreate)
+    Pipeline PipelineManager::createPipeline(PipelineType typeToCreate) const
     {
         switch (typeToCreate)
         {

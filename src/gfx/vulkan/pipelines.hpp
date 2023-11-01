@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <util/threads.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -33,24 +34,18 @@ namespace gfx::vulkan
         PipelineManager& operator= (const PipelineManager&) = delete;
         PipelineManager& operator= (PipelineManager&&)      = delete;
 
-        Pipeline& getPipeline(PipelineType);
+        const Pipeline& getPipeline(PipelineType) const;
 
     private:
-        Pipeline createPipeline(PipelineType);
+        Pipeline createPipeline(PipelineType) const;
 
         vk::Device     device;
         vk::RenderPass render_pass;
         Swapchain*     swapchain;
         Allocator*     allocator;
 
-        std::unordered_map<PipelineType, Pipeline> cache;
+        util::RwLock<std::unordered_map<PipelineType, Pipeline>> cache;
     };
-
-    Pipeline createPipeline(
-        PipelineType,
-        std::shared_ptr<Device>,
-        std::shared_ptr<RenderPass>,
-        std::shared_ptr<Swapchain>);
 
     class Pipeline // GraphicsPipeline
     {
