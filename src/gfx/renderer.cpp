@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "imgui_menu.hpp"
 #include "object.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
@@ -134,28 +135,57 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
-
-        std::vector<std::shared_ptr<const Object>> strongObjects;
-        std::vector<const Object*>                 rawObjects;
-
-        for (const auto& [id, weakRenderable] : this->draw_objects.access())
+        // Renderer fixed state
         {
-            if (std::shared_ptr<const Object> obj = weakRenderable.lock())
+            if (this->window->isActionActive(
+                    Window::Action::ToggleConsole, true))
             {
-                obj->updateFrameState();
+                this->show_menu = !this->show_menu;
 
-                if (obj->shouldDraw())
+                if (this->show_menu)
                 {
-                    rawObjects.push_back(obj.get());
-                    strongObjects.push_back(std::move(obj));
+                    this->window->detachCursor();
+                }
+                else
+                {
+                    this->window->attachCursor();
                 }
             }
         }
 
-        if (!currentFrame.render(this->draw_camera, rawObjects))
+        // collect objects and draw the frame
         {
-            this->resize();
+            vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
+
+            std::vector<std::shared_ptr<const Object>> strongObjects;
+            std::vector<const Object*>                 rawObjects;
+
+            for (const auto& [id, weakRenderable] : this->draw_objects.access())
+            {
+                if (std::shared_ptr<const Object> obj = weakRenderable.lock())
+                {
+                    obj->updateFrameState();
+
+                    if (obj->shouldDraw())
+                    {
+                        rawObjects.push_back(obj.get());
+                        strongObjects.push_back(std::move(obj));
+                    }
+                }
+            }
+
+            if (this->show_menu)
+            {
+                this->menu->render();
+            }
+
+            if (!currentFrame.render(
+                    this->draw_camera,
+                    rawObjects,
+                    this->show_menu ? this->menu.get() : nullptr))
+            {
+                this->resize();
+            }
         }
 
         this->window->endFrame();
@@ -166,6 +196,7 @@ namespace gfx
         this->window->blockThisThreadWhileMinimized();
         this->device->asLogicalDevice().waitIdle(); // stall
 
+        this->menu.reset();
         this->pipelines.reset();
         this->render_pass.reset();
         this->depth_buffer.reset();
@@ -217,6 +248,12 @@ namespace gfx
                         }));
                 });
         }
+
+        this->menu = std::make_unique<ImGuiMenu>(
+            *this->window,
+            **this->instance,
+            *this->device,
+            **this->render_pass);
     }
 
     void Renderer::registerObject(

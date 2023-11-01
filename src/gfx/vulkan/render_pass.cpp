@@ -2,6 +2,7 @@
 #include "device.hpp"
 #include "image.hpp"
 #include "swapchain.hpp"
+#include <gfx/imgui_menu.hpp>
 #include <util/log.hpp>
 
 namespace gfx::vulkan
@@ -195,8 +196,10 @@ namespace gfx::vulkan
             this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
     }
 
-    std::expected<void, Frame::ResizeNeeded>
-    Frame::render(Camera camera, const std::span<const Object*> unsortedObjects)
+    std::expected<void, Frame::ResizeNeeded> Frame::render(
+        Camera                         camera,
+        const std::span<const Object*> unsortedObjects,
+        ImGuiMenu*                     menu)
     {
         std::optional<bool> shouldResize = std::nullopt;
 
@@ -330,10 +333,10 @@ namespace gfx::vulkan
                     o->bindAndDraw(commandBuffer, bindState, camera);
                 }
 
-                // if (menu != std::nullopt)
-                // {
-                //     (*menu)->draw(commandBuffer);
-                // }
+                if (menu != nullptr)
+                {
+                    menu->draw(commandBuffer);
+                }
 
                 commandBuffer.endRenderPass();
                 commandBuffer.end();

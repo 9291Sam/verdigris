@@ -116,20 +116,19 @@ gfx::ImGuiMenu::ImGuiMenu(
         ImGui_ImplVulkan_Init(&imgui_init_info, renderPass),
         "Failed to initalize imguiVulkan");
 
-    const vk::SemaphoreCreateInfo semaphoreCreateInfo {
-        .sType {vk::StructureType::eSemaphoreCreateInfo},
+    const vk::FenceCreateInfo fenceCreateInfo {
+        .sType {vk::StructureType::eFenceCreateInfo},
         .pNext {nullptr},
         .flags {},
     };
 
-    vk::UniqueSemaphore imguiFontSemaphore =
-        device.asLogicalDevice().createSemaphoreUnique(semaphoreCreateInfo);
+    vk::UniqueFence imguiFontUploadFence =
+        device.asLogicalDevice().createFenceUnique(fenceCreateInfo);
 
     // Upload fonts
     device.accessQueue(
         vk::QueueFlagBits::eGraphics,
-        [this, outSignalSemaphore = *imguiFontSemaphore](
-            vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
+        [&](vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
         {
             const vk::CommandBufferBeginInfo BeginInfo {
                 .sType {vk::StructureType::eCommandBufferBeginInfo},
@@ -138,13 +137,9 @@ gfx::ImGuiMenu::ImGuiMenu(
                 .pInheritanceInfo {nullptr},
             };
 
-            // TODO: try not to be fast and loose with errors
-
             commandBuffer.begin(BeginInfo);
 
-            {
-                ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-            }
+            ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
 
             commandBuffer.end();
 
@@ -156,31 +151,20 @@ gfx::ImGuiMenu::ImGuiMenu(
                 .pWaitDstStageMask {nullptr},
                 .commandBufferCount {1},
                 .pCommandBuffers {&commandBuffer},
-                .signalSemaphoreCount {1},
-                .pSignalSemaphores {&outSignalSemaphore},
+                .signalSemaphoreCount {0},
+                .pSignalSemaphores {nullptr},
             };
 
-            queue.submit(SubmitInfo);
+            queue.submit(SubmitInfo, *imguiFontUploadFence);
         });
 
-    const vk::SemaphoreWaitInfo semaphoreWaitInfo {
-        .sType {vk::StructureType::eSemaphoreWaitInfo},
-        .pNext {nullptr},
-        .flags {},
-        .semaphoreCount {1},
-        .pSemaphores {&*imguiFontSemaphore},
-        .pValues {nullptr},
-    };
-
-    const vk::Result result =
-        device.asLogicalDevice().waitSemaphores(semaphoreWaitInfo, -1);
-
-    // wait idle for the upload to finish (this is fine its only done once,
-    // if its a problem use one of the signal semaphores)
+    const vk::Result result = device.asLogicalDevice().waitForFences(
+        *imguiFontUploadFence, static_cast<vk::Bool32>(true), -1);
 
     util::assertFatal(
         result == vk::Result::eSuccess,
-        "Failed to wait for upload semaphore imgui");
+        "Failed to wait for upload semaphore imgui | {}",
+        vk::to_string(result));
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 

@@ -8,6 +8,11 @@
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
+namespace gfx
+{
+    class ImGuiMenu;
+}
+
 namespace gfx::vulkan
 {
     class Device;
@@ -64,10 +69,8 @@ namespace gfx::vulkan
         Frame& operator= (Frame&&) noexcept = default;
 
         // @return {true}, is resize needed
-        [[nodiscard]] std::expected<void, ResizeNeeded> render(
-            Camera, std::span<const Object*>
-            // std::optional<ImGuiMenu*> menu
-        );
+        [[nodiscard]] std::expected<void, ResizeNeeded>
+        render(Camera, std::span<const Object*>, ImGuiMenu*);
 
     private:
         Device*                             device;

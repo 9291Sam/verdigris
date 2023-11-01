@@ -68,11 +68,14 @@ namespace gfx
         std::unique_ptr<vulkan::Image2D>         depth_buffer;
         std::unique_ptr<vulkan::RenderPass>      render_pass;
         std::unique_ptr<vulkan::PipelineManager> pipelines;
+        std::unique_ptr<ImGuiMenu>               menu;
 
         // Renderer state
         util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
 
         mutable std::atomic<Camera> draw_camera;
+
+        bool show_menu;
     };
 } // namespace gfx
 
