@@ -45,7 +45,12 @@ namespace gfx::vulkan
             vk::PipelineStageFlags destinationStage,
             vk::AccessFlags        sourceAccess,
             vk::AccessFlags        destinationAccess);
-        void copyFromBuffer(vk::CommandBuffer, const Buffer&);
+        void copyFromBuffer(
+            vk::CommandBuffer,
+            const Buffer&,
+            vk::ImageLayout        endLayout,
+            vk::PipelineStageFlags happensBeforeStage,
+            vk::AccessFlags        endAccess);
 
     private:
         VmaAllocator allocator;

@@ -282,13 +282,9 @@ namespace gfx
 
             ImGui::TextUnformatted(fpsAndTps.c_str());
 
-            const std::string s = state.string;
-            ImGui::PushTextWrapPos(0.0f);
-            ImGui::TextUnformatted(state.string.c_str());
-            ImGui::PopTextWrapPos();
-
-            ImGui::Image((ImTextureID)this->image_descriptor, ImVec2(256, 256));
-
+            ImGui::Image(
+                (ImTextureID)(this->image_descriptor), ImVec2(256, 256));
+            // std::reinterpret_pointer_cast();
             ImGui::End();
         }
 

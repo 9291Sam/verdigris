@@ -157,27 +157,48 @@ namespace gfx::vulkan
     }
 
     void Image2D::copyFromBuffer(
-        vk::CommandBuffer commandBuffer, const Buffer& buffer)
+        vk::CommandBuffer      commandBuffer,
+        const Buffer&          buffer,
+        vk::ImageLayout        endLayout,
+        vk::PipelineStageFlags happensBeforeStage,
+        vk::AccessFlags        endAccess)
     {
-        util::debugBreak(); // need to actually transition layouts correctely.
+        this->transitionLayout(
+            commandBuffer,
+            this->layout,
+            vk::ImageLayout::eTransferDstOptimal,
+            vk::PipelineStageFlagBits::eHost,
+            vk::PipelineStageFlagBits::eTransfer,
+            vk::AccessFlagBits::eNone,
+            vk::AccessFlagBits::eTransferWrite);
 
-        vk::BufferImageCopy copyParams {
+        vk::BufferImageCopy region {
             .bufferOffset {0},
             .bufferRowLength {0},
             .bufferImageHeight {0},
-            .imageSubresource {vk::ImageSubresourceLayers {
+            .imageSubresource {
                 .aspectMask {this->aspect},
-                .mipLevel {1},
+                .mipLevel {0},
                 .baseArrayLayer {0},
                 .layerCount {1},
-            }},
-            .imageOffset {0},
+
+            },
+            .imageOffset {vk::Offset3D {0, 0, 0}},
             .imageExtent {
                 vk::Extent3D {this->extent.width, this->extent.height, 1}},
         };
 
         commandBuffer.copyBufferToImage(
-            *buffer, this->image, this->layout, copyParams);
+            *buffer, this->image, this->layout, region);
+
+        this->transitionLayout(
+            commandBuffer,
+            vk::ImageLayout::eTransferDstOptimal,
+            endLayout,
+            vk::PipelineStageFlagBits::eTransfer,
+            happensBeforeStage,
+            vk::AccessFlagBits::eTransferWrite,
+            endAccess);
     }
 
 } // namespace gfx::vulkan

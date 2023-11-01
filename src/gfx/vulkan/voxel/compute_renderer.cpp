@@ -24,7 +24,8 @@ namespace gfx::vulkan::voxel
               vk::ImageTiling::eOptimal,
               vk::MemoryPropertyFlagBits::eDeviceLocal}
     {
-        std::uint32_t srgbFillColor {0x007F8FFF};
+        // A R G B
+        std::uint32_t srgbFillColor {0xFF'00'AF'9F};
 
         vulkan::Buffer fillBuffer {
             this->allocator,
@@ -63,7 +64,12 @@ namespace gfx::vulkan::voxel
 
                 commandBuffer.begin(BeginInfo);
 
-                this->output_image.copyFromBuffer(commandBuffer, fillBuffer);
+                this->output_image.copyFromBuffer(
+                    commandBuffer,
+                    fillBuffer,
+                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                    vk::PipelineStageFlagBits::eFragmentShader,
+                    vk::AccessFlagBits::eShaderRead);
 
                 commandBuffer.end();
 

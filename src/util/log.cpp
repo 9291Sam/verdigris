@@ -22,6 +22,8 @@ namespace util
                 return "Warn ";
             case LoggingLevel::Fatal:
                 return "Fatal";
+            case LoggingLevel::Panic:
+                return "Panic";
             default:
                 return "Unknown level";
             };
@@ -215,7 +217,7 @@ namespace util
             }(),
             message);
 
-        if (level == LoggingLevel::Fatal || level == LoggingLevel::Warn)
+        if (level >= LoggingLevel::Warn)
         {
             std::ignore =
                 std::fwrite(output.data(), sizeof(char), output.size(), stdout);

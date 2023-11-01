@@ -24,6 +24,9 @@ namespace game::entity
     private:
         std::shared_ptr<gfx::SimpleTriangulatedObject> object;
 
+        glm::vec3     root;
+        mutable float time_alive;
+
         Cube(const Game&, glm::vec3 position);
     };
 } // namespace game::entity

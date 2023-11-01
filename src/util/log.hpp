@@ -15,7 +15,8 @@ namespace util
         Debug = 1,
         Log   = 2,
         Warn  = 3,
-        Fatal = 4
+        Fatal = 4,
+        Panic = 5,
     };
 
     void installGlobalLoggerRacy();
@@ -132,7 +133,7 @@ namespace util
 
             asynchronouslyLog(
                 message,
-                LoggingLevel::Fatal,
+                LoggingLevel::Panic,
                 location,
                 std::chrono::system_clock::now());
 
