@@ -18,6 +18,16 @@ namespace gfx
     class ImGuiMenu
     {
     public:
+
+        struct State
+        {
+            glm::vec3   player_position;
+            float       fps;
+            float       tps;
+            std::string string;
+        };
+
+    public:
         ImGuiMenu(
             const Window&, vk::Instance, const vulkan::Device&, vk::RenderPass);
         ~ImGuiMenu() noexcept;
@@ -27,20 +37,12 @@ namespace gfx
         ImGuiMenu& operator= (const ImGuiMenu&) = delete;
         ImGuiMenu& operator= (ImGuiMenu&&)      = delete;
 
-        void setPlayerPosition(glm::vec3) const;
-        void setFps(float) const;
-
-        void render();
+        void render(State&);
         void draw(vk::CommandBuffer);
 
     private:
-        // rendering things
         vk::UniqueDescriptorPool pool;
-
-        // menu items
-        mutable std::atomic<glm::vec3> player_position;
-        mutable std::atomic<float>     fps;
-        std::string                    string;
+        /// Unfortunately, imgui is entirely based off of global state.
     };
 } // namespace gfx
 

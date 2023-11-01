@@ -24,14 +24,7 @@ namespace util
         Mutex& operator= (const Mutex&)     = delete;
         Mutex& operator= (Mutex&&) noexcept = default;
 
-        void lock(std::invocable<T&...> auto func) noexcept(noexcept(std::apply(func, this->tuple)))
-        {
-            std::unique_lock lock {this->mutex};
-
-            std::apply(func, this->tuple);
-        }
-
-        void lock(std::invocable<const T&...> auto func) const
+        void lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->mutex};
@@ -39,23 +32,15 @@ namespace util
             std::apply(func, this->tuple);
         }
 
-        bool
-        try_lock(std::invocable<T&...> auto func) noexcept(noexcept(std::apply(func, this->tuple)))
-        {
-            std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
+        // void lock(std::invocable<const T&...> auto func) const
+        //     noexcept(noexcept(std::apply(func, this->tuple)))
+        // {
+        //     std::unique_lock lock {this->mutex};
 
-            if (lock.try_lock())
-            {
-                std::apply(func, this->tuple);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
+        //     std::apply(func, this->tuple);
+        // }
 
-        bool try_lock(std::invocable<const T&...> auto func) const
+        bool try_lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
@@ -70,6 +55,22 @@ namespace util
                 return false;
             }
         }
+
+        // bool try_lock(std::invocable<const T&...> auto func) const
+        //     noexcept(noexcept(std::apply(func, this->tuple)))
+        // {
+        //     std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
+
+        //     if (lock.try_lock())
+        //     {
+        //         std::apply(func, this->tuple);
+        //         return true;
+        //     }
+        //     else
+        //     {
+        //         return false;
+        //     }
+        // }
 
         std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
             requires (sizeof...(T) == 1)
@@ -88,14 +89,17 @@ namespace util
         }
 
     private:
-        mutable std::mutex mutex;
-        std::tuple<T...>   tuple;
+        mutable std::mutex       mutex;
+        mutable std::tuple<T...> tuple;
     }; // class Mutex
 
-    inline std::byte* threadedMemcpy(std::byte* dst, std::span<const std::byte> src)
+    inline std::byte*
+    threadedMemcpy(std::byte* dst, std::span<const std::byte> src)
     {
-        const std::size_t numberOfThreads      = std::thread::hardware_concurrency() * 3 / 4;
-        const std::size_t threadDelegationSize = src.size_bytes() / numberOfThreads;
+        const std::size_t numberOfThreads =
+            std::thread::hardware_concurrency() * 3 / 4;
+        const std::size_t threadDelegationSize =
+            src.size_bytes() / numberOfThreads;
 
         std::vector<std::future<void>> futures {};
         futures.reserve(numberOfThreads);
@@ -131,7 +135,8 @@ namespace util
         return dst;
     }
 
-    inline std::byte* threadedMemcpy(std::byte* dst, const std::byte* src, std::size_t size)
+    inline std::byte*
+    threadedMemcpy(std::byte* dst, const std::byte* src, std::size_t size)
     {
         return threadedMemcpy(dst, std::span<const std::byte> {src, size});
     }

@@ -25,7 +25,7 @@ namespace game
     {
     public:
 
-        explicit Game(const gfx::Renderer&);
+        explicit Game(gfx::Renderer&);
         ~Game();
 
         Game(const Game&)             = delete;
@@ -47,12 +47,9 @@ namespace game
         void registerEntity(const std::shared_ptr<const entity::Entity>&) const;
         void removeEntity(util::UUID) const;
 
-        const gfx::Renderer& renderer;
+        gfx::Renderer& renderer;
         util::Registrar<util::UUID, std::weak_ptr<const entity::Entity>>
             entities;
-        // TODO: move this isolated since it needs to be isolated for better
-        // movement
-        // we need a "game"(physics) tick and then a "world" tick?
 
         Player                                       player;
         // world::World                                 world;

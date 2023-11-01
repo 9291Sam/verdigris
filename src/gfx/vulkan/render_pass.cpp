@@ -199,7 +199,8 @@ namespace gfx::vulkan
     std::expected<void, Frame::ResizeNeeded> Frame::render(
         Camera                         camera,
         const std::span<const Object*> unsortedObjects,
-        ImGuiMenu*                     menu)
+        ImGuiMenu*                     menu,
+        std::function<void()>          postFrameUploadFunc)
     {
         std::optional<bool> shouldResize = std::nullopt;
 
@@ -397,6 +398,10 @@ namespace gfx::vulkan
                             vk::to_string(vk::Result {result}));
                     }
                 }
+
+                // we can do basically whatever the fuck we want since this
+                // thread is going to be stalled on rendering the frame.
+                postFrameUploadFunc();
 
                 const vk::Result result =
                     this->device->asLogicalDevice().waitForFences(

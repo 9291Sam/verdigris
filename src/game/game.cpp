@@ -1,12 +1,13 @@
 #include "game.hpp"
 #include "entity/cube.hpp"
 #include "entity/disk_entity.hpp"
+#include <gfx/imgui_menu.hpp>
 #include <gfx/renderer.hpp>
 #include <util/log.hpp>
 
 namespace game
 {
-    Game::Game(const gfx::Renderer& renderer_)
+    Game::Game(gfx::Renderer& renderer_)
         : renderer {renderer_}
         , entities {}
         , player {*this, {-30.0f, 20.0f, -20.0f}}
@@ -59,8 +60,6 @@ namespace game
 
         this->player.tick();
 
-        // this->world.updateChunkState();
-
         this->renderer.setCamera(this->player.getCamera());
 
         strongEntityTickFutures.clear(); // await all futures
@@ -73,6 +72,12 @@ namespace game
             std::memory_order_release);
 
         this->last_tick_end_time = thisFrameEndTime;
+
+        this->renderer.getMenuState().lock(
+            [&](gfx::ImGuiMenu::State& state)
+            {
+                state.tps = 1 / this->getTickDeltaTimeSeconds();
+            });
     }
 
     void Game::registerEntity(

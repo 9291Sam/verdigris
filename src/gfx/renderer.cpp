@@ -70,7 +70,9 @@ namespace gfx
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, *this->device)}
+        , menu_state {ImGuiMenu::State {}}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
+        , show_menu {false}
     {
         this->initializeRenderer();
     }
@@ -93,6 +95,11 @@ namespace gfx
         const auto deltaRadiansY = (nDeltaY / 2) * this->getFovYRadians();
 
         return Window::Delta {.x {deltaRadiansX}, .y {deltaRadiansY}};
+    }
+
+    const util::Mutex<ImGuiMenu::State>& Renderer::getMenuState() const
+    {
+        return this->menu_state;
     }
 
     [[nodiscard]] bool Renderer::isActionActive(Window::Action a) const
@@ -123,7 +130,7 @@ namespace gfx
         return static_cast<float>(width) / static_cast<float>(height);
     }
 
-    void Renderer::setCamera(Camera c) const
+    void Renderer::setCamera(Camera c)
     {
         this->draw_camera = c;
     }
@@ -135,7 +142,7 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        // Renderer fixed state
+        auto updateAfterFrameFunc = [&]
         {
             if (this->window->isActionActive(
                     Window::Action::ToggleConsole, true))
@@ -151,11 +158,31 @@ namespace gfx
                     this->window->attachCursor();
                 }
             }
-        }
 
-        // collect objects and draw the frame
+            this->menu_state.lock(
+                [&](ImGuiMenu::State& state)
+                {
+                    state.fps = 1 / this->getFrameDeltaTimeSeconds();
+                });
+        };
+
+        // collect objects and draw the frame TODO: move to isolate thread
         {
             vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
+
+            std::future<void> menuRender = std::async(
+                std::launch::async,
+                [&]
+                {
+                    if (this->show_menu)
+                    {
+                        this->menu_state.lock(
+                            [&](ImGuiMenu::State& state)
+                            {
+                                this->menu->render(state);
+                            });
+                    }
+                });
 
             std::vector<std::shared_ptr<const Object>> strongObjects;
             std::vector<const Object*>                 rawObjects;
@@ -174,15 +201,13 @@ namespace gfx
                 }
             }
 
-            if (this->show_menu)
-            {
-                this->menu->render();
-            }
+            menuRender.get();
 
             if (!currentFrame.render(
                     this->draw_camera,
                     rawObjects,
-                    this->show_menu ? this->menu.get() : nullptr))
+                    this->show_menu ? this->menu.get() : nullptr,
+                    updateAfterFrameFunc))
             {
                 this->resize();
             }

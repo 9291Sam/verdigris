@@ -2,9 +2,11 @@
 #define SRC_GFX_RENDERER_HPP
 
 #include "camera.hpp"
+#include "imgui_menu.hpp"
 #include "window.hpp"
 #include <memory>
 #include <util/registrar.hpp>
+#include <util/threads.hpp>
 #include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -37,6 +39,7 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
+        [[nodiscard]] const util::Mutex<ImGuiMenu::State>& getMenuState() const;
         [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
         [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
 
@@ -45,7 +48,7 @@ namespace gfx
         [[nodiscard]] float getFovXRadians() const;
         [[nodiscard]] float getAspectRatio() const;
 
-        void               setCamera(Camera) const;
+        void               setCamera(Camera);
         [[nodiscard]] bool continueTicking();
         void               drawFrame();
 
@@ -68,20 +71,22 @@ namespace gfx
         std::unique_ptr<vulkan::Image2D>         depth_buffer;
         std::unique_ptr<vulkan::RenderPass>      render_pass;
         std::unique_ptr<vulkan::PipelineManager> pipelines;
-        std::unique_ptr<ImGuiMenu>               menu;
 
-        // Renderer state
-        util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
+        // Drawing things
+        std::unique_ptr<ImGuiMenu> menu;
+        util::Registrar<util::UUID, std::weak_ptr<const Object>>
+            draw_objects; // rasterizeables
+        // std::unique_ptr<VoxelComputeRenderer>
 
+        // State
+        util::Mutex<ImGuiMenu::State> menu_state;
+        std::atomic<Camera>           draw_camera;
+        bool                          show_menu;
         // things to draw
         // std::unique_ptr<VoxelComputeRenderer> voxel_renderer;
         // poke into menu and get the image
         // start with rendering a constant color image
         // then try to do a simple ray trace of a fixed size like 1024
-
-        mutable std::atomic<Camera> draw_camera;
-
-        bool show_menu;
     };
 } // namespace gfx
 

@@ -4,7 +4,8 @@
 
 namespace gfx::vulkan
 {
-    Swapchain::Swapchain(const Device& device_, vk::SurfaceKHR surface, vk::Extent2D extent_)
+    Swapchain::Swapchain(
+        const Device& device_, vk::SurfaceKHR surface, vk::Extent2D extent_)
         : device {device_.asLogicalDevice()}
         , extent {extent_}
         , format {vk::SurfaceFormatKHR {
@@ -14,28 +15,47 @@ namespace gfx::vulkan
         , images {}      // NOLINT
         , image_views {} // NOLINT
     {
-        const auto availableSurfaces = device_.asPhysicalDevice().getSurfaceFormatsKHR(surface);
+        const auto availableSurfaces =
+            device_.asPhysicalDevice().getSurfaceFormatsKHR(surface);
 
-        if (std::ranges::find(availableSurfaces, this->format) == availableSurfaces.end())
+        if (std::ranges::find(availableSurfaces, this->format)
+            == availableSurfaces.end())
         {
             util::panic("Failed to find ideal surface format!");
         }
 
         const vk::PresentModeKHR selectedPresentMode = [&]
         {
+            const std::array presentModeSelectionOrder {
+                vk::PresentModeKHR::eMailbox,
+                vk::PresentModeKHR::eImmediate,
+                vk::PresentModeKHR::eFifo,
+            };
+
             const auto availablePresentModes =
                 device_.asPhysicalDevice().getSurfacePresentModesKHR(surface);
 
-            if (std::ranges::find(availablePresentModes, vk::PresentModeKHR::eMailbox)
-                != availablePresentModes.cend())
+            for (vk::PresentModeKHR availableMode : availablePresentModes)
             {
-                return vk::PresentModeKHR::eMailbox;
+                util::logTrace(
+                    "Present mode {} available", vk::to_string(availableMode));
             }
-            else
+
+            for (vk::PresentModeKHR m : presentModeSelectionOrder)
             {
-                return vk::PresentModeKHR::eFifo;
+                if (std::ranges::find(availablePresentModes, m)
+                    != availablePresentModes.cend())
+                {
+                    return m;
+                }
             }
+
+            util::logWarn("Unable to select a present mode!");
+            return vk::PresentModeKHR::eFifo;
         }();
+
+        util::logTrace(
+            "Selected {} as present mode", vk::to_string(selectedPresentMode));
 
         const vk::SurfaceCapabilitiesKHR surfaceCapabilities =
             device_.asPhysicalDevice().getSurfaceCapabilitiesKHR(surface);
@@ -68,8 +88,9 @@ namespace gfx::vulkan
         };
         // clang-format on
 
-        this->swapchain = this->device.createSwapchainKHRUnique(swapchainCreateInfoKHR);
-        this->images    = this->device.getSwapchainImagesKHR(*this->swapchain);
+        this->swapchain =
+            this->device.createSwapchainKHRUnique(swapchainCreateInfoKHR);
+        this->images = this->device.getSwapchainImagesKHR(*this->swapchain);
 
         // image view initialization
         this->image_views.reserve(this->images.size());
@@ -98,7 +119,8 @@ namespace gfx::vulkan
                 },
             };
 
-            this->image_views.push_back(this->device.createImageViewUnique(imageCreateInfo));
+            this->image_views.push_back(
+                this->device.createImageViewUnique(imageCreateInfo));
         }
     }
 

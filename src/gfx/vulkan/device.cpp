@@ -51,13 +51,13 @@ namespace gfx::vulkan
                 });
         }
 
+        constexpr std::size_t                maxNumberOfQueues {128};
+        std::array<float, maxNumberOfQueues> queuePriorites {};
+        std::fill(queuePriorites.begin(), queuePriorites.end(), 1.0f);
+
         // Collect queue information
         std::vector<QueueCreateInfoAndMetadata> metaDataQueueCreateInfos {};
         {
-            constexpr std::size_t                maxNumberOfQueues {128};
-            std::array<float, maxNumberOfQueues> queuePriorites {};
-            std::fill(queuePriorites.begin(), queuePriorites.end(), 1.0f);
-
             std::size_t idx = 0;
             for (vk::QueueFamilyProperties p :
                  this->physical_device.getQueueFamilyProperties())

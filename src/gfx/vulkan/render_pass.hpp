@@ -2,9 +2,11 @@
 #define SRC_GFX_VULKAN_RENDER__PASS_HPP
 
 #include <expected>
+#include <functional>
 #include <gfx/camera.hpp>
 #include <gfx/object.hpp>
 #include <span>
+#include <util/misc.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -69,8 +71,12 @@ namespace gfx::vulkan
         Frame& operator= (Frame&&) noexcept = default;
 
         // @return {true}, is resize needed
-        [[nodiscard]] std::expected<void, ResizeNeeded>
-        render(Camera, std::span<const Object*>, ImGuiMenu*);
+        [[nodiscard]] std::expected<void, ResizeNeeded> render(
+            Camera,
+            std::span<const Object*>,
+            ImGuiMenu*,
+            std::function<void()>
+                postFrameUploadFunc); // TODO: move only function
 
     private:
         Device*                             device;
