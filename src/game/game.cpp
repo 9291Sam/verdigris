@@ -11,7 +11,7 @@ namespace game
         : renderer {renderer_}
         , entities {}
         , player {*this, {-30.0f, 20.0f, -20.0f}}
-    // , world {*this}
+        , world {*this}
     {
         this->temp_entities.push_back(
             entity::Cube::create(*this, glm::vec3 {0.0f, 12.5f, 0.0f}));
@@ -61,6 +61,8 @@ namespace game
         this->player.tick();
 
         this->renderer.setCamera(this->player.getCamera());
+
+        this->world.updateChunkState();
 
         strongEntityTickFutures.clear(); // await all futures
 

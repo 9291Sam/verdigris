@@ -314,13 +314,15 @@ namespace game::world
         vertices.reserve(9'000'000);
         // for (std::size_t x = 0; x < SparseVoxelVolume) }
 
-        for (const auto& [x, xArray] : this->data | boost::adaptors::indexed(0))
+        for (std::size_t xIdx = 0; xIdx < this->data.size(); ++xIdx)
         {
-            for (const auto& [y, yArray] : xArray | boost::adaptors::indexed(0))
+            for (std::size_t yIdx = 0; yIdx < this->data[xIdx].size(); ++yIdx)
             {
-                for (const auto& [z, voxel] :
-                     yArray | boost::adaptors::indexed(0))
+                for (std::size_t zIdx = 0; zIdx < this->data[xIdx][yIdx].size();
+                     ++zIdx)
                 {
+                    auto& voxel = this->data[xIdx][yIdx][zIdx];
+
                     std::visit(
                         util::VariantHelper {
                             [&](const std::unique_ptr<VoxelVolume>& volume)
@@ -328,19 +330,19 @@ namespace game::world
                                 const Position LocalVolumeOffset {
                                     localOffset
                                     + Position {
-                                        (static_cast<std::int32_t>(x)
+                                        (static_cast<std::int32_t>(xIdx)
                                          - static_cast<std::int32_t>(
                                                SparseVoxelVolume::Extent)
                                                / 2)
                                             * static_cast<std::int32_t>(
                                                 VoxelVolume::Extent),
-                                        (static_cast<std::int32_t>(y)
+                                        (static_cast<std::int32_t>(yIdx)
                                          - static_cast<std::int32_t>(
                                                SparseVoxelVolume::Extent)
                                                / 2)
                                             * static_cast<std::int32_t>(
                                                 VoxelVolume::Extent),
-                                        (static_cast<std::int32_t>(z)
+                                        (static_cast<std::int32_t>(zIdx)
                                          - static_cast<std::int32_t>(
                                                SparseVoxelVolume::Extent)
                                                / 2)

@@ -54,103 +54,103 @@ namespace game::world
         const std::int32_t localMaxPollingZ =
             SparseVoxelVolume::VoxelMaximum + this->location.z;
 
-        this->future_volume =
-            util::runAsynchronously<std::shared_ptr<SparseVoxelVolume>>(
-                // TODO: find why replacing position = this->location with just
-                // a default `=` capture and calling it directely causes a
-                // `stack-buffer-overrun` i.e a read after free
-                [position = this->location,
-                 generationFunc,
-                 localMinPollingX,
-                 localMaxPollingX,
-                 localMinPollingZ,
-                 localMaxPollingZ]
+        this->future_volume = std::async(
+            std::launch::async,
+            // TODO: find why replacing position = this->location with just
+            // a default `=` capture and calling it directely causes a
+            // `stack-buffer-overrun` i.e a read after free
+            [position = this->location,
+             generationFunc,
+             localMinPollingX,
+             localMaxPollingX,
+             localMinPollingZ,
+             localMaxPollingZ]
+            {
+                // util::logTrace(
+                //     "SparseVolume creation started @ {}",
+                //     static_cast<std::string>(position));
+
+                auto start = std::chrono::high_resolution_clock::now();
+
+                std::shared_ptr<SparseVoxelVolume> volume =
+                    std::make_shared<SparseVoxelVolume>();
+
+                for (std::int32_t pollingX :
+                     std::views::iota(localMinPollingX, localMaxPollingX))
                 {
-                    // util::logTrace(
-                    //     "SparseVolume creation started @ {}",
-                    //     static_cast<std::string>(position));
-
-                    auto start = std::chrono::high_resolution_clock::now();
-
-                    std::shared_ptr<SparseVoxelVolume> volume =
-                        std::make_shared<SparseVoxelVolume>();
-
-                    for (std::int32_t pollingX :
-                         std::views::iota(localMinPollingX, localMaxPollingX))
+                    for (std::int32_t pollingZ :
+                         std::views::iota(localMinPollingZ, localMaxPollingZ))
                     {
-                        for (std::int32_t pollingZ : std::views::iota(
-                                 localMinPollingZ, localMaxPollingZ))
-                        {
-                            const float normalizedX =
-                                static_cast<float>(util::map<double>(
-                                    static_cast<double>(pollingX),
-                                    static_cast<double>(localMinPollingX),
-                                    static_cast<double>(localMaxPollingX),
-                                    0.0,
-                                    1.0));
+                        const float normalizedX =
+                            static_cast<float>(util::map<double>(
+                                static_cast<double>(pollingX),
+                                static_cast<double>(localMinPollingX),
+                                static_cast<double>(localMaxPollingX),
+                                0.0,
+                                1.0));
 
-                            const float normalizedZ =
-                                static_cast<float>(util::map<double>(
-                                    static_cast<double>(pollingZ),
-                                    static_cast<double>(localMinPollingZ),
-                                    static_cast<double>(localMaxPollingZ),
-                                    0.0,
-                                    1.0));
+                        const float normalizedZ =
+                            static_cast<float>(util::map<double>(
+                                static_cast<double>(pollingZ),
+                                static_cast<double>(localMinPollingZ),
+                                static_cast<double>(localMaxPollingZ),
+                                0.0,
+                                1.0));
 
-                            // glm::vec4 color {
-                            //     0.0f,
-                            //     util::map(normalizedX, -1.0f, 1.0f,
-                            //     0.0f, 1.0f), util::map(normalizedZ,
-                            //     -1.0f, 1.0f, 0.0f, 1.0f), 1.0f};
+                        // glm::vec4 color {
+                        //     0.0f,
+                        //     util::map(normalizedX, -1.0f, 1.0f,
+                        //     0.0f, 1.0f), util::map(normalizedZ,
+                        //     -1.0f, 1.0f, 0.0f, 1.0f), 1.0f};
 
-                            // glm::vec4 color {
-                            //     0.0f,
-                            //     4 * normalizedX - 4 * normalizedX *
-                            //     normalizedX, 4 * normalizedZ - 4 *
-                            //     normalizedZ * normalizedZ, 1.0f};
+                        // glm::vec4 color {
+                        //     0.0f,
+                        //     4 * normalizedX - 4 * normalizedX *
+                        //     normalizedX, 4 * normalizedZ - 4 *
+                        //     normalizedZ * normalizedZ, 1.0f};
 
-                            glm::vec4 color {
-                                0.0f,
-                                std::exp(
-                                    -12.0 * (normalizedX - 0.5)
-                                    * (normalizedX - 0.5)),
-                                std::exp(
-                                    -12.0 * (normalizedZ - 0.5)
-                                    * (normalizedZ - 0.5)),
-                                1.0f};
+                        glm::vec4 color {
+                            0.0f,
+                            std::exp(
+                                -12.0 * (normalizedX - 0.5)
+                                * (normalizedX - 0.5)),
+                            std::exp(
+                                -12.0 * (normalizedZ - 0.5)
+                                * (normalizedZ - 0.5)),
+                            1.0f};
 
-                            Position polled {
-                                pollingX,
-                                generationFunc(pollingX, pollingZ),
-                                pollingZ};
+                        Position polled {
+                            pollingX,
+                            generationFunc(pollingX, pollingZ),
+                            pollingZ};
 
-                            Position accessPosition = polled - position;
+                        Position accessPosition = polled - position;
 
-                            // util::logTrace(
-                            //     "accessPosition {} | Polled {} | loc {}",
-                            //     static_cast<std::string>(accessPosition),
-                            //     static_cast<std::string>(polled),
-                            //     static_cast<std::string>(position));
+                        // util::logTrace(
+                        //     "accessPosition {} | Polled {} | loc {}",
+                        //     static_cast<std::string>(accessPosition),
+                        //     static_cast<std::string>(polled),
+                        //     static_cast<std::string>(position));
 
-                            volume->accessFromLocalPosition(accessPosition) =
-                                world::Voxel {
-                                    .r {util::convertLinearToSRGB(color.r)},
-                                    .g {util::convertLinearToSRGB(color.g)},
-                                    .b {util::convertLinearToSRGB(color.b)},
-                                    .a {util::convertLinearToSRGB(color.a)}};
-                        }
+                        volume->accessFromLocalPosition(accessPosition) =
+                            world::Voxel {
+                                .r {util::convertLinearToSRGB(color.r)},
+                                .g {util::convertLinearToSRGB(color.g)},
+                                .b {util::convertLinearToSRGB(color.b)},
+                                .a {util::convertLinearToSRGB(color.a)}};
                     }
+                }
 
-                    auto end = std::chrono::high_resolution_clock::now();
+                auto end = std::chrono::high_resolution_clock::now();
 
-                    util::logTrace(
-                        "Generated chunk in {}ms",
-                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                            end - start)
-                            .count());
+                util::logTrace(
+                    "Generated chunk in {}ms",
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        end - start)
+                        .count());
 
-                    return volume;
-                });
+                return volume;
+            });
     }
 
     void Chunk::updateDrawState(const gfx::Renderer& renderer)
@@ -158,13 +158,13 @@ namespace game::world
         switch (this->state)
         {
         case ChunkStates::WaitingForVolume:
-            if (std::optional<std::shared_ptr<SparseVoxelVolume>> newVolume =
-                    this->future_volume->tryAwait())
-            {
-                this->volume = std::move(*newVolume);
 
-                this->future_object = util::runAsynchronously<
-                    std::shared_ptr<gfx::SimpleTriangulatedObject>>(
+            if (this->future_volume->valid())
+            {
+                this->volume = std::move(this->future_volume->get());
+
+                this->future_object = std::async(
+                    std::launch::async,
                     [location  = this->location,
                      volume    = this->volume,
                      &renderer = renderer]
@@ -198,10 +198,9 @@ namespace game::world
 
         case ChunkStates::WaitingForObject:
 
-            if (std::optional<std::shared_ptr<gfx::SimpleTriangulatedObject>>
-                    newObject = this->future_object->tryAwait())
+            if (this->future_object->valid())
             {
-                this->object = std::move(*newObject);
+                this->object = std::move(this->future_object->get());
 
                 this->state = ChunkStates::Initalized;
 
@@ -231,7 +230,7 @@ namespace game::world
         default:
             util::panic(
                 "Chunk::draw() called with invalid state {}",
-                util::toUnderlying(this->state));
+                std::to_underlying(this->state));
 
             return;
         }

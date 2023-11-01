@@ -248,6 +248,29 @@ namespace util
 
         return std::pow(IntegerAsFloatNormalized, 2.4f);
     }
+
+    template<class T>
+    constexpr inline T
+    map(T x, T in_min, T in_max, T out_min, T out_max) noexcept
+    {
+        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
+
+    template<class... T>
+    struct VariantHelper : T...
+    {
+        using T::operator()...;
+    };
+    template<class... Ts>
+    VariantHelper(Ts...) -> VariantHelper<Ts...>;
+
+    constexpr inline void
+    hashCombine(std::size_t& seed_, std::size_t hash_) noexcept
+    {
+        hash_ += 0x9e3779b9 + (seed_ << 6) + (seed_ >> 2);
+        seed_ ^= hash_;
+    }
+
 } // namespace util
 
 #endif // SRC_UTIL_MISC_HPP

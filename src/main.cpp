@@ -3,6 +3,7 @@
 #include <game/game.hpp>
 #include <gfx/renderer.hpp>
 #include <util/log.hpp>
+#include <util/noise.hpp>
 
 int main()
 {

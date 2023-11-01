@@ -52,7 +52,7 @@ namespace game
             entities;
 
         Player                                       player;
-        // world::World                                 world;
+        world::World                                 world;
         std::vector<std::shared_ptr<entity::Entity>> temp_entities;
 
         std::chrono::time_point<std::chrono::steady_clock> last_tick_end_time;

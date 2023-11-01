@@ -1,12 +1,15 @@
 #ifndef SRC_UTIL_NOISE_HPP
 #define SRC_UTIL_NOISE_HPP
 
+#include "glm/geometric.hpp"
 #include "misc.hpp"
 #include <cmath>
 #include <concepts>
+#include <gcem.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <limits>
+#include <numbers>
 #include <random>
 
 ///
@@ -99,13 +102,14 @@ namespace util
     }
 
     template<std::size_t N> // TODO: replace with some AbsolutePosition
-    constexpr inline Vec2
-    randomGradient(Vector<std::int64_t, N> vector, std::uint64_t seed)
+    constexpr inline glm::vec2
+    randomGradient(glm::vec<N, std::int64_t> vector, std::uint64_t seed)
     {
         std::size_t workingSeed {0};
-        for (std::int64_t i : vector.data)
+
+        for (std::size_t i = 0; i < N; ++i)
         {
-            util::hashCombine(workingSeed, static_cast<std::size_t>(i));
+            util::hashCombine(workingSeed, static_cast<std::size_t>(vector[i]));
         }
 
         FastMCG<std::uint64_t> engine {workingSeed};
@@ -116,63 +120,65 @@ namespace util
         // gcem is ~3-5x slower than std, try and avoid it
         if consteval
         {
-            return Vec2 {gcem::cos(random), gcem::sin(random)};
+            return glm::vec2 {gcem::cos(random), gcem::sin(random)};
         }
         else
         {
-            return Vec2 {std::cos(random), std::sin(random)};
+            return glm::vec2 {std::cos(random), std::sin(random)};
         }
     }
 
     template<std::size_t N>
     constexpr inline float dotGridGradient(
-        Vector<std::int64_t, N> position,
-        Vector<float, N>        perlinGridGranularity,
-        std::uint64_t           seed)
+        glm::vec<N, std::int64_t> position,
+        glm::vec<N, float>        perlinGridGranularity,
+        std::uint64_t             seed)
     {
         // Get gradient from integer coordinates
-        const Vec2 gradient = randomGradient(position, seed);
+        const glm::vec2 gradient = randomGradient(position, seed);
 
         // Compute the distance vector
-        const Vector<float, N> offset {
-            perlinGridGranularity - static_cast<Vector<float, N>>(position)};
+        const glm::vec<N, float> offset {
+            perlinGridGranularity - static_cast<glm::vec<N, float>>(position)};
 
-        return offset.dot(gradient);
+        return glm::dot(offset, gradient);
     }
 
     // Compute Perlin noise at coordinates x, y
     // TODO: replace with some AbsolutePosition with an int64 + a float
     // TODO: add seeds
     constexpr inline float
-    perlin(Vec2 vector, std::uint64_t seed) // TODO: make generic
+    perlin(glm::vec2 vector, std::uint64_t seed) // TODO: make generic
     {
-        const Vector<std::int64_t, 2> BottomLeftGrid {
-            static_cast<std::int64_t>(std::floor(vector.x())),
-            static_cast<std::int64_t>(std::floor(vector.y())),
+        const glm::vec<2, std::int64_t> BottomLeftGrid {
+            static_cast<std::int64_t>(std::floor(vector.x)),
+            static_cast<std::int64_t>(std::floor(vector.y)),
         };
 
-        const Vector<std::int64_t, 2> TopRightGrid {BottomLeftGrid + 1};
+        const glm::vec<2, std::int64_t> TopRightGrid {
+            BottomLeftGrid + glm::vec<2, std::int64_t> {1LL, 1LL}};
 
-        const Vector<std::int64_t, 2> BottomRightGrid {
-            BottomLeftGrid.x(), TopRightGrid.y()};
+        const glm::vec<2, std::int64_t> BottomRightGrid {
+            BottomLeftGrid.x, TopRightGrid.y};
 
-        const Vector<std::int64_t, 2> TopLeftGrid {
-            TopRightGrid.x(), BottomLeftGrid.y()};
+        const glm::vec<2, std::int64_t> TopLeftGrid {
+            TopRightGrid.x, BottomLeftGrid.y};
 
-        const Vec2 OffsetIntoGrid {vector - static_cast<Vec2>(BottomLeftGrid)};
+        const glm::vec2 OffsetIntoGrid {
+            vector - static_cast<glm::vec2>(BottomLeftGrid)};
 
         const float LeftGradient = quarticInterpolate(
             dotGridGradient(BottomLeftGrid, vector, seed),
             dotGridGradient(TopLeftGrid, vector, seed),
-            OffsetIntoGrid.x());
+            OffsetIntoGrid.x);
 
         const float RightGradient = quarticInterpolate(
             dotGridGradient(BottomRightGrid, vector, seed),
             dotGridGradient(TopRightGrid, vector, seed),
-            OffsetIntoGrid.x());
+            OffsetIntoGrid.x);
 
         return quarticInterpolate(
-            LeftGradient, RightGradient, OffsetIntoGrid.y());
+            LeftGradient, RightGradient, OffsetIntoGrid.y);
     }
 
 } // namespace util

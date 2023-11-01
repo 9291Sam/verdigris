@@ -36,36 +36,43 @@ namespace
     }
 } // namespace
 
-game::world::World::World(const Game& game_)
-    : game {game_}
-    , chunks {}
+namespace game::world
 {
-    // util::panic("update world to draw stuff");
-    this->chunks.insert(Chunk {Position {-511, 0, -511}, generationFunc});
-    this->chunks.insert(Chunk {Position {0, 0, -511}, generationFunc});
-    this->chunks.insert(Chunk {Position {511, 0, -511}, generationFunc});
 
-    this->chunks.insert(Chunk {Position {-511, 0, 0}, generationFunc});
-    this->chunks.insert(Chunk {Position {0, 0, 0}, generationFunc});
-    this->chunks.insert(Chunk {Position {511, 0, 0}, generationFunc});
-
-    this->chunks.insert(Chunk {Position {-511, 0, 511}, generationFunc});
-    this->chunks.insert(Chunk {Position {0, 0, 511}, generationFunc});
-    this->chunks.insert(Chunk {Position {511, 0, 511}, generationFunc});
-}
-
-void game::world::World::updateChunkState()
-{
-    for (const Chunk& c : this->chunks)
+    World::World(const Game& game_)
+        : game {game_}
+        , chunks {}
     {
-        c.updateDrawState(this->game.renderer);
-    }
-}
+        // util::panic("update world to draw stuff");
+        this->chunks.insert(Chunk {Position {-511, 0, -511}, generationFunc});
+        this->chunks.insert(Chunk {Position {0, 0, -511}, generationFunc});
+        this->chunks.insert(Chunk {Position {511, 0, -511}, generationFunc});
 
-std::size_t game::world::World::estimateSize() const
-{
-    // a realloc causes a surprising performance hit due to it calling
-    // potentially ~30k+ move constructors, avoid please
-    // return this->objects.size() * 3 / 2;
-    return 150;
-}
+        this->chunks.insert(Chunk {Position {-511, 0, 0}, generationFunc});
+        this->chunks.insert(Chunk {Position {0, 0, 0}, generationFunc});
+        this->chunks.insert(Chunk {Position {511, 0, 0}, generationFunc});
+
+        this->chunks.insert(Chunk {Position {-511, 0, 511}, generationFunc});
+        this->chunks.insert(Chunk {Position {0, 0, 511}, generationFunc});
+        this->chunks.insert(Chunk {Position {511, 0, 511}, generationFunc});
+    }
+
+    void World::updateChunkState()
+    {
+        for (const Chunk& c : this->chunks)
+        {
+            // this function, while non const, doesn't change the chunk's
+            // storted state, thus this is fine
+            const_cast<Chunk&>(c).updateDrawState(this->game.renderer);
+        }
+    }
+
+    std::size_t World::estimateSize() const
+    {
+        // a realloc causes a surprising performance hit due to it calling
+        // potentially ~30k+ move constructors, avoid please
+        // return this->objects.size() * 3 / 2;
+        return 150;
+    }
+
+} // namespace game::world
