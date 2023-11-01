@@ -1,5 +1,6 @@
 #include "image.hpp"
 #include "allocator.hpp"
+#include "buffer.hpp"
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
 
@@ -30,7 +31,9 @@ namespace gfx::vulkan
             .imageType {VK_IMAGE_TYPE_2D},
             .format {static_cast<VkFormat>(format)},
             .extent {VkExtent3D {
-                .width {this->extent.width}, .height {this->extent.height}, .depth {1}}},
+                .width {this->extent.width},
+                .height {this->extent.height},
+                .depth {1}}},
             .mipLevels {1},
             .arrayLayers {1},
             .samples {VK_SAMPLE_COUNT_1_BIT},
@@ -44,7 +47,8 @@ namespace gfx::vulkan
         const VmaAllocationCreateInfo imageAllocationCreateInfo {
             .flags {},
             .usage {VMA_MEMORY_USAGE_AUTO},
-            .requiredFlags {static_cast<VkMemoryPropertyFlags>(memoryPropertyFlags)},
+            .requiredFlags {
+                static_cast<VkMemoryPropertyFlags>(memoryPropertyFlags)},
             .preferredFlags {},
             .memoryTypeBits {},
             .pool {nullptr},
@@ -66,7 +70,8 @@ namespace gfx::vulkan
             "Failed to allocate image memory {}",
             vk::to_string(result));
 
-        util::assertFatal(outputImage != nullptr, "Returned image was nullptr!");
+        util::assertFatal(
+            outputImage != nullptr, "Returned image was nullptr!");
 
         this->image = vk::Image {outputImage};
 
@@ -92,7 +97,8 @@ namespace gfx::vulkan
 
     Image2D::~Image2D()
     {
-        vmaDestroyImage(this->allocator, static_cast<VkImage>(this->image), this->memory);
+        vmaDestroyImage(
+            this->allocator, static_cast<VkImage>(this->image), this->memory);
     }
 
     vk::ImageView Image2D::operator* () const
@@ -144,8 +150,34 @@ namespace gfx::vulkan
             }},
         };
 
-        commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, nullptr, nullptr, barrier);
+        commandBuffer.pipelineBarrier(
+            sourceStage, destinationStage, {}, nullptr, nullptr, barrier);
 
         this->layout = to;
     }
+
+    void Image2D::copyFromBuffer(
+        vk::CommandBuffer commandBuffer, const Buffer& buffer)
+    {
+        util::debugBreak(); // need to actually transition layouts correctely.
+
+        vk::BufferImageCopy copyParams {
+            .bufferOffset {0},
+            .bufferRowLength {0},
+            .bufferImageHeight {0},
+            .imageSubresource {vk::ImageSubresourceLayers {
+                .aspectMask {this->aspect},
+                .mipLevel {1},
+                .baseArrayLayer {0},
+                .layerCount {1},
+            }},
+            .imageOffset {0},
+            .imageExtent {
+                vk::Extent3D {this->extent.width, this->extent.height, 1}},
+        };
+
+        commandBuffer.copyBufferToImage(
+            *buffer, this->image, this->layout, copyParams);
+    }
+
 } // namespace gfx::vulkan

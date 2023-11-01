@@ -78,10 +78,12 @@ namespace gfx
         std::unique_ptr<vulkan::PipelineManager> pipelines;
 
         // Drawing things
-        std::unique_ptr<ImGuiMenu> menu;
+        std::unique_ptr<vulkan::voxel::ComputeRenderer> voxel_renderer;
+        std::unique_ptr<ImGuiMenu>                      menu;
+
+        // Rasterizeables
         util::Registrar<util::UUID, std::weak_ptr<const Object>>
             draw_objects; // rasterizeables
-        std::unique_ptr<vulkan::voxel::ComputeRenderer> voxel_renderer;
 
         // State
         util::Mutex<ImGuiMenu::State> menu_state;

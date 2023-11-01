@@ -33,6 +33,8 @@ namespace gfx
         const vulkan::Device& device,
         vk::RenderPass        renderPass)
         : pool {nullptr}
+        , sampler {nullptr}
+        , image_descriptor {nullptr}
     {
         util::assertFatal(
             !isMenuInitalized.exchange(true), "Only one ImGuiMenu can exist!");
@@ -90,6 +92,30 @@ namespace gfx
 
         this->pool =
             device.asLogicalDevice().createDescriptorPoolUnique(poolCreateInfo);
+
+        vk::SamplerCreateInfo samplerCreateInfo {
+            .sType {vk::StructureType::eSamplerCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .magFilter {vk::Filter::eLinear},
+            .minFilter {vk::Filter::eLinear},
+            .mipmapMode {vk::SamplerMipmapMode::eLinear},
+            .addressModeU {vk::SamplerAddressMode::eRepeat},
+            .addressModeV {vk::SamplerAddressMode::eRepeat},
+            .addressModeW {vk::SamplerAddressMode::eRepeat},
+            .mipLodBias {},
+            .anisotropyEnable {static_cast<vk::Bool32>(false)},
+            .maxAnisotropy {1.0f},
+            .compareEnable {static_cast<vk::Bool32>(false)},
+            .compareOp {vk::CompareOp::eNever},
+            .minLod {-1000},
+            .maxLod {1000},
+            .borderColor {vk::BorderColor::eFloatTransparentBlack},
+            .unnormalizedCoordinates {},
+        };
+
+        this->sampler =
+            device.asLogicalDevice().createSamplerUnique(samplerCreateInfo);
 
         ImGui_ImplGlfw_InitForVulkan(window.window, true);
 
@@ -181,6 +207,11 @@ namespace gfx
 
     ImGuiMenu::~ImGuiMenu() noexcept
     {
+        if (this->image_descriptor != nullptr)
+        {
+            ImGui_ImplVulkan_RemoveTexture(this->image_descriptor);
+        }
+
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -188,6 +219,15 @@ namespace gfx
         util::assertFatal(
             isMenuInitalized.exchange(false),
             "Only one ImGuiMenu can be destroyed");
+    }
+
+    void ImGuiMenu::bindImage(vk::ImageView viewToBind)
+    {
+        this->image_descriptor = ImGui_ImplVulkan_AddTexture(
+            *this->sampler,
+            viewToBind,
+            static_cast<VkImageLayout>(
+                vk::ImageLayout::eShaderReadOnlyOptimal));
     }
 
     void ImGuiMenu::render(State& state) // NOLINT
@@ -246,6 +286,8 @@ namespace gfx
             ImGui::PushTextWrapPos(0.0f);
             ImGui::TextUnformatted(state.string.c_str());
             ImGui::PopTextWrapPos();
+
+            ImGui::Image((ImTextureID)this->image_descriptor, ImVec2(256, 256));
 
             ImGui::End();
         }

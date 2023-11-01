@@ -25,7 +25,7 @@ namespace gfx::vulkan::voxel
         ComputeRenderer& operator= (const ComputeRenderer&) = delete;
         ComputeRenderer& operator= (ComputeRenderer&&)      = delete;
 
-        void          render(vk::CommandBuffer);
+        // void          render(vk::CommandBuffer);
         vk::ImageView getImage();
 
     private:
@@ -34,6 +34,7 @@ namespace gfx::vulkan::voxel
 
         Image2D output_image;
 
+        // fill cpu
         // fixed size image solid color
         // gradient
         // fixed world

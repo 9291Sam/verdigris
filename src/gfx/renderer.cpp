@@ -220,9 +220,10 @@ namespace gfx
     void Renderer::resize()
     {
         this->window->blockThisThreadWhileMinimized();
-        this->device->asLogicalDevice().waitIdle(); // stall
+        this->device->asLogicalDevice().waitIdle(); // stall TODO: make better?
 
         this->menu.reset();
+        this->voxel_renderer.reset();
         this->pipelines.reset();
         this->render_pass.reset();
         this->depth_buffer.reset();
@@ -275,11 +276,16 @@ namespace gfx
                 });
         }
 
+        this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
+            this->device.get(), this->allocator.get(), vk::Extent2D {256, 256});
+
         this->menu = std::make_unique<ImGuiMenu>(
             *this->window,
             **this->instance,
             *this->device,
             **this->render_pass);
+
+        this->menu->bindImage(this->voxel_renderer->getImage());
     }
 
     void Renderer::registerObject(

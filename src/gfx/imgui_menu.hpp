@@ -37,12 +37,16 @@ namespace gfx
         ImGuiMenu& operator= (const ImGuiMenu&) = delete;
         ImGuiMenu& operator= (ImGuiMenu&&)      = delete;
 
+        void bindImage(vk::ImageView);
         void render(State&);
         void draw(vk::CommandBuffer);
 
     private:
         vk::UniqueDescriptorPool pool;
         /// Unfortunately, imgui is entirely based off of global state.
+
+        vk::UniqueSampler sampler;
+        vk::DescriptorSet image_descriptor;
     };
 } // namespace gfx
 
