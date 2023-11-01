@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <bit>
+#include <cmath>
 #include <concepts>
 #include <type_traits>
 
