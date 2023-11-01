@@ -18,6 +18,11 @@ namespace gfx
 
     namespace vulkan
     {
+        namespace voxel
+        {
+            class ComputeRenderer;
+        } // namespace voxel
+
         class Instance;
         class Device;
         class Allocator;
@@ -76,7 +81,7 @@ namespace gfx
         std::unique_ptr<ImGuiMenu> menu;
         util::Registrar<util::UUID, std::weak_ptr<const Object>>
             draw_objects; // rasterizeables
-        // std::unique_ptr<VoxelComputeRenderer>
+        std::unique_ptr<vulkan::voxel::ComputeRenderer> voxel_renderer;
 
         // State
         util::Mutex<ImGuiMenu::State> menu_state;

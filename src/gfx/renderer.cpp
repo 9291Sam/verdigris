@@ -8,6 +8,7 @@
 #include "vulkan/pipelines.hpp"
 #include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
+#include "vulkan/voxel/compute_renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>

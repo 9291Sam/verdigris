@@ -20,6 +20,7 @@ namespace gfx::vulkan
     {
         None,
         Voxel,
+        ComputeRendererOutput,
     };
 
     struct DescriptorState

@@ -125,6 +125,8 @@ add_executable(verdigris
     src/game/player.cpp
 
 
+    src/gfx/vulkan/voxel/compute_renderer.cpp
+
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp
     src/gfx/vulkan/descriptors.cpp
