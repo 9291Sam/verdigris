@@ -39,9 +39,6 @@ namespace gfx::vulkan::voxel
 
         DescriptorSet set;
 
-        // fill cpu
-        // fixed size image solid color
-        // gradient
         // fixed world
         // dynamic size
         // dynamic world

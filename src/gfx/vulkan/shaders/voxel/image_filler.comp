@@ -2,15 +2,46 @@
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
-layout(set = 0, binding = 0, rgba8) writeonly uniform image2D outputImage;
+layout(set = 0, binding = 0, rgba8) writeonly uniform image2D out_image;
+layout(set = 0, binding = 1, std430) readonly buffer World
+{
+    vec3 camera_position;
+    vec3 camera_forward;
+    vec3 sphere_center;
+    float sphere_radius;
+    float focal_length;
+} in_world;
+
+struct Ray
+{
+    vec3 origin;
+    vec3 direction;
+};
+
+vec3 Ray_at(in Ray self, in float t)
+{
+    return self.origin + self.direction * t;
+}
+
+
+vec4 calculateColor(in Ray ray)
+{
+    return vec4(1.0, 1.0, 1.0, 1.0);
+};
+
 
 void main()
 {
+    Ray ray;
+    // ray.origin = {}; // TODO:
+    // ray.direction = {}; // TODO:
+
     imageStore(
-        outputImage,
+        out_image,
         ivec2(gl_GlobalInvocationID),
-        vec4(
-            0.0, gl_GlobalInvocationID.x * 1/255.0, gl_GlobalInvocationID.y * 1/255.0, 1.0
-        )
+        // vec4(
+        //     0.0, gl_GlobalInvocationID.x * 1/255.0, gl_GlobalInvocationID.y * 1/255.0, 1.0
+        // )
+        calculateColor(ray)
     );
 }
