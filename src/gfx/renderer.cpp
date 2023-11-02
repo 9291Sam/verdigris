@@ -76,6 +76,8 @@ namespace gfx
         , show_menu {false}
     {
         this->initializeRenderer();
+
+        this->window->attachCursor();
     }
 
     Renderer::~Renderer() = default;

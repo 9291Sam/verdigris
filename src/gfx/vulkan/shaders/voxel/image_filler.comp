@@ -9,6 +9,8 @@ void main()
     imageStore(
         outputImage,
         ivec2(gl_GlobalInvocationID),
-        vec4((1.0, 1.0, 1.0, 1.0))
+        vec4(
+            0.0, gl_GlobalInvocationID.x * 1/255.0, gl_GlobalInvocationID.y * 1/255.0, 1.0
+        )
     );
 }
