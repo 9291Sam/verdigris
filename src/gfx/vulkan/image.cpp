@@ -111,6 +111,11 @@ namespace gfx::vulkan
         return this->format;
     }
 
+    vk::Extent2D Image2D::getExtent() const
+    {
+        return this->extent;
+    }
+
     vk::ImageLayout Image2D::getLayout() const
     {
         return this->layout;

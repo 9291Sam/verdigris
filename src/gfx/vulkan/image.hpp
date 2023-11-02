@@ -35,6 +35,7 @@ namespace gfx::vulkan
 
         [[nodiscard]] vk::ImageView   operator* () const;
         [[nodiscard]] vk::Format      getFormat() const;
+        [[nodiscard]] vk::Extent2D    getExtent() const;
         [[nodiscard]] vk::ImageLayout getLayout() const;
 
         void transitionLayout(

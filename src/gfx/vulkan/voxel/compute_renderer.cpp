@@ -225,7 +225,8 @@ namespace gfx::vulkan::voxel
             vk::AccessFlagBits::eShaderRead,
             vk::AccessFlagBits::eShaderWrite);
 
-        commandBuffer.dispatch(8, 8, 1);
+        auto [x, y] = this->output_image.getExtent();
+        commandBuffer.dispatch(x / 32, y / 32, 1);
 
         this->output_image.transitionLayout(
             commandBuffer,
@@ -237,8 +238,8 @@ namespace gfx::vulkan::voxel
             vk::AccessFlagBits::eShaderRead);
     }
 
-    vk::ImageView ComputeRenderer::getImage()
+    const vulkan::Image2D& ComputeRenderer::getImage() const
     {
-        return *this->output_image;
+        return this->output_image;
     }
 } // namespace gfx::vulkan::voxel

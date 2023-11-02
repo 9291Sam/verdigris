@@ -9,6 +9,7 @@
 #include "window.hpp"
 #include <atomic>
 #include <cmath>
+#include <gfx/vulkan/image.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 namespace
@@ -221,13 +222,15 @@ namespace gfx
             "Only one ImGuiMenu can be destroyed");
     }
 
-    void ImGuiMenu::bindImage(vk::ImageView viewToBind)
+    void ImGuiMenu::bindImage(const vulkan::Image2D& imageToBind)
     {
         this->image_descriptor = ImGui_ImplVulkan_AddTexture(
             *this->sampler,
-            viewToBind,
+            *imageToBind,
             static_cast<VkImageLayout>(
                 vk::ImageLayout::eShaderReadOnlyOptimal));
+
+        this->display_image_size = imageToBind.getExtent();
     }
 
     void ImGuiMenu::render(State& state) // NOLINT
@@ -283,7 +286,10 @@ namespace gfx
             ImGui::TextUnformatted(fpsAndTps.c_str());
 
             ImGui::Image(
-                (ImTextureID)(this->image_descriptor), ImVec2(256, 256));
+                (ImTextureID)(this->image_descriptor),
+                ImVec2(
+                    this->display_image_size.width,
+                    this->display_image_size.height));
 
             ImGui::End();
         }

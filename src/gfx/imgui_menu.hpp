@@ -12,6 +12,7 @@ namespace gfx
         class Instance;
         class Device;
         class RenderPass;
+        class Image2D;
     } // namespace vulkan
     class Window;
 
@@ -37,7 +38,7 @@ namespace gfx
         ImGuiMenu& operator= (const ImGuiMenu&) = delete;
         ImGuiMenu& operator= (ImGuiMenu&&)      = delete;
 
-        void bindImage(vk::ImageView);
+        void bindImage(const vulkan::Image2D&);
         void render(State&);
         void draw(vk::CommandBuffer);
 
@@ -45,6 +46,7 @@ namespace gfx
         vk::UniqueDescriptorPool pool;
         /// Unfortunately, imgui is entirely based off of global state.
 
+        vk::Extent2D      display_image_size;
         vk::UniqueSampler sampler;
         vk::DescriptorSet image_descriptor;
     };

@@ -38,8 +38,8 @@ namespace gfx::vulkan::voxel
         ComputeRenderer& operator= (const ComputeRenderer&) = delete;
         ComputeRenderer& operator= (ComputeRenderer&&)      = delete;
 
-        void          render(vk::CommandBuffer);
-        vk::ImageView getImage();
+        void                   render(vk::CommandBuffer);
+        const vulkan::Image2D& getImage() const;
 
     private:
         const Renderer&  renderer;

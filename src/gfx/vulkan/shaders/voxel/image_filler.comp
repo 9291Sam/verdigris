@@ -65,8 +65,8 @@ vec4 calculateColor(in Ray ray)
 
 void main()
 {
-    const uint outImageWidth = 256;
-    const uint outImageHeight = 256;
+    const uint outImageWidth = imageSize(out_image).x;
+    const uint outImageHeight = imageSize(out_image).y;
     const float aspectRatio = 1.0;
     const float focalLength = 1.0;
     const float viewportWidth = 1.0;

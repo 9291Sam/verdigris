@@ -285,7 +285,7 @@ namespace gfx
             this->device.get(),
             this->allocator.get(),
             this->pipelines.get(),
-            vk::Extent2D {256, 256});
+            vk::Extent2D {512, 512});
 
         this->menu = std::make_unique<ImGuiMenu>(
             *this->window,
