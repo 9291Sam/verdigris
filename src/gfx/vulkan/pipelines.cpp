@@ -54,17 +54,19 @@ namespace gfx::vulkan
         , render_pass {renderPass}
         , swapchain {swapchain_}
         , allocator {allocator_}
-        , cache {{}}
+        , graphics_pipeline_cache {{}}
+        , compute_pipeline_cache {{}}
     {}
 
-    const Pipeline&
-    PipelineManager::getPipeline(PipelineType pipelineToGet) const
+    const GraphicsPipeline& PipelineManager::getGraphicsPipeline(
+        GraphicsPipelineType pipelineToGet) const
     {
-        const Pipeline* maybePipeline = nullptr;
+        const GraphicsPipeline* maybePipeline = nullptr;
 
-        this->cache.read_lock(
-            [pipelineToGet, &maybePipeline](
-                const std::unordered_map<PipelineType, Pipeline>& cache)
+        this->graphics_pipeline_cache.read_lock(
+            [pipelineToGet, &maybePipeline](const std::unordered_map<
+                                            GraphicsPipelineType,
+                                            GraphicsPipeline>& cache)
             {
                 if (cache.contains(pipelineToGet))
                 {
@@ -78,9 +80,10 @@ namespace gfx::vulkan
         }
         else // we probablly to create the pipeline
         {
-            this->cache.write_lock(
+            this->graphics_pipeline_cache.write_lock(
                 [pipelineToGet, &maybePipeline, this](
-                    std::unordered_map<PipelineType, Pipeline>& cache)
+                    std::unordered_map<GraphicsPipelineType, GraphicsPipeline>&
+                        cache)
                 {
                     // Double check someone else hasn't already created the
                     // pipeline
@@ -90,7 +93,8 @@ namespace gfx::vulkan
                         return;
                     }
 
-                    cache[pipelineToGet] = this->createPipeline(pipelineToGet);
+                    cache[pipelineToGet] =
+                        this->createGraphicsPipeline(pipelineToGet);
 
                     maybePipeline = &cache[pipelineToGet];
                 });
@@ -99,14 +103,60 @@ namespace gfx::vulkan
         return *maybePipeline;
     }
 
-    Pipeline PipelineManager::createPipeline(PipelineType typeToCreate) const
+    const ComputePipeline&
+    PipelineManager::getComputePipeline(ComputePipelineType pipelineToGet) const
+    {
+        const ComputePipeline* maybePipeline = nullptr;
+
+        this->compute_pipeline_cache.read_lock(
+            [pipelineToGet, &maybePipeline](
+                const std::unordered_map<ComputePipelineType, ComputePipeline>&
+                    cache)
+            {
+                if (cache.contains(pipelineToGet))
+                {
+                    maybePipeline = &cache.at(pipelineToGet);
+                }
+            });
+
+        if (maybePipeline != nullptr)
+        {
+            return *maybePipeline;
+        }
+        else // we probablly to create the pipeline
+        {
+            this->compute_pipeline_cache.write_lock(
+                [pipelineToGet, &maybePipeline, this](
+                    std::unordered_map<ComputePipelineType, ComputePipeline>&
+                        cache)
+                {
+                    // Double check someone else hasn't already created the
+                    // pipeline
+                    if (cache.contains(pipelineToGet))
+                    {
+                        maybePipeline = &cache.at(pipelineToGet);
+                        return;
+                    }
+
+                    cache[pipelineToGet] =
+                        this->createComputePipeline(pipelineToGet);
+
+                    maybePipeline = &cache[pipelineToGet];
+                });
+        }
+
+        return *maybePipeline;
+    }
+
+    GraphicsPipeline PipelineManager::createGraphicsPipeline(
+        GraphicsPipelineType typeToCreate) const
     {
         switch (typeToCreate)
         {
-        case gfx::vulkan::PipelineType::NoPipeline:
+        case gfx::vulkan::GraphicsPipelineType::NoPipeline:
             util::panic("Tried to create a null pipeline!");
 
-        case gfx::vulkan::PipelineType::Flat: {
+        case gfx::vulkan::GraphicsPipelineType::Flat: {
             // TODO: replace with #embed
             vk::UniqueShaderModule fragmentShader = createShaderFromFile(
                 device, "src/gfx/vulkan/shaders/flat_pipeline.frag.bin");
@@ -135,8 +185,8 @@ namespace gfx::vulkan
                 },
             };
 
-            return Pipeline {
-                Pipeline::VertexType::Normal,
+            return GraphicsPipeline {
+                GraphicsPipeline::VertexType::Normal,
                 this->device,
                 this->render_pass,
                 *this->swapchain,
@@ -164,7 +214,7 @@ namespace gfx::vulkan
                 }()};
         }
 
-        case PipelineType::Voxel: {
+        case GraphicsPipelineType::Voxel: {
             vk::UniqueShaderModule fragmentShader = createShaderFromFile(
                 this->device, "src/gfx/vulkan/shaders/voxel.frag.bin");
 
@@ -192,14 +242,14 @@ namespace gfx::vulkan
                 },
             };
 
-            return Pipeline {
-                Pipeline::VertexType::None,
+            return GraphicsPipeline {
+                GraphicsPipeline::VertexType::None,
                 this->device,
                 this->render_pass,
                 *this->swapchain,
                 shaderStages,
                 vk::PrimitiveTopology::eTriangleStrip,
-                [&] //  -> vk::UniquePipelineLayout
+                [&] // -> vk::UniquePipelineLayout
                 {
                     const vk::PushConstantRange pushConstantsInformation {
                         .stageFlags {vk::ShaderStageFlagBits::eVertex},
@@ -228,7 +278,30 @@ namespace gfx::vulkan
             std::to_underlying(typeToCreate));
     }
 
-    Pipeline::Pipeline(
+    ComputePipeline PipelineManager::createComputePipeline(
+        ComputePipelineType typeToCreate) const
+    {
+        switch (typeToCreate)
+        {
+        case ComputePipelineType::NoPipeline:
+            util::panic("Tried to create null compute pipeline");
+            return {};
+        case ComputePipelineType::RayCaster: {
+            vk::UniqueShaderModule shader = createShaderFromFile(
+                this->device,
+                "src/gfx/vulkan/shaders/voxel/image_filler.comp.bin");
+
+            std::array<vk::DescriptorSetLayout, 1> descriptorSetLayouts {
+                **this->allocator->getDescriptorSetLayout(
+                    DescriptorSetType::VoxelRayTracing)};
+
+            return ComputePipeline {
+                this->device, std::move(shader), descriptorSetLayouts};
+        }
+        }
+    }
+
+    GraphicsPipeline::GraphicsPipeline(
         VertexType                                   vertexType,
         vk::Device                                   device,
         vk::RenderPass                               renderPass,
@@ -236,7 +309,7 @@ namespace gfx::vulkan
         std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
         vk::PrimitiveTopology                        topology,
         vk::UniquePipelineLayout                     layout_)
-        : Pipeline {}
+        : GraphicsPipeline {}
     {
         const vk::Viewport viewport {
             .x {0.0f},
@@ -294,7 +367,7 @@ namespace gfx::vulkan
             break;
         }
 
-        (*this) = Pipeline {
+        (*this) = GraphicsPipeline {
             device,
             renderPass,
             shaderStages,
@@ -372,7 +445,7 @@ namespace gfx::vulkan
             std::move(layout_)};
     }
 
-    Pipeline::Pipeline(
+    GraphicsPipeline::GraphicsPipeline(
         vk::Device                                   device,
         vk::RenderPass                               renderPass,
         std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
@@ -425,34 +498,72 @@ namespace gfx::vulkan
         this->pipeline = std::move(maybePipeline); // NOLINT
     }
 
-    vk::Pipeline Pipeline::operator* () const
+    vk::Pipeline GraphicsPipeline::operator* () const
     {
         return *this->pipeline;
     }
-    vk::PipelineLayout Pipeline::getLayout() const
+    vk::PipelineLayout GraphicsPipeline::getLayout() const
     {
         return *this->layout;
     }
 
-    // FlatPipeline::FlatPipeline(
-    //     std::shared_ptr<Device>     device,
-    //     std::shared_ptr<Swapchain>  swapchain,
-    //     std::shared_ptr<RenderPass> renderPass)
-    //     : Pipeline {
-    //         device, // this is captured by the lambda
-    //         std::move(renderPass),
-    //         std::move(swapchain),
-    //         PipelineBuilder {}
-    //             .withVertexShader(vulkan::Pipeline::createShaderFromFile(
-    //                 this->device,
-    //                 "src/gfx/vulkan/shaders/flat_pipeline.vert.bin"))
-    //             .withFragmentShader(vulkan::Pipeline::createShaderFromFile(
-    //                 this->device,
-    //                 "src/gfx/vulkan/shaders/flat_pipeline.frag.bin"))
-    //             .withLayout()
-    //             .transfer(),
-    //         0} // id
-    // {}
+    ComputePipeline::ComputePipeline(
+        vk::Device                               device,
+        vk::UniqueShaderModule                   module,
+        std::span<const vk::DescriptorSetLayout> setLayouts)
+        : layout {nullptr}
+        , pipeline {nullptr}
+    {
+        const vk::PipelineShaderStageCreateInfo shaderStageCreateInfo {
 
-    // FlatPipeline::~FlatPipeline() {}
+            .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .stage {vk::ShaderStageFlagBits::eCompute},
+            .module {*module},
+            .pName {"main"},
+            .pSpecializationInfo {},
+        };
+
+        const vk::PipelineLayoutCreateInfo layoutCreateInfo {
+            .sType {vk::StructureType::ePipelineLayoutCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .setLayoutCount {static_cast<std::uint32_t>(setLayouts.size())},
+            .pSetLayouts {setLayouts.data()},
+            .pushConstantRangeCount {0}, // TODO: add push constants
+            .pPushConstantRanges {nullptr},
+        };
+
+        this->layout = device.createPipelineLayoutUnique(layoutCreateInfo);
+
+        const vk::ComputePipelineCreateInfo computePipelineCreateInfo {
+            .sType {vk::StructureType::eComputePipelineCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .stage {shaderStageCreateInfo},
+            .layout {*this->layout},
+            .basePipelineHandle {nullptr},
+            .basePipelineIndex {0},
+        };
+
+        auto [result, maybePipeline] = device.createComputePipelineUnique(
+            nullptr, computePipelineCreateInfo);
+
+        util::assertFatal(
+            result == vk::Result::eSuccess,
+            "Failed to create compute pipeline");
+
+        this->pipeline = std::move(maybePipeline); // NOLINT
+    }
+
+    vk::Pipeline ComputePipeline::operator* () const
+    {
+        return *this->pipeline;
+    }
+    vk::PipelineLayout ComputePipeline::getLayout() const
+    {
+        return *this->layout;
+    }
+
 } // namespace gfx::vulkan

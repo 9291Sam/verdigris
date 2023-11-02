@@ -58,7 +58,8 @@ namespace gfx
 
     vk::PipelineLayout Object::getCurrentPipelineLayout() const
     {
-        return this->renderer.pipelines->getPipeline(this->bind_state.pipeline)
+        return this->renderer.pipelines
+            ->getGraphicsPipeline(this->bind_state.pipeline)
             .getLayout();
     }
 
@@ -72,8 +73,9 @@ namespace gfx
         gfx::BindState&                  workingBindState,
         std::array<vk::DescriptorSet, 4> setsToBindIfRequired) const
     {
-        const vulkan::Pipeline& requiredPipeline =
-            this->renderer.pipelines->getPipeline(this->bind_state.pipeline);
+        const vulkan::GraphicsPipeline& requiredPipeline =
+            this->renderer.pipelines->getGraphicsPipeline(
+                this->bind_state.pipeline);
 
         if (workingBindState.pipeline != this->bind_state.pipeline)
         {
@@ -147,7 +149,7 @@ gfx::SimpleTriangulatedObject::SimpleTriangulatedObject(
             vertices_.size(),
             indices_.size()),
         BindState {
-            .pipeline {vulkan::PipelineType::Flat},
+            .pipeline {vulkan::GraphicsPipelineType::Flat},
             .descriptors {
                 {ObjectBoundDescriptor {std::nullopt},
                  ObjectBoundDescriptor {std::nullopt},

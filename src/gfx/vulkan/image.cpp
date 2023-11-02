@@ -42,7 +42,7 @@ namespace gfx::vulkan
             .sharingMode {VK_SHARING_MODE_EXCLUSIVE},
             .queueFamilyIndexCount {0},
             .pQueueFamilyIndices {nullptr},
-            .initialLayout {VK_IMAGE_LAYOUT_UNDEFINED}};
+            .initialLayout {static_cast<VkImageLayout>(this->layout)}};
 
         const VmaAllocationCreateInfo imageAllocationCreateInfo {
             .flags {},

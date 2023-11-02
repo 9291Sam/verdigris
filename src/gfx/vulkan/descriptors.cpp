@@ -138,8 +138,7 @@ namespace gfx::vulkan
                 util::panic(
                     "Tried to find the layout of a DescriptorSetType::None!");
                 break;
-            case DescriptorSetType::Voxel:
-
+            case DescriptorSetType::Voxel: {
                 std::array<vk::DescriptorSetLayoutBinding, 3> bindings {
                     vk::DescriptorSetLayoutBinding {
                         .binding {0},
@@ -164,7 +163,7 @@ namespace gfx::vulkan
                     }};
 
                 this->descriptor_layout_cache[typeToGet] = DescriptorSetLayout {
-                    device,
+                    this->device,
                     vk::DescriptorSetLayoutCreateInfo {
                         .sType {
                             vk::StructureType::eDescriptorSetLayoutCreateInfo},
@@ -175,6 +174,29 @@ namespace gfx::vulkan
                         .pBindings {bindings.data()},
                     }};
                 break;
+            }
+            case DescriptorSetType::VoxelRayTracing: {
+                std::array<vk::DescriptorSetLayoutBinding, 1> bindings {
+                    vk::DescriptorSetLayoutBinding {
+                        .binding {0},
+                        .descriptorType {vk::DescriptorType::eStorageImage},
+                        .descriptorCount {1},
+                        .stageFlags {vk::ShaderStageFlagBits::eCompute},
+                        .pImmutableSamplers {nullptr},
+                    }};
+
+                this->descriptor_layout_cache[typeToGet] = DescriptorSetLayout {
+                    this->device,
+                    vk::DescriptorSetLayoutCreateInfo {
+                        .sType {
+                            vk::StructureType::eDescriptorSetLayoutCreateInfo},
+                        .pNext {nullptr},
+                        .flags {},
+                        .bindingCount {
+                            static_cast<std::uint32_t>(bindings.size())},
+                        .pBindings {bindings.data()},
+                    }};
+            }
             }
 
             return this->descriptor_layout_cache[typeToGet];

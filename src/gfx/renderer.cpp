@@ -259,10 +259,10 @@ namespace gfx
         {
             std::vector<std::future<void>> pipelineFutures {};
 
-            magic_enum::enum_for_each<vulkan::PipelineType>(
-                [&](vulkan::PipelineType type)
+            magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
+                [&](vulkan::GraphicsPipelineType type)
                 {
-                    if (type == vulkan::PipelineType::NoPipeline)
+                    if (type == vulkan::GraphicsPipelineType::NoPipeline)
                     {
                         return;
                     }
@@ -271,13 +271,17 @@ namespace gfx
                         std::launch::async,
                         [this, type]
                         {
-                            std::ignore = this->pipelines->getPipeline(type);
+                            std::ignore =
+                                this->pipelines->getGraphicsPipeline(type);
                         }));
                 });
         }
 
         this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
-            this->device.get(), this->allocator.get(), vk::Extent2D {256, 256});
+            this->device.get(),
+            this->allocator.get(),
+            this->pipelines.get(),
+            vk::Extent2D {256, 256});
 
         this->menu = std::make_unique<ImGuiMenu>(
             *this->window,

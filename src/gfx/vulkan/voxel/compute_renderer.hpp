@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 #define SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 
+#include <gfx/vulkan/descriptors.hpp>
 #include <gfx/vulkan/image.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -9,6 +10,7 @@ namespace gfx::vulkan
 {
     class Device;
     class Allocator;
+    class PipelineManager;
 } // namespace gfx::vulkan
 
 namespace gfx::vulkan::voxel
@@ -17,7 +19,7 @@ namespace gfx::vulkan::voxel
     {
     public:
 
-        ComputeRenderer(Device*, Allocator*, vk::Extent2D);
+        ComputeRenderer(Device*, Allocator*, PipelineManager*, vk::Extent2D);
         ~ComputeRenderer();
 
         ComputeRenderer(const ComputeRenderer&)             = delete;
@@ -29,10 +31,13 @@ namespace gfx::vulkan::voxel
         vk::ImageView getImage();
 
     private:
-        Device*    device;
-        Allocator* allocator;
+        Device*          device;
+        Allocator*       allocator;
+        PipelineManager* pipeline_manager;
 
         Image2D output_image;
+
+        DescriptorSet set;
 
         // fill cpu
         // fixed size image solid color

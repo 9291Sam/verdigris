@@ -19,7 +19,8 @@ namespace gfx::vulkan
     enum class DescriptorSetType
     {
         None,
-        Voxel
+        Voxel,
+        VoxelRayTracing,
     };
 
     struct DescriptorState

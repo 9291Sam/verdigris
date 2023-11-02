@@ -14,6 +14,7 @@ namespace gfx::vulkan
               std::unordered_map<vk::DescriptorType, std::uint32_t> {
                   {vk::DescriptorType::eStorageBuffer, 3},
                   {vk::DescriptorType::eUniformBuffer, 3},
+                  {vk::DescriptorType::eStorageImage, 3},
               }}
     {
         VmaVulkanFunctions vulkanFunctions {};

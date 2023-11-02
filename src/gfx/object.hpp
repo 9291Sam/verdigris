@@ -33,7 +33,9 @@ namespace gfx
 
     struct BindState
     {
-        vulkan::PipelineType pipeline = vulkan::PipelineType::NoPipeline;
+        // TODO: replace with std::variant
+        vulkan::GraphicsPipelineType pipeline =
+            vulkan::GraphicsPipelineType::NoPipeline;
         std::array<ObjectBoundDescriptor, 4> descriptors;
 
         [[nodiscard]] std::strong_ordering

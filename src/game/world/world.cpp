@@ -43,34 +43,15 @@ namespace game::world
         : game {game_}
         , chunks {}
     {
-        // util::panic("update world to draw stuff");
-        // this->chunks.insert(Chunk {Position {-511, 0, -511},
-        // generationFunc}); this->chunks.insert(Chunk {Position {0, 0, -511},
-        // generationFunc}); this->chunks.insert(Chunk {Position {511, 0, -511},
-        // generationFunc});
+        std::int32_t radius = 2;
 
-        // this->chunks.insert(Chunk {Position {-511, 0, 0}, generationFunc});
-        // this->chunks.insert(Chunk {Position {0, 0, 0}, generationFunc});
-        // this->chunks.insert(Chunk {Position {511, 0, 0}, generationFunc});
-
-        // this->chunks.insert(Chunk {Position {-511, 0, 511}, generationFunc});
-        // this->chunks.insert(Chunk {Position {0, 0, 511}, generationFunc});
-        // this->chunks.insert(Chunk {Position {511, 0, 511}, generationFunc});
-
-        // Define the radius
-        int radius = 3; // Change this to the desired radius
-
-        // Generate chunks within the specified radius
-        for (int x = -radius; x <= radius; x++)
+        for (std::int32_t x = -radius; x <= radius; x++)
         {
-            for (int z = -radius; z <= radius; z++)
+            for (std::int32_t z = -radius; z <= radius; z++)
             {
-                // Calculate the position for the chunk
-                int chunkX = x * 512;
-                int chunkZ = z * 512;
+                std::int32_t chunkX = static_cast<std::int32_t>(x * 512);
+                std::int32_t chunkZ = static_cast<std::int32_t>(z * 512);
 
-                // Insert the chunk using the calculated position and generation
-                // function
                 this->chunks.insert(Chunk {
                     Position {chunkX - x, 0, chunkZ - z}, generationFunc});
             }
@@ -91,8 +72,7 @@ namespace game::world
     {
         // a realloc causes a surprising performance hit due to it calling
         // potentially ~30k+ move constructors, avoid please
-        // return this->objects.size() * 3 / 2;
-        return 150;
+        return this->chunks.size() * 3 / 2;
     }
 
 } // namespace game::world

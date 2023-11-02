@@ -12,14 +12,22 @@ namespace gfx::vulkan
     class Device;
     class RenderPass;
     class Swapchain;
-    class Pipeline;
+    class GraphicsPipeline;
+    class DescriptorPool;
+    class ComputePipeline;
     class Allocator;
 
-    enum class PipelineType
+    enum class GraphicsPipelineType
     {
         NoPipeline,
         Flat,
         Voxel,
+    };
+
+    enum class ComputePipelineType
+    {
+        NoPipeline,
+        RayCaster
     };
 
     class PipelineManager
@@ -34,20 +42,25 @@ namespace gfx::vulkan
         PipelineManager& operator= (const PipelineManager&) = delete;
         PipelineManager& operator= (PipelineManager&&)      = delete;
 
-        const Pipeline& getPipeline(PipelineType) const;
+        const GraphicsPipeline& getGraphicsPipeline(GraphicsPipelineType) const;
+        const ComputePipeline&  getComputePipeline(ComputePipelineType) const;
 
     private:
-        Pipeline createPipeline(PipelineType) const;
+        GraphicsPipeline createGraphicsPipeline(GraphicsPipelineType) const;
+        ComputePipeline  createComputePipeline(ComputePipelineType) const;
 
         vk::Device     device;
         vk::RenderPass render_pass;
         Swapchain*     swapchain;
         Allocator*     allocator;
 
-        util::RwLock<std::unordered_map<PipelineType, Pipeline>> cache;
+        util::RwLock<std::unordered_map<GraphicsPipelineType, GraphicsPipeline>>
+            graphics_pipeline_cache;
+        util::RwLock<std::unordered_map<ComputePipelineType, ComputePipeline>>
+            compute_pipeline_cache;
     };
 
-    class Pipeline // GraphicsPipeline
+    class GraphicsPipeline // GraphicsPipeline
     {
     public:
 
@@ -59,9 +72,9 @@ namespace gfx::vulkan
 
     public:
 
-        Pipeline() = default;
+        GraphicsPipeline() = default;
         // "optimized" constructor, (shorter)
-        Pipeline(
+        GraphicsPipeline(
             VertexType,
             vk::Device,
             vk::RenderPass,
@@ -71,7 +84,7 @@ namespace gfx::vulkan
             vk::UniquePipelineLayout);
 
         // manual constructor
-        Pipeline(
+        GraphicsPipeline(
             vk::Device,
             vk::RenderPass,
             std::span<vk::PipelineShaderStageCreateInfo>,
@@ -84,15 +97,40 @@ namespace gfx::vulkan
             std::optional<vk::PipelineDepthStencilStateCreateInfo>,
             std::optional<vk::PipelineColorBlendStateCreateInfo>,
             vk::UniquePipelineLayout);
-        ~Pipeline() = default;
+        ~GraphicsPipeline() = default;
 
-        Pipeline(const Pipeline&)             = delete;
-        Pipeline(Pipeline&&)                  = default;
-        Pipeline& operator= (const Pipeline&) = delete;
-        Pipeline& operator= (Pipeline&&)      = default;
+        GraphicsPipeline(const GraphicsPipeline&)             = delete;
+        GraphicsPipeline(GraphicsPipeline&&)                  = default;
+        GraphicsPipeline& operator= (const GraphicsPipeline&) = delete;
+        GraphicsPipeline& operator= (GraphicsPipeline&&)      = default;
 
         [[nodiscard]] vk::Pipeline       operator* () const;
         [[nodiscard]] vk::PipelineLayout getLayout() const;
+
+    private:
+        vk::UniquePipelineLayout layout;
+        vk::UniquePipeline       pipeline;
+    };
+
+    class ComputePipeline
+    {
+    public:
+
+        ComputePipeline() = default;
+        ComputePipeline(
+            vk::Device,
+            vk::UniqueShaderModule,
+            std::span<const vk::DescriptorSetLayout>);
+        ~ComputePipeline() = default;
+
+        ComputePipeline(const ComputePipeline&)             = delete;
+        ComputePipeline(ComputePipeline&&)                  = default;
+        ComputePipeline& operator= (const ComputePipeline&) = delete;
+        ComputePipeline& operator= (ComputePipeline&&)      = default;
+
+        [[nodiscard]] vk::Pipeline       operator* () const;
+        [[nodiscard]] vk::PipelineLayout getLayout() const;
+
 
     private:
         vk::UniquePipelineLayout layout;
