@@ -23,6 +23,11 @@ namespace gfx::vulkan
     class Frame;
     class PipelineManager;
 
+    namespace voxel
+    {
+        class ComputeRenderer;
+    }
+
     class RenderPass
     {
     public:
@@ -74,6 +79,7 @@ namespace gfx::vulkan
         [[nodiscard]] std::expected<void, ResizeNeeded> render(
             Camera,
             std::span<const Object*>,
+            voxel::ComputeRenderer*,
             ImGuiMenu*,
             std::function<void()>
                 postFrameUploadFunc); // TODO: move only function

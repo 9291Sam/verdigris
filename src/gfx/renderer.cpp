@@ -209,6 +209,7 @@ namespace gfx
             if (!currentFrame.render(
                     this->draw_camera,
                     rawObjects,
+                    this->voxel_renderer.get(),
                     this->show_menu ? this->menu.get() : nullptr,
                     updateAfterFrameFunc))
             {
@@ -280,6 +281,7 @@ namespace gfx
         }
 
         this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
+            *this,
             this->device.get(),
             this->allocator.get(),
             this->pipelines.get(),

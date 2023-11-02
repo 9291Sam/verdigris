@@ -1,4 +1,5 @@
 #include "compute_renderer.hpp"
+#include <gfx/renderer.hpp>
 #include <gfx/vulkan/allocator.hpp>
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/device.hpp>
@@ -7,14 +8,25 @@
 #include <glm/vec4.hpp>
 #include <util/log.hpp>
 
+struct UploadInfo
+{
+    glm::vec4 camera_position;
+    glm::vec4 camera_forward;
+    glm::vec4 sphere_center;
+    float     sphere_radius;
+    float     focal_length;
+};
+
 namespace gfx::vulkan::voxel
 {
     ComputeRenderer::ComputeRenderer(
+        const Renderer&  renderer_,
         Device*          device_,
         Allocator*       allocator_,
         PipelineManager* manager_,
         vk::Extent2D     extent)
-        : device {device_}
+        : renderer {renderer_}
+        , device {device_}
         , allocator {allocator_}
         , pipeline_manager {manager_}
         , output_image {
@@ -31,11 +43,12 @@ namespace gfx::vulkan::voxel
               vk::ImageAspectFlagBits::eColor,
               vk::ImageTiling::eOptimal,
               vk::MemoryPropertyFlagBits::eDeviceLocal}
+        , time_alive {0.0f}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
 
-        vk::UniqueSampler sampler =
+        this->output_image_sampler =
             this->device->asLogicalDevice().createSamplerUnique(
                 vk::SamplerCreateInfo {
                     .sType {vk::StructureType::eSamplerCreateInfo},
@@ -58,16 +71,7 @@ namespace gfx::vulkan::voxel
                     .unnormalizedCoordinates {},
                 });
 
-        struct UploadInfo
-        {
-            glm::vec4 camera_position;
-            glm::vec4 camera_forward;
-            glm::vec4 sphere_center;
-            float     sphere_radius;
-            float     focal_length;
-        };
-
-        vulkan::Buffer setBuffer = vulkan::Buffer {
+        this->input_buffer = vulkan::Buffer {
             this->allocator,
             sizeof(UploadInfo),
             vk::BufferUsageFlagBits::eUniformBuffer
@@ -78,20 +82,20 @@ namespace gfx::vulkan::voxel
         UploadInfo info {
             .camera_position {glm::vec4 {0.0f, 0.0f, 0.0f, 1.0f}},
             .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
-            .sphere_center {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
-            .sphere_radius {1.0f},
+            .sphere_center {glm::vec4 {0.0f, 0.0f, 1.5f, 0.0f}},
+            .sphere_radius {0.33f},
             .focal_length {1.0f}};
 
-        setBuffer.write(std::span<const std::byte> {
+        this->input_buffer.write(std::span<const std::byte> {
             reinterpret_cast<const std::byte*>(&info), sizeof(UploadInfo)});
 
         const vk::DescriptorImageInfo imageBindInfo {
-            .sampler {*sampler},
+            .sampler {*this->output_image_sampler},
             .imageView {*this->output_image},
             .imageLayout {vk::ImageLayout::eGeneral}};
 
         const vk::DescriptorBufferInfo bufferBindInfo {
-            .buffer {*setBuffer},
+            .buffer {*this->input_buffer},
             .offset {0},
             .range {sizeof(UploadInfo)},
         };
@@ -146,38 +150,14 @@ namespace gfx::vulkan::voxel
 
                 commandBuffer.begin(BeginInfo);
 
-                const vulkan::ComputePipeline& pipeline =
-                    this->pipeline_manager->getComputePipeline(
-                        ComputePipelineType::RayCaster);
-
-                commandBuffer.bindPipeline(
-                    vk::PipelineBindPoint::eCompute, *pipeline);
-
-                commandBuffer.bindDescriptorSets(
-                    vk::PipelineBindPoint::eCompute,
-                    pipeline.getLayout(),
-                    0,
-                    *this->set,
-                    {});
-
+                // we need to change the layout on the first time
                 this->output_image.transitionLayout(
                     commandBuffer,
                     vk::ImageLayout::eUndefined,
-                    vk::ImageLayout::eGeneral,
-                    vk::PipelineStageFlagBits::eComputeShader,
-                    vk::PipelineStageFlagBits::eComputeShader,
-                    vk::AccessFlagBits::eNone,
-                    vk::AccessFlagBits::eShaderWrite);
-
-                commandBuffer.dispatch(8, 8, 1);
-
-                this->output_image.transitionLayout(
-                    commandBuffer,
-                    vk::ImageLayout::eGeneral,
                     vk::ImageLayout::eShaderReadOnlyOptimal,
                     vk::PipelineStageFlagBits::eComputeShader,
                     vk::PipelineStageFlagBits::eComputeShader,
-                    vk::AccessFlagBits::eShaderWrite,
+                    vk::AccessFlagBits::eNone,
                     vk::AccessFlagBits::eShaderRead);
 
                 commandBuffer.end();
@@ -206,6 +186,56 @@ namespace gfx::vulkan::voxel
     }
 
     ComputeRenderer::~ComputeRenderer() = default;
+
+    void ComputeRenderer::render(vk::CommandBuffer commandBuffer)
+    {
+        // TODO: move to a logical place
+        this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
+
+        UploadInfo info {
+            .camera_position {glm::vec4 {0.0f, 0.0f, 0.0f, 1.0f}},
+            .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
+            .sphere_center {glm::vec4 {
+                0.0f, 0.0f, std::sin(this->time_alive) + 2.0f, 0.0f}},
+            .sphere_radius {0.33f},
+            .focal_length {1.0f}};
+
+        this->input_buffer.write(std::span<const std::byte> {
+            reinterpret_cast<const std::byte*>(&info), sizeof(UploadInfo)});
+
+        const vulkan::ComputePipeline& pipeline =
+            this->pipeline_manager->getComputePipeline(
+                ComputePipelineType::RayCaster);
+
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, *pipeline);
+
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eCompute,
+            pipeline.getLayout(),
+            0,
+            *this->set,
+            {});
+
+        this->output_image.transitionLayout(
+            commandBuffer,
+            vk::ImageLayout::eShaderReadOnlyOptimal,
+            vk::ImageLayout::eGeneral,
+            vk::PipelineStageFlagBits::eComputeShader,
+            vk::PipelineStageFlagBits::eComputeShader,
+            vk::AccessFlagBits::eShaderRead,
+            vk::AccessFlagBits::eShaderWrite);
+
+        commandBuffer.dispatch(8, 8, 1);
+
+        this->output_image.transitionLayout(
+            commandBuffer,
+            vk::ImageLayout::eGeneral,
+            vk::ImageLayout::eShaderReadOnlyOptimal,
+            vk::PipelineStageFlagBits::eComputeShader,
+            vk::PipelineStageFlagBits::eComputeShader,
+            vk::AccessFlagBits::eShaderWrite,
+            vk::AccessFlagBits::eShaderRead);
+    }
 
     vk::ImageView ComputeRenderer::getImage()
     {

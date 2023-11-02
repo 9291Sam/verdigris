@@ -1,5 +1,6 @@
 #include "render_pass.hpp"
 #include "device.hpp"
+#include "gfx/vulkan/voxel/compute_renderer.hpp"
 #include "image.hpp"
 #include "swapchain.hpp"
 #include <gfx/imgui_menu.hpp>
@@ -199,6 +200,7 @@ namespace gfx::vulkan
     std::expected<void, Frame::ResizeNeeded> Frame::render(
         Camera                         camera,
         const std::span<const Object*> unsortedObjects,
+        voxel::ComputeRenderer*        computeRenderer,
         ImGuiMenu*                     menu,
         std::function<void()>          postFrameUploadFunc)
     {
@@ -323,6 +325,11 @@ namespace gfx::vulkan
                     .clearValueCount {clearValues.size()},
                     .pClearValues {clearValues.data()},
                 };
+
+                if (computeRenderer != nullptr)
+                {
+                    computeRenderer->render(commandBuffer);
+                }
 
                 commandBuffer.beginRenderPass(
                     renderPassBeginInfo, vk::SubpassContents::eInline);
