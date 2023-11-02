@@ -176,14 +176,22 @@ namespace gfx::vulkan
                 break;
             }
             case DescriptorSetType::VoxelRayTracing: {
-                std::array<vk::DescriptorSetLayoutBinding, 1> bindings {
+                std::array<vk::DescriptorSetLayoutBinding, 2> bindings {
                     vk::DescriptorSetLayoutBinding {
                         .binding {0},
                         .descriptorType {vk::DescriptorType::eStorageImage},
                         .descriptorCount {1},
                         .stageFlags {vk::ShaderStageFlagBits::eCompute},
                         .pImmutableSamplers {nullptr},
-                    }};
+                    },
+                    vk::DescriptorSetLayoutBinding {
+                        .binding {1},
+                        .descriptorType {vk::DescriptorType::eUniformBuffer},
+                        .descriptorCount {1},
+                        .stageFlags {vk::ShaderStageFlagBits::eCompute},
+                        .pImmutableSamplers {nullptr},
+                    },
+                };
 
                 this->descriptor_layout_cache[typeToGet] = DescriptorSetLayout {
                     this->device,

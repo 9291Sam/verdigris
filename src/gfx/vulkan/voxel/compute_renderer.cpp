@@ -3,6 +3,8 @@
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/device.hpp>
 #include <gfx/vulkan/pipelines.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <util/log.hpp>
 
 namespace gfx::vulkan::voxel
@@ -56,22 +58,68 @@ namespace gfx::vulkan::voxel
                     .unnormalizedCoordinates {},
                 });
 
+        struct UploadInfo
+        {
+            glm::vec4 camera_position;
+            glm::vec4 camera_forward;
+            glm::vec4 sphere_center;
+            float     sphere_radius;
+            float     focal_length;
+        };
+
+        vulkan::Buffer setBuffer = vulkan::Buffer {
+            this->allocator,
+            sizeof(UploadInfo),
+            vk::BufferUsageFlagBits::eUniformBuffer
+                | vk::BufferUsageFlagBits::eTransferDst,
+            vk::MemoryPropertyFlagBits::eDeviceLocal
+                | vk::MemoryPropertyFlagBits::eHostVisible};
+
+        UploadInfo info {
+            .camera_position {glm::vec4 {0.5f, 0.5f, 0.5f, 0.5f}},
+            .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
+            .sphere_center {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
+            .sphere_radius {1.0f},
+            .focal_length {1.0f}};
+
+        setBuffer.write(std::span<const std::byte> {
+            reinterpret_cast<const std::byte*>(&info), sizeof(UploadInfo)});
+
         const vk::DescriptorImageInfo imageBindInfo {
             .sampler {*sampler},
             .imageView {*this->output_image},
             .imageLayout {vk::ImageLayout::eGeneral}};
 
-        const vk::WriteDescriptorSet setUpdateInfo {
-            .sType {vk::StructureType::eWriteDescriptorSet},
-            .pNext {nullptr},
-            .dstSet {*this->set},
-            .dstBinding {0},
-            .dstArrayElement {0},
-            .descriptorCount {1},
-            .descriptorType {vk::DescriptorType::eStorageImage},
-            .pImageInfo {&imageBindInfo},
-            .pBufferInfo {nullptr},
-            .pTexelBufferView {nullptr}};
+        const vk::DescriptorBufferInfo bufferBindInfo {
+            .buffer {*setBuffer},
+            .offset {0},
+            .range {sizeof(UploadInfo)},
+        };
+
+        const std::array<vk::WriteDescriptorSet, 2> setUpdateInfo {
+            vk::WriteDescriptorSet {
+                .sType {vk::StructureType::eWriteDescriptorSet},
+                .pNext {nullptr},
+                .dstSet {*this->set},
+                .dstBinding {0},
+                .dstArrayElement {0},
+                .descriptorCount {1},
+                .descriptorType {vk::DescriptorType::eStorageImage},
+                .pImageInfo {&imageBindInfo},
+                .pBufferInfo {nullptr},
+                .pTexelBufferView {nullptr}},
+            vk::WriteDescriptorSet {
+                .sType {vk::StructureType::eWriteDescriptorSet},
+                .pNext {nullptr},
+                .dstSet {*this->set},
+                .dstBinding {1},
+                .dstArrayElement {0},
+                .descriptorCount {1},
+                .descriptorType {vk::DescriptorType::eUniformBuffer},
+                .pImageInfo {nullptr},
+                .pBufferInfo {&bufferBindInfo},
+                .pTexelBufferView {nullptr}},
+        };
 
         this->device->asLogicalDevice().updateDescriptorSets(
             setUpdateInfo, nullptr);

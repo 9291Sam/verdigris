@@ -1,9 +1,10 @@
 #version 460
+#extension GL_EXT_scalar_block_layout : require
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0, binding = 0, rgba8) writeonly uniform image2D out_image;
-layout(set = 0, binding = 1, std430) readonly buffer World
+layout(set = 0, binding = 1, std430) readonly uniform World
 {
     vec3 camera_position;
     vec3 camera_forward;
@@ -26,22 +27,48 @@ vec3 Ray_at(in Ray self, in float t)
 
 vec4 calculateColor(in Ray ray)
 {
-    return vec4(1.0, 1.0, 1.0, 1.0);
+    return vec4(1.0, ray.origin);
 };
 
 
 void main()
 {
+    const uint outImageWidth = 256;
+    const uint outImageHeight = 256;
+    const float aspectRatio = 1.0;
+    const float focalLength = 1.0;
+    const float viewportWidth = 1.0;
+    const float viewportHeight = aspectRatio * viewportWidth;
+
+    const vec3 viewportU = vec3(viewportWidth, 0.0, 0.0);
+    const vec3 viewportV = vec3(0.0, -viewportHeight, 0.0);
+
+    const vec3 pixelDeltaU = viewportU / float(outImageWidth);
+    const vec3 pixelDeltaV = viewportV / float(outImageHeight);
+
+    const vec3 viewportUpperLeft = 
+        in_world.camera_position -
+        vec3(0.0, 0.0, focalLength) -
+        viewportU / 2 -
+        viewportV / 2;
+
+    const vec3 pixel00Location =
+        viewportUpperLeft + (pixelDeltaU + pixelDeltaV) * 0.5;
+
+
+    const vec3 pixelCenter =
+        pixel00Location + (pixelDeltaU * float(gl_GlobalInvocationID.x))
+                            + (pixelDeltaV * float(gl_GlobalInvocationID.y));
+    
+    const vec3 rayDirection = pixelCenter - in_world.camera_position;
+
     Ray ray;
-    // ray.origin = {}; // TODO:
-    // ray.direction = {}; // TODO:
+    ray.origin = in_world.camera_position;
+    ray.direction = rayDirection;
 
     imageStore(
         out_image,
         ivec2(gl_GlobalInvocationID),
-        // vec4(
-        //     0.0, gl_GlobalInvocationID.x * 1/255.0, gl_GlobalInvocationID.y * 1/255.0, 1.0
-        // )
         calculateColor(ray)
     );
 }
