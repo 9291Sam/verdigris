@@ -25,10 +25,47 @@ vec3 Ray_at(in Ray self, in float t)
 }
 
 
+// vec4 calculateColor(in Ray ray)
+// {
+//     return vec4(ray.direction, 1.0);
+// };
+
 vec4 calculateColor(in Ray ray)
 {
-    return vec4(1.0, ray.origin);
-};
+    // Define the unit sphere at the origin (radius = 1.0)
+    vec3 sphereCenter = vec3(0.0, 0.0, 1.0);
+    float sphereRadius = 0.33;
+
+    // Compute the coefficients for the quadratic equation of the ray-sphere intersection
+    vec3 oc = ray.origin - sphereCenter;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2.0 * dot(oc, ray.direction);
+    float c = dot(oc, oc) - sphereRadius * sphereRadius;
+
+    // Calculate the discriminant to determine if there's an intersection
+    float discriminant = b * b - 4.0 * a * c;
+
+    if (discriminant > 0.0) {
+        // Ray intersects the sphere
+        // Calculate the value of t for the two possible intersection points
+        float t1 = (-b - sqrt(discriminant)) / (2.0 * a);
+        float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
+
+        // Choose the smaller positive t value
+        float t = min(t1, t2);
+
+        // Calculate the intersection point
+        vec3 intersectionPoint = Ray_at(ray, t);
+
+        // Calculate and return the color based on the intersection point
+        vec3 normal = normalize(intersectionPoint - sphereCenter);
+        vec4 color = vec4(normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        return color;
+    }
+
+    // No intersection with the sphere, return a background color
+    return vec4(0.0, 0.0, 0.0, 1.0);
+}
 
 
 void main()

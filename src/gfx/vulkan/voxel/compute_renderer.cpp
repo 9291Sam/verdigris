@@ -76,7 +76,7 @@ namespace gfx::vulkan::voxel
                 | vk::MemoryPropertyFlagBits::eHostVisible};
 
         UploadInfo info {
-            .camera_position {glm::vec4 {0.5f, 0.5f, 0.5f, 0.5f}},
+            .camera_position {glm::vec4 {0.0f, 0.0f, 0.0f, 1.0f}},
             .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
             .sphere_center {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
             .sphere_radius {1.0f},
