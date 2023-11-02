@@ -30,65 +30,6 @@ namespace gfx::vulkan::voxel
               vk::ImageTiling::eOptimal,
               vk::MemoryPropertyFlagBits::eDeviceLocal}
     {
-        {
-            const vk::FenceCreateInfo fenceCreateInfo {
-                .sType {vk::StructureType::eFenceCreateInfo},
-                .pNext {nullptr},
-                .flags {},
-            };
-
-            vk::UniqueFence endTransferFence =
-                this->device->asLogicalDevice().createFenceUnique(
-                    fenceCreateInfo);
-
-            this->device->accessQueue(
-                vk::QueueFlagBits::eCompute,
-                [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
-                {
-                    const vk::CommandBufferBeginInfo BeginInfo {
-                        .sType {vk::StructureType::eCommandBufferBeginInfo},
-                        .pNext {nullptr},
-                        .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-                        .pInheritanceInfo {nullptr},
-                    };
-
-                    commandBuffer.begin(BeginInfo);
-
-                    this->output_image.transitionLayout(
-                        commandBuffer,
-                        vk::ImageLayout::eUndefined,
-                        vk::ImageLayout::eGeneral,
-                        vk::PipelineStageFlagBits::eAllCommands,
-                        vk::PipelineStageFlagBits::eAllCommands,
-                        vk::AccessFlagBits::eNone,
-                        vk::AccessFlagBits::eShaderWrite);
-
-                    commandBuffer.end();
-
-                    const vk::SubmitInfo SubmitInfo {
-                        .sType {vk::StructureType::eSubmitInfo},
-                        .pNext {nullptr},
-                        .waitSemaphoreCount {0},
-                        .pWaitSemaphores {nullptr},
-                        .pWaitDstStageMask {nullptr},
-                        .commandBufferCount {1},
-                        .pCommandBuffers {&commandBuffer},
-                        .signalSemaphoreCount {0},
-                        .pSignalSemaphores {nullptr},
-                    };
-
-                    queue.submit(SubmitInfo, *endTransferFence);
-                });
-
-            const vk::Result result =
-                this->device->asLogicalDevice().waitForFences(
-                    *endTransferFence, static_cast<vk::Bool32>(true), -1);
-
-            util::assertFatal(
-                result == vk::Result::eSuccess,
-                "Failed to wait for image trnasfer");
-        }
-
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
 
@@ -118,8 +59,7 @@ namespace gfx::vulkan::voxel
         const vk::DescriptorImageInfo imageBindInfo {
             .sampler {*sampler},
             .imageView {*this->output_image},
-            .imageLayout {vk::ImageLayout::eGeneral}}; // why isnt this
-                                                       // storage?
+            .imageLayout {vk::ImageLayout::eGeneral}};
 
         const vk::WriteDescriptorSet setUpdateInfo {
             .sType {vk::StructureType::eWriteDescriptorSet},
@@ -136,80 +76,85 @@ namespace gfx::vulkan::voxel
         this->device->asLogicalDevice().updateDescriptorSets(
             setUpdateInfo, nullptr);
 
-        {
-            const vk::FenceCreateInfo fenceCreateInfo {
-                .sType {vk::StructureType::eFenceCreateInfo},
-                .pNext {nullptr},
-                .flags {},
-            };
+        const vk::FenceCreateInfo fenceCreateInfo {
+            .sType {vk::StructureType::eFenceCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+        };
 
-            vk::UniqueFence endTransferFence =
-                this->device->asLogicalDevice().createFenceUnique(
-                    fenceCreateInfo);
+        vk::UniqueFence endTransferFence =
+            this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
 
-            this->device->accessQueue(
-                vk::QueueFlagBits::eCompute,
-                [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
-                {
-                    const vk::CommandBufferBeginInfo BeginInfo {
-                        .sType {vk::StructureType::eCommandBufferBeginInfo},
-                        .pNext {nullptr},
-                        .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-                        .pInheritanceInfo {nullptr},
-                    };
+        this->device->accessQueue(
+            vk::QueueFlagBits::eCompute,
+            [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+            {
+                const vk::CommandBufferBeginInfo BeginInfo {
+                    .sType {vk::StructureType::eCommandBufferBeginInfo},
+                    .pNext {nullptr},
+                    .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
+                    .pInheritanceInfo {nullptr},
+                };
 
-                    commandBuffer.begin(BeginInfo);
+                commandBuffer.begin(BeginInfo);
 
-                    const vulkan::ComputePipeline& pipeline =
-                        this->pipeline_manager->getComputePipeline(
-                            ComputePipelineType::RayCaster);
+                const vulkan::ComputePipeline& pipeline =
+                    this->pipeline_manager->getComputePipeline(
+                        ComputePipelineType::RayCaster);
 
-                    commandBuffer.bindPipeline(
-                        vk::PipelineBindPoint::eCompute, *pipeline);
+                commandBuffer.bindPipeline(
+                    vk::PipelineBindPoint::eCompute, *pipeline);
 
-                    commandBuffer.bindDescriptorSets(
-                        vk::PipelineBindPoint::eCompute,
-                        pipeline.getLayout(),
-                        0,
-                        *this->set,
-                        {});
+                commandBuffer.bindDescriptorSets(
+                    vk::PipelineBindPoint::eCompute,
+                    pipeline.getLayout(),
+                    0,
+                    *this->set,
+                    {});
 
-                    this->output_image.transitionLayout(
-                        commandBuffer,
-                        vk::ImageLayout::eGeneral,
-                        vk::ImageLayout::eShaderReadOnlyOptimal,
-                        vk::PipelineStageFlagBits::eComputeShader,
-                        vk::PipelineStageFlagBits::eComputeShader,
-                        vk::AccessFlagBits::eNone,
-                        vk::AccessFlagBits::eShaderRead);
+                this->output_image.transitionLayout(
+                    commandBuffer,
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eGeneral,
+                    vk::PipelineStageFlagBits::eComputeShader,
+                    vk::PipelineStageFlagBits::eComputeShader,
+                    vk::AccessFlagBits::eNone,
+                    vk::AccessFlagBits::eShaderWrite);
 
-                    commandBuffer.dispatch(8, 8, 1);
+                commandBuffer.dispatch(8, 8, 1);
 
-                    commandBuffer.end();
+                this->output_image.transitionLayout(
+                    commandBuffer,
+                    vk::ImageLayout::eGeneral,
+                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                    vk::PipelineStageFlagBits::eComputeShader,
+                    vk::PipelineStageFlagBits::eComputeShader,
+                    vk::AccessFlagBits::eShaderWrite,
+                    vk::AccessFlagBits::eShaderRead);
 
-                    const vk::SubmitInfo SubmitInfo {
-                        .sType {vk::StructureType::eSubmitInfo},
-                        .pNext {nullptr},
-                        .waitSemaphoreCount {0},
-                        .pWaitSemaphores {nullptr},
-                        .pWaitDstStageMask {nullptr},
-                        .commandBufferCount {1},
-                        .pCommandBuffers {&commandBuffer},
-                        .signalSemaphoreCount {0},
-                        .pSignalSemaphores {nullptr},
-                    };
+                commandBuffer.end();
 
-                    queue.submit(SubmitInfo, *endTransferFence);
-                });
+                const vk::SubmitInfo SubmitInfo {
+                    .sType {vk::StructureType::eSubmitInfo},
+                    .pNext {nullptr},
+                    .waitSemaphoreCount {0},
+                    .pWaitSemaphores {nullptr},
+                    .pWaitDstStageMask {nullptr},
+                    .commandBufferCount {1},
+                    .pCommandBuffers {&commandBuffer},
+                    .signalSemaphoreCount {0},
+                    .pSignalSemaphores {nullptr},
+                };
 
-            const vk::Result result =
-                this->device->asLogicalDevice().waitForFences(
-                    *endTransferFence, static_cast<vk::Bool32>(true), -1);
+                queue.submit(SubmitInfo, *endTransferFence);
+            });
 
-            util::assertFatal(
-                result == vk::Result::eSuccess,
-                "Failed to wait for image trnasfer");
-        }
+        const vk::Result result = this->device->asLogicalDevice().waitForFences(
+            *endTransferFence, static_cast<vk::Bool32>(true), -1);
+
+        util::assertFatal(
+            result == vk::Result::eSuccess,
+            "Failed to wait for image trnasfer");
     }
 
     ComputeRenderer::~ComputeRenderer() = default;

@@ -398,7 +398,7 @@ namespace gfx::vulkan
                 .depthClampEnable {static_cast<vk::Bool32>(false)},
                 .rasterizerDiscardEnable {static_cast<vk::Bool32>(false)},
                 .polygonMode {vk::PolygonMode::eFill},
-                .cullMode {vk::CullModeFlagBits::eNone},
+                .cullMode {vk::CullModeFlagBits::eBack},
                 .frontFace {vk::FrontFace::eCounterClockwise},
                 .depthBiasEnable {static_cast<vk::Bool32>(false)},
                 .depthBiasConstantFactor {0.0f},
