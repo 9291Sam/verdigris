@@ -1,7 +1,7 @@
 #version 460
 #extension GL_EXT_scalar_block_layout : require
 
-#include <util.glsl>
+#include <../include/ray.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
@@ -14,17 +14,6 @@ layout(set = 0, binding = 1, std430) readonly uniform World
     float sphere_radius;
     float focal_length;
 } in_world;
-struct Ray
-{
-    vec3 origin;
-    vec3 direction;
-};
-
-vec3 Ray_at(in Ray self, in float t)
-{
-    return self.origin + self.direction * t;
-}
-
 
 vec4 calculateColor(in Ray ray)
 {
@@ -59,15 +48,12 @@ vec4 calculateColor(in Ray ray)
         return color;
     }
 
-
     // pallet in the background
     vec2 uuid = vec2(gl_GlobalInvocationID.xy);
     uuid /= vec2(imageSize(out_image).xy);
     return vec4(0.0, uuid, 1.0);
     // return vec4(0.0, 0.0, 0.0, 0.0);
-
 }
-
 
 void main()
 {
@@ -75,7 +61,7 @@ void main()
     const uint outImageHeight = imageSize(out_image).y;
 
     if (gl_GlobalInvocationID.x > outImageWidth ||
-        gl_GlobalInvocationID.y > outImageHeight)
+            gl_GlobalInvocationID.y > outImageHeight)
     {
         return;
     }
@@ -91,20 +77,19 @@ void main()
     const vec3 pixelDeltaU = viewportU / float(outImageWidth);
     const vec3 pixelDeltaV = viewportV / float(outImageHeight);
 
-    const vec3 viewportUpperLeft = 
+    const vec3 viewportUpperLeft =
         in_world.camera_position -
-        vec3(0.0, 0.0, focalLength) -
-        viewportU / 2 -
-        viewportV / 2;
+            vec3(0.0, 0.0, focalLength) -
+            viewportU / 2 -
+            viewportV / 2;
 
     const vec3 pixel00Location =
         viewportUpperLeft + (pixelDeltaU + pixelDeltaV) * 0.5;
 
-
     const vec3 pixelCenter =
         pixel00Location + (pixelDeltaU * float(gl_GlobalInvocationID.x))
-                            + (pixelDeltaV * float(gl_GlobalInvocationID.y));
-    
+            + (pixelDeltaV * float(gl_GlobalInvocationID.y));
+
     const vec3 rayDirection = pixelCenter - in_world.camera_position;
 
     Ray ray;

@@ -257,6 +257,12 @@ namespace gfx
                     ImGuiWindowFlags_NoMove |          // NOLINT
                     ImGuiWindowFlags_NoDecoration))    // NOLINT
         {
+            static constexpr float WindowPadding = 5.0f;
+
+            ImGui::PushStyleVar(
+                ImGuiStyleVar_WindowPadding,
+                ImVec2(WindowPadding, WindowPadding));
+
             if (ImGui::Button("Button"))
             {
                 util::logTrace("pressed button");
@@ -289,7 +295,8 @@ namespace gfx
                 static_cast<float>(this->display_image_size.height)
                 / static_cast<float>(this->display_image_size.width);
 
-            const float imageWidth = std::min(x, DesiredConsoleSize.x);
+            const float imageWidth =
+                std::min(x, DesiredConsoleSize.x - WindowPadding * 2); //
 
             auto vec = ImVec2(imageWidth, imageWidth * displayImageAspectRatio);
 
