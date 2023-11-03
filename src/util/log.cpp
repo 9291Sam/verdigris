@@ -111,7 +111,7 @@ namespace util
 
     void Logger::send(std::string string)
     {
-        if (!this->message_queue->enqueue(string))
+        if (!this->message_queue->enqueue(std::move(string)))
         {
             std::puts("Unable to send message to worker thread!\n");
             std::ignore =

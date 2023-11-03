@@ -188,7 +188,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             target_compile_options(verdigris PUBLIC -glldb)
             target_compile_options(verdigris PUBLIC -gdwarf-4)
             target_compile_options(verdigris PUBLIC -g3)
-            target_compile_options(verdigris PUBLIC -fprofile-instr-generate -fcoverage-mapping)
+            # target_compile_options(verdigris PUBLIC -fcoverage-mapping)
+            # target_compile_options(verdigris PUBLIC -fprofile-instr-generate)
+            
 
             target_compile_options(verdigris PUBLIC -fsanitize=address)
             target_link_options(verdigris PUBLIC -fsanitize=address)
@@ -260,8 +262,27 @@ if (APPLE)
     target_link_libraries(verdigris PUBLIC "-framework Cocoa -framework IOKit")
 endif ()
 
+# function(compile_shader target)
+#     cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT" "SOURCES")
+#     foreach (source ${arg_SOURCES})
+#         add_custom_command(
+#                 OUTPUT ${source}.${arg_FORMAT}
+#                 DEPENDS ${source}
+#                 DEPFILE ${source}.d
+#                 COMMAND
+#                 ${glslc_executable}
+#                 $<$<BOOL:${arg_ENV}>:--target-env=${arg_ENV}>
+#                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
+#                 -MD -MF ${source}.d
+#                 -o ${source}.${arg_FORMAT}
+#                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+#         )
+#         target_sources(${target} PRIVATE ${source}.${arg_FORMAT})
+#     endforeach ()
+# endfunction()
+
 function(compile_shader target)
-    cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT" "SOURCES")
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT;INCLUDE_DIRS" "SOURCES")
     foreach (source ${arg_SOURCES})
         add_custom_command(
                 OUTPUT ${source}.${arg_FORMAT}
@@ -271,6 +292,7 @@ function(compile_shader target)
                 ${glslc_executable}
                 $<$<BOOL:${arg_ENV}>:--target-env=${arg_ENV}>
                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
+                $<$<BOOL:${arg_INCLUDE_DIRS}>:-I${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include>
                 -MD -MF ${source}.d
                 -o ${source}.${arg_FORMAT}
                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}
@@ -280,13 +302,14 @@ function(compile_shader target)
 endfunction()
 
 compile_shader(verdigris
-        ENV vulkan1.0
-        FORMAT bin
-        SOURCES
-        src/gfx/vulkan/shaders/flat_pipeline.vert
-        src/gfx/vulkan/shaders/flat_pipeline.frag
-        src/gfx/vulkan/shaders/voxel.vert
-        src/gfx/vulkan/shaders/voxel.frag
+    ENV vulkan1.0
+    FORMAT bin
+    INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include"
+    SOURCES
+    src/gfx/vulkan/shaders/flat_pipeline.vert
+    src/gfx/vulkan/shaders/flat_pipeline.frag
+    src/gfx/vulkan/shaders/voxel.vert
+    src/gfx/vulkan/shaders/voxel.frag
 
-        src/gfx/vulkan/shaders/voxel/image_filler.comp
-        )
+    src/gfx/vulkan/shaders/voxel/image_filler.comp
+)

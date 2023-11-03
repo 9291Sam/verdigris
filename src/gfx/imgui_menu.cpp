@@ -291,6 +291,8 @@ namespace gfx
 
             const float imageWidth = std::min(x, DesiredConsoleSize.x);
 
+            auto vec = ImVec2(imageWidth, imageWidth * displayImageAspectRatio);
+
             ImGui::Image(
                 (ImTextureID)(this->image_descriptor),
                 ImVec2(imageWidth, imageWidth * displayImageAspectRatio));
