@@ -180,11 +180,12 @@ namespace gfx::vulkan
         auto end = std::chrono::high_resolution_clock::now();
 
         // TODO: add names to stuff
-        util::logTrace(
-            "Wrote buffer of size {} in {}us",
-            this->size_bytes,
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-                .count());
+        // util::logTrace(
+        //     "Wrote buffer of size {} in {}us",
+        //     this->size_bytes,
+        //     std::chrono::duration_cast<std::chrono::microseconds>(end -
+        //     start)
+        //         .count());
     }
 
     void

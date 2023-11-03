@@ -190,8 +190,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             target_compile_options(verdigris PUBLIC -g3)
             target_compile_options(verdigris PUBLIC -fprofile-instr-generate -fcoverage-mapping)
 
-            # target_compile_options(verdigris PUBLIC -fsanitize=address)
-            # target_link_options(verdigris PUBLIC -fsanitize=address)
+            target_compile_options(verdigris PUBLIC -fsanitize=address)
+            target_link_options(verdigris PUBLIC -fsanitize=address)
 
             # target_compile_options(verdigris PUBLIC -fsanitize=undefined)
             # target_link_options(verdigris PUBLIC -fsanitize=undefined)
