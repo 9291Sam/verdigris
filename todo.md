@@ -18,3 +18,7 @@ Voxels:
 1 voxel rendering with a moveable camera
 8 ^ 3 voxel naiieve rendering
 chunked rendering
+
+
+todo: add toggles for chaning logging level on the fly in the menu
+and enableing and disabiling validation
