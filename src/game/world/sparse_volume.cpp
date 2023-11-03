@@ -226,16 +226,7 @@ namespace game::world
                         v.position += static_cast<glm::vec3>(
                             Position {localX, localY, localZ});
 
-                        v.color = voxel.getColor(); // *=
-
-                        if (localX == 0 && localY == 0 && localZ == 0)
-                        {
-                            util::logDebug(
-                                "offset: {} | outcolor: {}",
-                                glm::to_string(
-                                    static_cast<glm::vec3>(localOffset)),
-                                glm::to_string(v.color));
-                        }
+                        v.color *= voxel.getColor();
 
                         outputVertices.push_back(v);
                     }

@@ -140,19 +140,6 @@ namespace game::world
                                 .g {util::convertLinearToSRGB(color.g)},
                                 .b {util::convertLinearToSRGB(color.b)},
                                 .a {static_cast<std::uint8_t>(color.a * 255)}};
-
-                        if (pollingX == 0 and pollingZ == 0)
-                        {
-                            util::logDebug(
-                                "X: {} | Z: {} | nX: {} | nZ: {} | Voxel: {}",
-                                pollingX,
-                                pollingZ,
-                                normalizedX,
-                                normalizedZ,
-                                static_cast<std::string>(
-                                    volume->accessFromLocalPosition(
-                                        accessPosition)));
-                        }
                     }
                 }
 

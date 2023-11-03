@@ -33,7 +33,7 @@ namespace gfx::vulkan::voxel
               this->allocator,
               this->device->asLogicalDevice(),
               extent,
-              vk::Format::eR8G8B8A8Unorm,
+              vk::Format::eR8G8B8A8Snorm,
               vk::ImageUsageFlagBits::eSampled
                   | vk::ImageUsageFlagBits::eStorage, //  It's similar to trying to save a screenshot, look at Sascha's example on that.
               vk::ImageAspectFlagBits::eColor,

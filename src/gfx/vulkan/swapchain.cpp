@@ -9,7 +9,7 @@ namespace gfx::vulkan
         : device {device_.asLogicalDevice()}
         , extent {extent_}
         , format {vk::SurfaceFormatKHR {
-              .format {vk::Format::eB8G8R8A8Unorm},
+              .format {vk::Format::eB8G8R8A8Srgb},
               .colorSpace {vk::ColorSpaceKHR::eVkColorspaceSrgbNonlinear}}}
         , swapchain {nullptr}
         , images {}      // NOLINT
