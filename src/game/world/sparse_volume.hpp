@@ -27,8 +27,8 @@ namespace game::world
         bool                 operator== (const Position&) const  = default;
         std::strong_ordering operator<=> (const Position&) const = default;
 
-        operator glm::vec3 () const;
-        operator std::string () const;
+        explicit operator glm::vec3 () const;
+        explicit operator std::string () const;
     };
 
     struct Voxel

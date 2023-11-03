@@ -11,3 +11,10 @@ make player movement blessed so its responsive during render tick holds
 install limits on buffer uploading per frame to prevent stuttering on uploads
 
 add views of system memory and gpu vram usage
+
+Voxels:
+
+1 voxel rendering
+1 voxel rendering with a moveable camera
+8 ^ 3 voxel naiieve rendering
+chunked rendering
