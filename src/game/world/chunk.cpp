@@ -97,11 +97,13 @@ namespace game::world
                                 0.0,
                                 1.0));
 
-                        // glm::vec4 color {
-                        //     0.0f,
-                        //     util::map(normalizedX, -1.0f, 1.0f,
-                        //     0.0f, 1.0f), util::map(normalizedZ,
-                        //     -1.0f, 1.0f, 0.0f, 1.0f), 1.0f};
+                        glm::vec4 color {
+                            0.0f,
+                            // util::map(normalizedX, -1.0f, 1.0f, 0.0f, 1.0f),
+                            // util::map(normalizedZ, -1.0f, 1.0f, 0.0f, 1.0f),
+                            normalizedX,
+                            normalizedZ,
+                            1.0f};
 
                         // glm::vec4 color {
                         //     0.0f,
@@ -109,15 +111,15 @@ namespace game::world
                         //     normalizedX, 4 * normalizedZ - 4 *
                         //     normalizedZ * normalizedZ, 1.0f};
 
-                        glm::vec4 color {
-                            0.0f,
-                            std::exp(
-                                -12.0 * (normalizedX - 0.5)
-                                * (normalizedX - 0.5)),
-                            std::exp(
-                                -12.0 * (normalizedZ - 0.5)
-                                * (normalizedZ - 0.5)),
-                            1.0f};
+                        // glm::vec4 color {
+                        //     0.0f,
+                        //     std::exp(
+                        //         -12.0 * (normalizedX - 0.5)
+                        //         * (normalizedX - 0.5)),
+                        //     std::exp(
+                        //         -12.0 * (normalizedZ - 0.5)
+                        //         * (normalizedZ - 0.5)),
+                        //     1.0f};
 
                         Position polled {
                             pollingX,
@@ -137,7 +139,20 @@ namespace game::world
                                 .r {util::convertLinearToSRGB(color.r)},
                                 .g {util::convertLinearToSRGB(color.g)},
                                 .b {util::convertLinearToSRGB(color.b)},
-                                .a {util::convertLinearToSRGB(color.a)}};
+                                .a {static_cast<std::uint8_t>(color.a * 255)}};
+
+                        if (pollingX == 0 and pollingZ == 0)
+                        {
+                            util::logDebug(
+                                "X: {} | Z: {} | nX: {} | nZ: {} | Voxel: {}",
+                                pollingX,
+                                pollingZ,
+                                normalizedX,
+                                normalizedZ,
+                                static_cast<std::string>(
+                                    volume->accessFromLocalPosition(
+                                        accessPosition)));
+                        }
                     }
                 }
 

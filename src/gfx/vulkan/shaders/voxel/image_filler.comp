@@ -61,10 +61,10 @@ vec4 calculateColor(in Ray ray)
 
 
     // pallet in the background
-    // vec2 uuid = vec2(gl_GlobalInvocationID.xy);
-    // uuid /= vec2(imageSize(out_image).xy);
-    // return vec4(0.0, uuid, 1.0);
-    return vec4(0.0, 0.0, 0.0, 0.0);
+    vec2 uuid = vec2(gl_GlobalInvocationID.xy);
+    uuid /= vec2(imageSize(out_image).xy);
+    return vec4(0.0, uuid, 1.0);
+    // return vec4(0.0, 0.0, 0.0, 0.0);
 
 }
 

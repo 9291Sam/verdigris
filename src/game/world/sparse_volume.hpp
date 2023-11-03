@@ -40,6 +40,7 @@ namespace game::world
 
         [[nodiscard]] bool      shouldDraw() const;
         [[nodiscard]] glm::vec4 getColor() const;
+        explicit                operator std::string () const;
     };
 
     struct VoxelVolume

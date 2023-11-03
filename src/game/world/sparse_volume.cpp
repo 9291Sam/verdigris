@@ -78,7 +78,17 @@ namespace game::world
             util::convertSRGBToLinear(this->r),
             util::convertSRGBToLinear(this->g),
             util::convertSRGBToLinear(this->b),
-            util::convertSRGBToLinear(this->a)};
+            static_cast<float>(this->a) / 255.0f};
+    }
+
+    Voxel::operator std::string () const
+    {
+        return fmt::format(
+            "R: {} | G: {} | B: {} | A: {}",
+            this->r,
+            this->g,
+            this->b,
+            this->a);
     }
 
     bool Voxel::shouldDraw() const
@@ -216,7 +226,16 @@ namespace game::world
                         v.position += static_cast<glm::vec3>(
                             Position {localX, localY, localZ});
 
-                        v.color *= voxel.getColor();
+                        v.color = voxel.getColor(); // *=
+
+                        if (localX == 0 && localY == 0 && localZ == 0)
+                        {
+                            util::logDebug(
+                                "offset: {} | outcolor: {}",
+                                glm::to_string(
+                                    static_cast<glm::vec3>(localOffset)),
+                                glm::to_string(v.color));
+                        }
 
                         outputVertices.push_back(v);
                     }
