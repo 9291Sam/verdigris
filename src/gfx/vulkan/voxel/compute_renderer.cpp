@@ -33,13 +33,9 @@ namespace gfx::vulkan::voxel
               this->allocator,
               this->device->asLogicalDevice(),
               extent,
-              vk::Format::eB8G8R8A8Srgb,
+              vk::Format::eR8G8B8A8Unorm,
               vk::ImageUsageFlagBits::eSampled
-                  | vk::ImageUsageFlagBits::eStorage,
-              //   | vk::ImageUsageFlagBits::eTransferDst, // TODO:
-              //   remove once
-              // its generated on
-              // the gpu soley
+                  | vk::ImageUsageFlagBits::eStorage, //  It's similar to trying to save a screenshot, look at Sascha's example on that.
               vk::ImageAspectFlagBits::eColor,
               vk::ImageTiling::eOptimal,
               vk::MemoryPropertyFlagBits::eDeviceLocal}
@@ -79,15 +75,9 @@ namespace gfx::vulkan::voxel
             vk::MemoryPropertyFlagBits::eDeviceLocal
                 | vk::MemoryPropertyFlagBits::eHostVisible};
 
-        UploadInfo info {
-            .camera_position {glm::vec4 {0.0f, 0.0f, 0.0f, 1.0f}},
-            .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
-            .sphere_center {glm::vec4 {0.0f, 0.0f, 1.5f, 0.0f}},
-            .sphere_radius {0.33f},
-            .focal_length {1.0f}};
+        UploadInfo info {};
 
-        this->input_buffer.write(std::span<const std::byte> {
-            reinterpret_cast<const std::byte*>(&info), sizeof(UploadInfo)});
+        this->input_buffer.write(util::asBytes(&info));
 
         const vk::DescriptorImageInfo imageBindInfo {
             .sampler {*this->output_image_sampler},
@@ -200,8 +190,7 @@ namespace gfx::vulkan::voxel
             .sphere_radius {0.33f},
             .focal_length {1.0f}};
 
-        this->input_buffer.write(std::span<const std::byte> {
-            reinterpret_cast<const std::byte*>(&info), sizeof(UploadInfo)});
+        this->input_buffer.write(util::asBytes(&info));
 
         const vulkan::ComputePipeline& pipeline =
             this->pipeline_manager->getComputePipeline(
@@ -226,7 +215,10 @@ namespace gfx::vulkan::voxel
             vk::AccessFlagBits::eShaderWrite);
 
         auto [x, y] = this->output_image.getExtent();
-        commandBuffer.dispatch(x / 32, y / 32, 1);
+        commandBuffer.dispatch(
+            util::ceilingDivide(x, ComputeRenderer::ShaderDispatchSize.width),
+            util::ceilingDivide(y, ComputeRenderer::ShaderDispatchSize.height),
+            1);
 
         this->output_image.transitionLayout(
             commandBuffer,

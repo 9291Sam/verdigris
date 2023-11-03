@@ -55,6 +55,8 @@ namespace gfx::vulkan::voxel
 
         float time_alive;
 
+        static constexpr vk::Extent2D ShaderDispatchSize {32, 32};
+
         // fixed world
         // dynamic size
         // dynamic world

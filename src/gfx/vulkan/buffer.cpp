@@ -179,6 +179,7 @@ namespace gfx::vulkan
 
         auto end = std::chrono::high_resolution_clock::now();
 
+        // TODO: add names to stuff
         util::logTrace(
             "Wrote buffer of size {} in {}us",
             this->size_bytes,

@@ -1,4 +1,5 @@
 #include "device.hpp"
+#include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <util/threads.hpp>
 #include <vulkan/vulkan.hpp>
@@ -50,6 +51,26 @@ namespace gfx::vulkan
                     return rateDevice(deviceL) < rateDevice(deviceR);
                 });
         }
+
+        // magic_enum::enum_for_each<vk::Format>(
+        //     [&](auto f)
+        //     {
+        //         try
+        //         {
+        //             vk::ImageFormatProperties properties =
+        //                 this->physical_device.getImageFormatProperties(
+        //                     f,
+        //                     vk::ImageType::e2D,
+        //                     vk::ImageTiling::eOptimal,
+        //                     vk::ImageUsageFlagBits::eStorage);
+
+        //             util::logTrace("format {}", vk::to_string(f));
+        //         }
+        //         catch (...)
+        //         {
+        //             // util::logTrace("!format {}", vk::to_string(f));
+        //         }
+        //     });
 
         constexpr std::size_t                maxNumberOfQueues {128};
         std::array<float, maxNumberOfQueues> queuePriorites {};

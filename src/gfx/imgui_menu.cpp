@@ -285,11 +285,15 @@ namespace gfx
 
             ImGui::TextUnformatted(fpsAndTps.c_str());
 
+            const float displayImageAspectRatio =
+                static_cast<float>(this->display_image_size.height)
+                / static_cast<float>(this->display_image_size.width);
+
+            const float imageWidth = std::min(x, DesiredConsoleSize.x);
+
             ImGui::Image(
                 (ImTextureID)(this->image_descriptor),
-                ImVec2(
-                    this->display_image_size.width,
-                    this->display_image_size.height));
+                ImVec2(imageWidth, imageWidth * displayImageAspectRatio));
 
             ImGui::End();
         }

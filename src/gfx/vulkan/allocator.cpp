@@ -33,7 +33,8 @@ namespace gfx::vulkan
             .pHeapSizeLimit {nullptr},
             .pVulkanFunctions {&vulkanFunctions},
             .instance {*instance},
-            .vulkanApiVersion {instance.getVulkanVersion()},
+            // .vulkanApiVersion {instance.getVulkanVersion()},
+            .vulkanApiVersion {VK_API_VERSION_1_0},
             .pTypeExternalMemoryHandleTypes {nullptr},
         };
 

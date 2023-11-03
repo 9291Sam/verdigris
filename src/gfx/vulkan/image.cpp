@@ -130,11 +130,14 @@ namespace gfx::vulkan
         vk::AccessFlags        sourceAccess,
         vk::AccessFlags        destinationAccess)
     {
-        util::assertFatal(
-            this->layout == from,
-            "Incompatible layouts! {} | {}",
-            vk::to_string(this->layout),
-            vk::to_string(from));
+        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        {
+            util::assertFatal(
+                this->layout == from,
+                "Incompatible layouts! {} | {}",
+                vk::to_string(this->layout),
+                vk::to_string(from));
+        }
 
         const vk::ImageMemoryBarrier barrier {
             .sType {vk::StructureType::eImageMemoryBarrier},

@@ -10,7 +10,7 @@ namespace
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         [[maybe_unused]] void*                      pUserData)
     {
-        util::logFatal(
+        util::logWarn(
             "Validation Layer Message: Severity: {} | Type: {} | \n{}",
             std::to_underlying(messageSeverity),
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),

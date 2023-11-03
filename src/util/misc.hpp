@@ -7,6 +7,7 @@
 #include <bit>
 #include <cmath>
 #include <concepts>
+#include <span>
 #include <type_traits>
 
 namespace util
@@ -254,6 +255,20 @@ namespace util
     map(T x, T in_min, T in_max, T out_min, T out_max) noexcept
     {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    }
+
+    template<UnsignedInteger I>
+    constexpr I ceilingDivide(I top, I bottom) noexcept
+    {
+        return top / bottom + (top % bottom != 0);
+    }
+
+    template<class T>
+    constexpr std::span<std::byte, sizeof(T)> asBytes(T* t) noexcept
+        requires std::is_trivially_copyable_v<T>
+    {
+        return std::span<std::byte, sizeof(T)> {
+            reinterpret_cast<std::byte*>(t), sizeof(T)}; // NOLINT
     }
 
     template<class... T>
