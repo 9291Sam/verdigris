@@ -152,14 +152,14 @@ namespace gfx
             {
                 this->show_menu = !this->show_menu;
 
-                if (this->show_menu)
-                {
-                    this->window->detachCursor();
-                }
-                else
-                {
-                    this->window->attachCursor();
-                }
+                // if (this->show_menu)
+                // {
+                //     this->window->detachCursor();
+                // }
+                // else
+                // {
+                //     this->window->attachCursor();
+                // }
             }
 
             this->menu_state.lock(

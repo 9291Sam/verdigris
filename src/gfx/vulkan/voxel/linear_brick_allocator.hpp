@@ -38,8 +38,6 @@ namespace gfx::vulkan::voxel
     class LinearBrickAllocator
     {
     public:
-
-    public:
         LinearBrickAllocator(std::size_t brickSize, std::size_t numberOfBricks);
 
         [[nodiscard]] std::span<std::byte> lookupAllocation(BrickHandle) const;

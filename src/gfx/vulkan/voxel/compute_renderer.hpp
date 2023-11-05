@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 #define SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 
+#include <gfx/camera.hpp>
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/descriptors.hpp>
 #include <gfx/vulkan/image.hpp>
@@ -38,7 +39,7 @@ namespace gfx::vulkan::voxel
         ComputeRenderer& operator= (const ComputeRenderer&) = delete;
         ComputeRenderer& operator= (ComputeRenderer&&)      = delete;
 
-        void                   render(vk::CommandBuffer);
+        void                   render(vk::CommandBuffer, const Camera&);
         const vulkan::Image2D& getImage() const;
 
     private:

@@ -74,7 +74,7 @@ namespace gfx::vulkan::voxel
     std::span<std::byte>
     LinearBrickAllocator::lookupAllocation(BrickHandle handle) const
     {
-        if (handle.index == BrickHandle {}.index)
+        if (!handle.isValid())
         {
             util::panic("Failed to lookup allocation!");
         }

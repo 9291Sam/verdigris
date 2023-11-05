@@ -14,6 +14,7 @@ layout(set = 0, binding = 1, std430) readonly uniform World
     vec3 camera_position;
     vec3 camera_forward;
     vec3 sphere_center;
+    float _padd;
     float sphere_radius;
     float focal_length;
 } in_world;
@@ -21,14 +22,14 @@ layout(set = 0, binding = 1, std430) readonly uniform World
 vec4 calculateColor(in Ray ray)
 {
     // Define the unit sphere at the origin (radius = 1.0)
-    vec3 sphereCenter = vec3(0.0, 0.0, 1.0);
-    float sphereRadius = 0.5;
+    // vec3 sphereCenter = vec3(0.0, 0.0, 1.0);
+    // float sphereRadius = 0.5;
 
     // Compute the coefficients for the quadratic equation of the ray-sphere intersection
     vec3 oc = ray.origin - in_world.sphere_center;
     float a = dot(ray.direction, ray.direction);
     float b = 2.0 * dot(oc, ray.direction);
-    float c = dot(oc, oc) - sphereRadius * sphereRadius;
+    float c = dot(oc, oc) - in_world.sphere_radius * in_world.sphere_radius;
 
     // Calculate the discriminant to determine if there's an intersection
     float discriminant = b * b - 4.0 * a * c;
@@ -72,7 +73,7 @@ void main()
     }
 
     const float aspectRatio = float(uint8_t(1)); // 1.0;
-    const float focalLength = 1.0;
+    // const float in_world.focal_length = 1.0;
     const float viewportWidth = 1.0;
     const float viewportHeight = aspectRatio * viewportWidth;
 
@@ -82,11 +83,16 @@ void main()
     const vec3 pixelDeltaU = viewportU / float(outImageWidth);
     const vec3 pixelDeltaV = viewportV / float(outImageHeight);
 
+    // const vec3 viewportUpperLeft =
+    //     in_world.camera_position -
+    //         vec3(0.0, 0.0, in_world.focal_length) -
+    //         viewportU / 2 -
+    //         viewportV / 2;
     const vec3 viewportUpperLeft =
-        in_world.camera_position -
-            vec3(0.0, 0.0, focalLength) -
-            viewportU / 2 -
-            viewportV / 2;
+    in_world.camera_position -
+        in_world.camera_forward * in_world.focal_length -
+        viewportU / 2 -
+        viewportV / 2;
 
     const vec3 pixel00Location =
         viewportUpperLeft + (pixelDeltaU + pixelDeltaV) * 0.5;

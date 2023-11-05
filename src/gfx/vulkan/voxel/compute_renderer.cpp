@@ -177,18 +177,20 @@ namespace gfx::vulkan::voxel
 
     ComputeRenderer::~ComputeRenderer() = default;
 
-    void ComputeRenderer::render(vk::CommandBuffer commandBuffer)
+    void ComputeRenderer::render(
+        vk::CommandBuffer commandBuffer, const Camera& camera)
     {
         // TODO: move to a logical place
         this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
 
         UploadInfo info {
-            .camera_position {glm::vec4 {0.0f, 0.0f, 0.0f, 1.0f}},
-            .camera_forward {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
-            .sphere_center {glm::vec4 {
-                0.0f, 0.0f, std::sin(this->time_alive) + 2.0f, 0.0f}},
+            .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
+            .camera_forward {glm::vec4 {camera.getForwardVector(), 0.0f}},
+            .sphere_center {glm::vec4 {0.3f, 0.0f, 3.0f, 0.0f}},
             .sphere_radius {0.33f},
             .focal_length {1.0f}};
+
+        // info.camera_forward = glm::normalize(info.camera_forward);
 
         this->input_buffer.write(util::asBytes(&info));
 
