@@ -328,7 +328,7 @@ namespace gfx::vulkan
 
                 if (computeRenderer != nullptr)
                 {
-                    computeRenderer->render(commandBuffer);
+                    computeRenderer->render(commandBuffer, camera);
                 }
 
                 commandBuffer.beginRenderPass(
