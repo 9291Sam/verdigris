@@ -262,47 +262,52 @@ namespace gfx
             ImGui::PushStyleVar(
                 ImGuiStyleVar_WindowPadding,
                 ImVec2(WindowPadding, WindowPadding));
-
-            if (ImGui::Button("Button"))
             {
-                util::logTrace("pressed button");
+                if (ImGui::Button("Button"))
+                {
+                    util::logTrace("pressed button");
+                }
+
+                if (ImGui::IsItemActive())
+                {
+                    char random = static_cast<std::string>(util::UUID {})[0];
+
+                    if (random == '\0')
+                    {
+                        state.string.clear();
+                    }
+                    else
+                    {
+                        state.string += random;
+                    }
+                }
+
+                const std::string playerPosition = std::format(
+                    "Player position: {}",
+                    glm::to_string(state.player_position));
+                ImGui::TextUnformatted(playerPosition.c_str());
+
+                const std::string fpsAndTps = std::format(
+                    "FPS: {:.3f} | TPS: {:.3f}", state.fps, state.tps);
+
+                ImGui::TextUnformatted(fpsAndTps.c_str());
+
+                const float displayImageAspectRatio =
+                    static_cast<float>(this->display_image_size.height)
+                    / static_cast<float>(this->display_image_size.width);
+
+                const float imageWidth =
+                    std::min(x, DesiredConsoleSize.x - WindowPadding * 2); //
+
+                auto vec =
+                    ImVec2(imageWidth, imageWidth * displayImageAspectRatio);
+
+                ImGui::Image(
+                    (ImTextureID)(this->image_descriptor),
+                    ImVec2(imageWidth, imageWidth * displayImageAspectRatio));
             }
 
-            if (ImGui::IsItemActive())
-            {
-                char random = static_cast<std::string>(util::UUID {})[0];
-
-                if (random == '\0')
-                {
-                    state.string.clear();
-                }
-                else
-                {
-                    state.string += random;
-                }
-            }
-
-            const std::string playerPosition = std::format(
-                "Player position: {}", glm::to_string(state.player_position));
-            ImGui::TextUnformatted(playerPosition.c_str());
-
-            const std::string fpsAndTps =
-                std::format("FPS: {:.3f} | TPS: {:.3f}", state.fps, state.tps);
-
-            ImGui::TextUnformatted(fpsAndTps.c_str());
-
-            const float displayImageAspectRatio =
-                static_cast<float>(this->display_image_size.height)
-                / static_cast<float>(this->display_image_size.width);
-
-            const float imageWidth =
-                std::min(x, DesiredConsoleSize.x - WindowPadding * 2); //
-
-            auto vec = ImVec2(imageWidth, imageWidth * displayImageAspectRatio);
-
-            ImGui::Image(
-                (ImTextureID)(this->image_descriptor),
-                ImVec2(imageWidth, imageWidth * displayImageAspectRatio));
+            ImGui::PopStyleVar();
 
             ImGui::End();
         }
