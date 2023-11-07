@@ -49,6 +49,7 @@ namespace gfx
         vk::Extent2D      display_image_size;
         vk::UniqueSampler sampler;
         vk::DescriptorSet image_descriptor;
+        std::string_view  current_logging_level_selection;
     };
 } // namespace gfx
 

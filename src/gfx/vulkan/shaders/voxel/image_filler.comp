@@ -90,7 +90,7 @@ void main()
     //         viewportV / 2;
     const vec3 viewportUpperLeft =
     in_world.camera_position -
-        in_world.camera_forward * in_world.focal_length -
+        in_world.camera_forward * vec3(0.0, 0.0, in_world.focal_length) -
         viewportU / 2 -
         viewportV / 2;
 

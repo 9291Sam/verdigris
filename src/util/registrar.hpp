@@ -12,7 +12,7 @@
 
 namespace util
 {
-    // think a flushable map, thats only occassionally accessed, not useful for
+    // think a flushable map, thats only occasionally accessed, not useful for
     // consistent concurrent random modification
     // but useful for delta changes between frames.
     template<class Key, class Value>

@@ -30,15 +30,15 @@ namespace gfx
 
         enum class Action : std::uint_fast8_t // bike shedding
         {
-            PlayerMoveForward  = 0,
-            PlayerMoveBackward = 1,
-            PlayerMoveLeft     = 2,
-            PlayerMoveRight    = 3,
-            PlayerMoveUp       = 5,
-            PlayerMoveDown     = 6,
-            PlayerSprint       = 7,
-            ToggleConsole      = 8,
-            MaxEnumValue       = 9,
+            PlayerMoveForward      = 0,
+            PlayerMoveBackward     = 1,
+            PlayerMoveLeft         = 2,
+            PlayerMoveRight        = 3,
+            PlayerMoveUp           = 5,
+            PlayerMoveDown         = 6,
+            PlayerSprint           = 7,
+            ToggleConsole          = 8,
+            ToggleCursorAttachment = 9,
         };
 
         enum class InteractionMethod

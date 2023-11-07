@@ -17,49 +17,57 @@
 
 namespace gfx
 {
+    using Action            = gfx::Window::Action;
+    using InteractionMethod = gfx::Window::InteractionMethod;
+    using ActionInformation = gfx::Window::ActionInformation;
 
     Renderer::Renderer()
         : window {std::make_unique<Window>(
             std::map<gfx::Window::Action, gfx::Window::ActionInformation> {
-                {gfx::Window::Action::PlayerMoveForward,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveForward,
+                 ActionInformation {
                      .key {GLFW_KEY_W},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerMoveBackward,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveBackward,
+                 ActionInformation {
                      .key {GLFW_KEY_S},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerMoveLeft,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveLeft,
+                 ActionInformation {
                      .key {GLFW_KEY_A},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerMoveRight,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveRight,
+                 ActionInformation {
                      .key {GLFW_KEY_D},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerMoveUp,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveUp,
+                 ActionInformation {
                      .key {GLFW_KEY_SPACE},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerMoveDown,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerMoveDown,
+                 ActionInformation {
                      .key {GLFW_KEY_LEFT_CONTROL},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::PlayerSprint,
-                 gfx::Window::ActionInformation {
+                {Action::PlayerSprint,
+                 ActionInformation {
                      .key {GLFW_KEY_LEFT_SHIFT},
-                     .method {gfx::Window::InteractionMethod::EveryFrame}}},
+                     .method {InteractionMethod::EveryFrame}}},
 
-                {gfx::Window::Action::ToggleConsole,
-                 gfx::Window::ActionInformation {
+                {Action::ToggleConsole,
+                 ActionInformation {
                      .key {GLFW_KEY_GRAVE_ACCENT},
-                     .method {gfx::Window::InteractionMethod::SinglePress}}},
+                     .method {InteractionMethod::SinglePress}}},
+
+                {Action::ToggleCursorAttachment,
+                 ActionInformation {
+                     .key {GLFW_KEY_BACKSLASH},
+                     .method {InteractionMethod::SinglePress}}},
 
             },
             vk::Extent2D {1920, 1080}, // NOLINT
@@ -74,6 +82,7 @@ namespace gfx
         , menu_state {ImGuiMenu::State {}}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , show_menu {false}
+        , is_cursor_attached {true}
     {
         this->initializeRenderer();
 
@@ -151,15 +160,21 @@ namespace gfx
                     Window::Action::ToggleConsole, true))
             {
                 this->show_menu = !this->show_menu;
+            }
 
-                // if (this->show_menu)
-                // {
-                //     this->window->detachCursor();
-                // }
-                // else
-                // {
-                //     this->window->attachCursor();
-                // }
+            if (this->window->isActionActive(
+                    Window::Action::ToggleCursorAttachment, true))
+            {
+                if (this->is_cursor_attached)
+                {
+                    this->is_cursor_attached = false;
+                    this->window->detachCursor();
+                }
+                else
+                {
+                    this->is_cursor_attached = true;
+                    this->window->attachCursor();
+                }
             }
 
             this->menu_state.lock(
@@ -276,6 +291,23 @@ namespace gfx
                         {
                             std::ignore =
                                 this->pipelines->getGraphicsPipeline(type);
+                        }));
+                });
+
+            magic_enum::enum_for_each<vulkan::ComputePipelineType>(
+                [&](vulkan::ComputePipelineType type)
+                {
+                    if (type == vulkan::ComputePipelineType::NoPipeline)
+                    {
+                        return;
+                    }
+
+                    pipelineFutures.push_back(std::async(
+                        std::launch::async,
+                        [this, type]
+                        {
+                            std::ignore =
+                                this->pipelines->getComputePipeline(type);
                         }));
                 });
         }

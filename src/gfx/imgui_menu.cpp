@@ -7,10 +7,12 @@
 #include "vulkan/device.hpp"
 #include "vulkan/render_pass.hpp"
 #include "window.hpp"
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <gfx/vulkan/image.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <string_view>
 
 namespace
 {
@@ -304,7 +306,42 @@ namespace gfx
                 (ImTextureID)(this->image_descriptor),
                 ImVec2(imageWidth, imageWidth * displayImageAspectRatio));
 
-            ImGui::End();
+            std::array<std::string_view, 5> LoggingLevels {
+                "Trace", "Debug", "Log", "Warn", "Fatal"};
+            this->current_logging_level_selection =
+                // NOLINTNEXTLINE
+                LoggingLevels[std::to_underlying(util::getCurrentLevel())];
+
+            if (ImGui::BeginCombo(
+                    "Logging Level",
+                    this->current_logging_level_selection.data()))
+            {
+                std::size_t idx = 0;
+                for (std::string_view s : LoggingLevels)
+                {
+                    bool is_selected =
+                        (this->current_logging_level_selection == s);
+
+                    if (ImGui::Selectable(s.data(), is_selected))
+                    {
+                        this->current_logging_level_selection = s;
+                        util::setLoggingLevel(
+                            static_cast<util::LoggingLevel>(idx));
+                    }
+
+                    if (is_selected)
+                    {
+                        ImGui::SetItemDefaultFocus(); // Set the initial focus
+                                                      // when opening the combo
+                                                      // (scrolling + for
+                                                      // keyboard navigation
+                                                      // support in the upcoming
+                                                      // navigation branch)
+                    }
+                    idx++;
+                }
+                ImGui::EndCombo();
+            }
         }
 
         ImGui::Render();

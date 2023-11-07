@@ -11,7 +11,7 @@ namespace game
 
 namespace game::entity
 {
-    class Entity : public std::enable_shared_from_this<Entity>
+    class Entity : public std::enable_shared_from_this<Entity> // TODO: uhhh no!
     {
     public:
         static std::shared_ptr<Entity> create(const Game&);

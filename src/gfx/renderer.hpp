@@ -82,13 +82,13 @@ namespace gfx
         std::unique_ptr<ImGuiMenu>                      menu;
 
         // Rasterizeables
-        util::Registrar<util::UUID, std::weak_ptr<const Object>>
-            draw_objects; // rasterizeables
+        util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
 
         // State
         util::Mutex<ImGuiMenu::State> menu_state;
         std::atomic<Camera>           draw_camera;
         bool                          show_menu;
+        bool                          is_cursor_attached;
         // things to draw
         // std::unique_ptr<VoxelComputeRenderer> voxel_renderer;
         // poke into menu and get the image

@@ -3,6 +3,7 @@
 #include "vulkan/vulkan_structs.hpp"
 #include <atomic>
 #include <chrono>
+#include <magic_enum_all.hpp>
 #include <thread>
 #include <util/log.hpp>
 #include <vulkan/vulkan.hpp>
@@ -78,12 +79,14 @@ namespace gfx
             this->action_interaction_map[action] = information.method;
         }
 
-        util::assertFatal(
-            key_information_map.size()
-                == static_cast<std::size_t>(Action::MaxEnumValue) - 1,
-            "Not all keys populated! {} {}",
-            key_information_map.size(),
-            std::to_underlying(Action::MaxEnumValue) - 1);
+        magic_enum::enum_for_each<Action>(
+            [&](Action a)
+            {
+                util::assertFatal(
+                    this->action_interaction_map.contains(a),
+                    "Action {} was not populated",
+                    magic_enum::enum_name(a));
+            });
 
         // update other callbacks
         glfwSetWindowUserPointer(this->window, static_cast<void*>(this));
