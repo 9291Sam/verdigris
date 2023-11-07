@@ -20,7 +20,7 @@ struct Voxel
     uint8_t metallic;
 
     /// 0 - nothing special
-    /// 1 - anisotropic
+    /// 1 - anisotropic?
     /// [2, 255] UB
     uint8_t special;
 };
