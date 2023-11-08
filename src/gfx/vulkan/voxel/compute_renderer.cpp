@@ -173,6 +173,66 @@ namespace gfx::vulkan::voxel
         util::assertFatal(
             result == vk::Result::eSuccess,
             "Failed to wait for image trnasfer");
+
+        static constexpr std::array<gfx::vulkan::Vertex, 8> Vertices {
+            gfx::vulkan::Vertex {
+                .position {-1.0f, -1.0f, -1.0f},
+                .color {0.0f, 0.0f, 0.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {-1.0f, -1.0f, 1.0f},
+                .color {0.0f, 0.0f, 1.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {-1.0f, 1.0f, -1.0f},
+                .color {0.0f, 1.0f, 0.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {-1.0f, 1.0f, 1.0f},
+                .color {0.0f, 1.0f, 1.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {1.0f, -1.0f, -1.0f},
+                .color {1.0f, 0.0f, 0.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {1.0f, -1.0f, 1.0f},
+                .color {1.0f, 0.0f, 1.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {1.0f, 1.0f, -1.0f},
+                .color {1.0f, 1.0f, 0.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+            gfx::vulkan::Vertex {
+                .position {1.0f, 1.0f, 1.0f},
+                .color {1.0f, 1.0f, 1.0f, 1.0f},
+                .normal {},
+                .uv {},
+            },
+        };
+
+        static constexpr std::array<gfx::vulkan::Index, 36> Indices {
+            6, 2, 7, 2, 3, 7, 0, 4, 5, 1, 0, 5, 0, 2, 6, 4, 0, 6,
+            3, 1, 7, 1, 5, 7, 2, 0, 3, 0, 1, 3, 4, 6, 7, 5, 4, 7};
+
+        this->obj = gfx::SimpleTriangulatedObject::create(
+            this->renderer,
+            std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
+            std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
     }
 
     ComputeRenderer::~ComputeRenderer() = default;
@@ -186,9 +246,16 @@ namespace gfx::vulkan::voxel
         UploadInfo info {
             .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
             .camera_forward {glm::vec4 {camera.getForwardVector(), 0.0f}},
-            .sphere_center {glm::vec4 {0.0f, 5.0f, 0.0f, 0.0f}},
+            .sphere_center {glm::vec4 {
+                18.0f, 5 + 5 * std::sin(this->time_alive), 0.0f, 0.0f}},
             .sphere_radius {1.0f},
             .focal_length {1.0f}};
+
+        this->obj->transform.lock(
+            [&](Transform& t)
+            {
+                t.translation = info.sphere_center;
+            });
 
         info.camera_forward = glm::normalize(info.camera_forward);
 

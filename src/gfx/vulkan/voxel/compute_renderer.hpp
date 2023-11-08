@@ -2,6 +2,7 @@
 #define SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 
 #include <gfx/camera.hpp>
+#include <gfx/object.hpp>
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/descriptors.hpp>
 #include <gfx/vulkan/image.hpp>
@@ -53,6 +54,8 @@ namespace gfx::vulkan::voxel
         vulkan::Buffer    input_buffer;
 
         DescriptorSet set;
+
+        std::shared_ptr<gfx::SimpleTriangulatedObject> obj;
 
         float time_alive;
 
