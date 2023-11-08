@@ -186,7 +186,7 @@ namespace gfx::vulkan::voxel
         UploadInfo info {
             .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
             .camera_forward {glm::vec4 {camera.getForwardVector(), 0.0f}},
-            .sphere_center {glm::vec4 {0.0f, 0.0f, 0.0f, 0.0f}},
+            .sphere_center {glm::vec4 {0.0f, 5.0f, 0.0f, 0.0f}},
             .sphere_radius {1.0f},
             .focal_length {1.0f}};
 

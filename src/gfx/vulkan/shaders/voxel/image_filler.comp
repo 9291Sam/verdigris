@@ -62,5 +62,5 @@ void main() {
     } else {
         // If there's no intersection, set the pixel color to the background color (e.g., black)
         imageStore(out_image, pixel_coords, vec4(0.0, 0.0, 0.0, 0.0));
-    }=
+    }
 }
