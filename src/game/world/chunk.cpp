@@ -39,10 +39,10 @@ namespace game::world
         , future_volume {std::nullopt}
         , future_object {std::nullopt}
     {
-        // util::logTrace(
-        //     "Constructed Chunk @ {} | {}",
-        //     static_cast<std::string>(position_),
-        //     static_cast<std::string>(this->location));
+        util::logTrace(
+            "Constructed Chunk @ {} | {}",
+            static_cast<std::string>(position_),
+            static_cast<std::string>(this->location));
 
         const std::int32_t localMinPollingX =
             SparseVoxelVolume::VoxelMinimum + this->location.x;
@@ -66,9 +66,9 @@ namespace game::world
              localMinPollingZ,
              localMaxPollingZ]
             {
-                // util::logTrace(
-                //     "SparseVolume creation started @ {}",
-                //     static_cast<std::string>(position));
+                util::logTrace(
+                    "SparseVolume creation started @ {}",
+                    static_cast<std::string>(position));
 
                 auto start = std::chrono::high_resolution_clock::now();
 
@@ -181,11 +181,11 @@ namespace game::world
 
                         auto end = std::chrono::high_resolution_clock::now();
 
-                        // util::logTrace(
-                        //     "Triangulated chunk in {}ms",
-                        //     std::chrono::duration_cast<
-                        //         std::chrono::milliseconds>(end - start)
-                        //         .count());
+                        util::logTrace(
+                            "Triangulated chunk in {}ms",
+                            std::chrono::duration_cast<
+                                std::chrono::milliseconds>(end - start)
+                                .count());
 
                         return gfx::SimpleTriangulatedObject::create(
                             renderer, std::move(vertices), std::move(indices));

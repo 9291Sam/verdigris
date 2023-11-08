@@ -103,9 +103,24 @@ void main()
 
     const vec3 rayDirection = pixelCenter - in_world.camera_position;
 
-    Ray ray;
-    ray.origin = in_world.camera_position;
-    ray.direction = rayDirection;
+    // Modify the camera's orientation based on the in_world.camera_forward vector
+mat3 cameraRotationMatrix = mat3(
+    normalize(cross(in_world.camera_forward, vec3(0.0, 1.0, 0.0))),  // Right vector
+    vec3(0.0, 1.0, 0.0),                                     // Up vector
+    -normalize(in_world.camera_forward)                               // Forward vector
+);
+
+// Apply the camera's orientation to the ray direction
+vec3 rotatedRayDirection = cameraRotationMatrix * rayDirection;
+
+// Use rotatedRayDirection to construct your ray
+Ray ray;
+ray.origin = in_world.camera_position;
+ray.direction = rotatedRayDirection;
+
+    // Ray ray;
+    // ray.origin = in_world.camera_position;
+    // ray.direction = rayDirection;
 
     imageStore(
         out_image,

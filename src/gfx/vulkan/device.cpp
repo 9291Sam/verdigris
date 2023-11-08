@@ -52,26 +52,6 @@ namespace gfx::vulkan
                 });
         }
 
-        // magic_enum::enum_for_each<vk::Format>(
-        //     [&](auto f)
-        //     {
-        //         try
-        //         {
-        //             vk::ImageFormatProperties properties =
-        //                 this->physical_device.getImageFormatProperties(
-        //                     f,
-        //                     vk::ImageType::e2D,
-        //                     vk::ImageTiling::eOptimal,
-        //                     vk::ImageUsageFlagBits::eStorage);
-
-        //             util::logTrace("format {}", vk::to_string(f));
-        //         }
-        //         catch (...)
-        //         {
-        //             // util::logTrace("!format {}", vk::to_string(f));
-        //         }
-        //     });
-
         constexpr std::size_t                maxNumberOfQueues {128};
         std::array<float, maxNumberOfQueues> queuePriorites {};
         std::fill(queuePriorites.begin(), queuePriorites.end(), 1.0f);
