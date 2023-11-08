@@ -72,55 +72,162 @@ void main()
         return;
     }
 
-    const float aspectRatio = float(uint8_t(1)); // 1.0;
-    // const float in_world.focal_length = 1.0;
-    const float viewportWidth = 1.0;
-    const float viewportHeight = aspectRatio * viewportWidth;
+    // const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+    // const float viewportWidth = 1.0;
+    // const float viewportHeight = aspectRatio * viewportWidth;
 
-    const vec3 viewportU = vec3(viewportWidth, 0.0, 0.0);
-    const vec3 viewportV = vec3(0.0, -viewportHeight, 0.0);
+    // const vec3 viewportU = vec3(viewportWidth, 0.0, 0.0);
+    // const vec3 viewportV = vec3(0.0, -viewportHeight, 0.0);
 
-    const vec3 pixelDeltaU = viewportU / float(outImageWidth);
-    const vec3 pixelDeltaV = viewportV / float(outImageHeight);
+    // const vec3 pixelDeltaU = viewportU / float(outImageWidth);
+    // const vec3 pixelDeltaV = viewportV / float(outImageHeight);
 
+    // // const vec3 viewportUpperLeft =
+    // // in_world.camera_position -
+    // //     vec3(0.0, 0.0, in_world.focal_length) -
+    // //     viewportU / 2 -
+    // //     viewportV / 2;
     // const vec3 viewportUpperLeft =
-    //     in_world.camera_position -
-    //         vec3(0.0, 0.0, in_world.focal_length) -
-    //         viewportU / 2 -
-    //         viewportV / 2;
-    const vec3 viewportUpperLeft =
-    in_world.camera_position -
-        in_world.camera_forward * vec3(0.0, 0.0, in_world.focal_length) -
-        viewportU / 2 -
-        viewportV / 2;
+    // in_world.camera_position -
+    // in_world.camera_forward * in_world.focal_length -
+    // viewportU / 2 -
+    // viewportV / 2;
 
-    const vec3 pixel00Location =
-        viewportUpperLeft + (pixelDeltaU + pixelDeltaV) * 0.5;
+    // const vec3 pixel00Location =
+    //     viewportUpperLeft + (pixelDeltaU + pixelDeltaV) * 0.5;
 
-    const vec3 pixelCenter =
-        pixel00Location + (pixelDeltaU * float(gl_GlobalInvocationID.x))
-            + (pixelDeltaV * float(gl_GlobalInvocationID.y));
+    // const vec3 pixelCenter =
+    //     pixel00Location + (pixelDeltaU * float(gl_GlobalInvocationID.x))
+    //         + (pixelDeltaV * float(gl_GlobalInvocationID.y));
 
-    const vec3 rayDirection = pixelCenter - in_world.camera_position;
-
-    // Modify the camera's orientation based on the in_world.camera_forward vector
-mat3 cameraRotationMatrix = mat3(
-    normalize(cross(in_world.camera_forward, vec3(0.0, 1.0, 0.0))),  // Right vector
-    vec3(0.0, 1.0, 0.0),                                     // Up vector
-    -normalize(in_world.camera_forward)                               // Forward vector
-);
-
-// Apply the camera's orientation to the ray direction
-vec3 rotatedRayDirection = cameraRotationMatrix * rayDirection;
-
-// Use rotatedRayDirection to construct your ray
-Ray ray;
-ray.origin = in_world.camera_position;
-ray.direction = rotatedRayDirection;
+    // const vec3 rayDirection = pixelCenter - in_world.camera_position;
 
     // Ray ray;
     // ray.origin = in_world.camera_position;
-    // ray.direction = rayDirection;
+    // ray.direction = normalize(rayDirection);
+
+
+
+
+
+//     const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+// const float viewportWidth = 1.0;
+// const float viewportHeight = aspectRatio * viewportWidth;
+
+// // Calculate camera right and up vectors based on the forward vector.
+// vec3 cameraForward = normalize(in_world.camera_forward);
+// vec3 worldUp = vec3(0.0, 1.0, 0.0);
+// vec3 cameraRight = normalize(cross(worldUp, cameraForward));
+// vec3 cameraUp = cross(cameraForward, cameraRight);
+
+// const vec3 pixelDeltaU = (2.0 * viewportWidth / float(outImageWidth)) * cameraRight;
+// const vec3 pixelDeltaV = (2.0 * viewportHeight / float(outImageHeight)) * cameraUp;
+
+// const vec3 viewportUpperLeft = in_world.camera_position - cameraForward - 0.5 * viewportWidth * cameraRight - 0.5 * viewportHeight * cameraUp;
+
+// const vec3 pixel00Location = viewportUpperLeft + 0.5 * pixelDeltaU + 0.5 * pixelDeltaV;
+
+// const vec3 pixelCenter = pixel00Location + float(gl_GlobalInvocationID.x) * pixelDeltaU + float(gl_GlobalInvocationID.y) * pixelDeltaV;
+
+// const vec3 rayDirection = normalize(pixelCenter - in_world.camera_position);
+
+//     Ray ray;
+//     ray.origin = in_world.camera_position;
+//     ray.direction = normalize(rayDirection);
+
+
+// const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+// const float viewportWidth = 1.0;
+// const float viewportHeight = aspectRatio * viewportWidth;
+
+// // Calculate camera right and up vectors based on the forward vector.
+// vec3 cameraForward = normalize(in_world.camera_forward);
+// vec3 worldUp = vec3(0.0, 1.0, 0.0);
+// vec3 cameraRight = normalize(cross(worldUp, cameraForward));
+// vec3 cameraUp = cross(cameraForward, cameraRight);
+
+// // Calculate the distance from the camera to the image plane.
+// const vec3 pixelDeltaU = (2.0 * viewportWidth / float(outImageWidth)) * cameraRight;
+// const vec3 pixelDeltaV = (2.0 * viewportHeight / float(outImageHeight)) * cameraUp;
+
+// const vec3 viewportUpperLeft = in_world.camera_position - cameraForward - 0.5 * viewportWidth * cameraRight - 0.5 * viewportHeight * cameraUp;
+
+// const vec3 pixel00Location = viewportUpperLeft + 0.5 * pixelDeltaU + 0.5 * pixelDeltaV;
+
+// const vec3 pixelCenter = pixel00Location + float(gl_GlobalInvocationID.x) * pixelDeltaU + float(gl_GlobalInvocationID.y) * pixelDeltaV;
+
+// const vec3 rayDirection = normalize(pixelCenter - in_world.camera_position);
+
+// float imagePlaneDistance = length(pixelCenter - in_world.camera_position);
+
+
+
+// const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+// const float viewportWidth = 1.0;
+// const float viewportHeight = aspectRatio * viewportWidth;
+
+// vec3 cameraForward = normalize(in_world.camera_forward);
+// vec3 worldUp = vec3(0.0, -1.0, 0.0);
+// vec3 cameraRight = normalize(cross(worldUp, cameraForward));
+// vec3 cameraUp = cross(cameraForward, cameraRight);
+
+// const vec3 viewportCenter = in_world.camera_position - in_world.focal_length * cameraForward;
+// const vec3 pixelCenter = viewportCenter + (2.0 * float(gl_GlobalInvocationID.x) / float(outImageWidth) - 1.0) * viewportWidth * cameraRight + (1.0 - 2.0 * float(gl_GlobalInvocationID.y) / float(outImageHeight)) * viewportHeight * cameraUp;
+
+// const vec3 rayDirection = normalize(pixelCenter - in_world.camera_position);
+
+// Ray ray;
+// ray.origin = in_world.camera_position;
+// ray.direction = rayDirection;
+
+
+
+// const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+// const float viewportWidth = 1.0;
+// const float viewportHeight = aspectRatio * viewportWidth;
+
+// vec3 cameraForward = normalize(in_world.camera_forward);
+// vec3 worldUp = vec3(0.0, 1.0, 0.0);
+// vec3 cameraRight = normalize(cross(cameraForward, worldUp));
+// vec3 cameraUp = cross(cameraRight, cameraForward);
+
+// const vec3 viewportCenter = in_world.camera_position - in_world.focal_length * cameraForward;
+
+// // Flip the Y-axis for Vulkan's coordinate system.
+// const vec3 pixelCenter = viewportCenter +
+//     (2.0 * float(gl_GlobalInvocationID.x) / float(outImageWidth) - 1.0) * viewportWidth * cameraRight +
+//     (1.0 - 2.0 * float(gl_GlobalInvocationID.y) / float(outImageHeight)) * viewportHeight * cameraUp;
+
+// const vec3 rayDirection = normalize(pixelCenter - in_world.camera_position);
+
+// Ray ray;
+// ray.origin = in_world.camera_position;
+// ray.direction = rayDirection;
+
+const float aspectRatio = float(outImageWidth) / float(outImageHeight);
+const float viewportWidth = 1.0;
+const float viewportHeight = aspectRatio * viewportWidth;
+
+vec3 cameraForward = normalize(in_world.camera_forward);
+vec3 worldUp = vec3(0.0, 1.0, 0.0);
+vec3 cameraRight = normalize(cross(worldUp, cameraForward));
+vec3 cameraUp = cross(cameraRight, cameraForward);
+
+const vec3 viewportCenter = in_world.camera_position - in_world.focal_length * cameraForward;
+
+// Flip the Y-axis for Vulkan's coordinate system.
+const vec3 pixelCenter = viewportCenter +
+    (2.0 * float(gl_GlobalInvocationID.x) / float(outImageWidth) - 1.0) * viewportWidth * cameraRight +
+    (1.0 - 2.0 * float(gl_GlobalInvocationID.y) / float(outImageHeight)) * viewportHeight * cameraUp;
+
+const vec3 rayDirection = normalize(pixelCenter - in_world.camera_position);
+
+Ray ray;
+ray.origin = in_world.camera_position;
+ray.direction = rayDirection;
+
+
+
 
     imageStore(
         out_image,
