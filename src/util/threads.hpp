@@ -196,12 +196,6 @@ namespace util
         return dst;
     }
 
-    inline std::byte*
-    threadedMemcpy(std::byte* dst, const std::byte* src, std::size_t size)
-    {
-        return threadedMemcpy(dst, std::span<const std::byte> {src, size});
-    }
-
 } // namespace util
 
 #endif // SRC_UTIL_THREADS_HPP

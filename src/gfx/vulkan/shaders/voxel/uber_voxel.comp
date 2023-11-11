@@ -1,0 +1,74 @@
+#version 460
+
+#extension GL_EXT_scalar_block_layout : require
+
+#include <../include/voxel.glsl>
+#include <../include/ray.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0, binding = 0, rgba8_snorm) writeonly uniform image2D out_image;
+layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
+{
+    vec3 camera_position;
+    vec3 camera_forward;
+    vec3 sphere_center;
+    float _padd;
+    float sphere_radius;
+    float focal_length;
+} in_world_info;
+
+const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
+
+vec4 calculatePixelColor(in Ray ray)
+{
+    Sphere sphere;
+    sphere.center = in_world_info.sphere_center;
+    sphere.radius = in_world_info.sphere_radius;
+
+    IntersectionResult result = Sphere_tryIntersect(sphere, ray);
+
+    if (result.intersection_occured)
+    {
+        return vec4(result.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+    }
+    else
+    {
+        return RayMissColor;
+    }
+}
+
+
+mat3 constructViewMatrix(vec3 forward, vec3 up)
+{
+    vec3 right = cross(up, forward);
+    up = cross(forward, right);
+    return mat3(right, up, -forward);
+}
+
+void main()
+{
+    ivec2 this_pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 image_size = imageSize(out_image);
+
+    // Calculate the ray direction from the camera
+    vec2 normalized_coords = (vec2(this_pixel_coords) / vec2(image_size)) * 2.0 - 1.0;
+
+    // Modify the code to handle non-square output images
+    float aspect_ratio = float(image_size.x) / float(image_size.y);
+    vec2 screen_coords = vec2(normalized_coords.x * aspect_ratio, normalized_coords.y);
+    
+    vec3 camera_forward = normalize(in_world_info.camera_forward);
+    vec3 camera_up = vec3(0.0, 1.0, 0.0); // Assuming an "up" direction of (0,1,0)
+    mat3 view_matrix = constructViewMatrix(camera_forward, camera_up);
+
+    Ray ray;
+    ray.origin = in_world_info.camera_position;
+    ray.direction = normalize(view_matrix * vec3(screen_coords, in_world_info.focal_length));
+
+    imageStore(
+        out_image,
+        this_pixel_coords,
+        calculatePixelColor(ray)
+    );
+}
