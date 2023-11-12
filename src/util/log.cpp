@@ -115,7 +115,7 @@ namespace util
         {
             std::puts("Unable to send message to worker thread!\n");
             std::ignore =
-                std::fwrite(string.data(), sizeof(char), string.size(), stdout);
+                std::fwrite(string.data(), sizeof(char), string.size(), stderr);
         }
     }
 
@@ -220,7 +220,7 @@ namespace util
         if (level >= LoggingLevel::Warn)
         {
             std::ignore =
-                std::fwrite(output.data(), sizeof(char), output.size(), stdout);
+                std::fwrite(output.data(), sizeof(char), output.size(), stderr);
         }
         else
         {

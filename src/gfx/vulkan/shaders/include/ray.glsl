@@ -33,6 +33,10 @@ struct Sphere
     float radius;
 };
 
+bool isEqual(float a, float b, float epsilon) {
+    return abs(a - b) < epsilon;
+}
+
 IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
 {
 
@@ -84,6 +88,7 @@ struct Cube
 
 IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
 {
+    ray.direction = -ray.direction; // TODO: what
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
     vec3 invdir = 1 / ray.direction;
@@ -114,9 +119,36 @@ IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
     if (tzmax < tmax)
         tmax = tzmax;
 
+    // IntersectionResult result;
+    // result.intersection_occured = true;
+    // result.maybe_normal = vec3(1.0, 1.0, 1.0);
+
+    // return result;
+
+
     IntersectionResult result;
     result.intersection_occured = true;
-    result.maybe_normal = vec3(1.0, 1.0, 1.0);
+
+    // Calculate the normal vector based on which face is hit
+    vec3 hit_point = ray.origin + tmin * ray.direction;
+    vec3 normal;
+    
+    const float EPSILON = 0.001;
+
+    if (isEqual(hit_point.x, bounds[1].x, EPSILON))
+        normal = vec3(-1.0, 0.0, 0.0); // Hit right face
+    else if (isEqual(hit_point.x, bounds[0].x, EPSILON))
+        normal = vec3(1.0, 0.0, 0.0); // Hit left face
+    else if (isEqual(hit_point.y, bounds[1].y, EPSILON))
+        normal = vec3(0.0, -1.0, 0.0); // Hit top face
+    else if (isEqual(hit_point.y, bounds[0].y, EPSILON))
+        normal = vec3(0.0, 1.0, 0.0); // Hit bottom face
+    else if (isEqual(hit_point.z, bounds[1].z, EPSILON))
+        normal = vec3(0.0, 0.0, -1.0); // Hit front face
+    else if (isEqual(hit_point.z, bounds[0].z, EPSILON))
+        normal = vec3(0.0, 0.0, 1.0); // Hit back face
+
+    result.maybe_normal = normal;
 
     return result;
 }
