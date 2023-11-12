@@ -12,11 +12,6 @@ vec3 Ray_at(in Ray self, in float t)
     return self.origin + self.direction * t;
 }
 
-struct Sphere
-{
-    vec3 center;
-    float radius;
-};
 
 struct IntersectionResult
 {
@@ -31,6 +26,12 @@ IntersectionResult IntersectionResult_getMiss()
 
     return result;
 }
+
+struct Sphere
+{
+    vec3 center;
+    float radius;
+};
 
 IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
 {
@@ -74,6 +75,52 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
         return IntersectionResult_getMiss();
     }
 }
+
+struct Cube
+{
+    vec3 center;
+    float edge_length;
+};
+
+IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
+{
+    float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+    vec3 invdir = 1 / ray.direction;
+
+    vec3 bounds[2] = vec3[2](self.center - self.edge_length, self.center + self.edge_length);
+    
+    tmin = (bounds[int(invdir[0] < 0)].x - ray.origin.x) * invdir.x;
+    tmax = (bounds[1-int(invdir[0] < 0)].x - ray.origin.x) * invdir.x;
+    tymin = (bounds[int(invdir[1] < 0)].y - ray.origin.y) * invdir.y;
+    tymax = (bounds[1-int(invdir[1] < 0)].y - ray.origin.y) * invdir.y;
+    
+    if ((tmin > tymax) || (tymin > tmax))
+        return IntersectionResult_getMiss();
+
+    if (tymin > tmin)
+        tmin = tymin;
+    if (tymax < tmax)
+        tmax = tymax;
+    
+    tzmin = (bounds[int(invdir[2] < 0)].z - ray.origin.z) * invdir.z;
+    tzmax = (bounds[1-int(invdir[2] < 0)].z - ray.origin.z) * invdir.z;
+    
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return IntersectionResult_getMiss();
+
+    if (tzmin > tmin)
+        tmin = tzmin;
+    if (tzmax < tmax)
+        tmax = tzmax;
+
+    IntersectionResult result;
+    result.intersection_occured = true;
+    result.maybe_normal = vec3(1.0, 1.0, 1.0);
+
+    return result;
+}
+
 
 
 

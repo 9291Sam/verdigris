@@ -19,23 +19,37 @@ layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
 } in_world_info;
 
 const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
+const vec3 WorldUpVector = vec3(0.0, 1.0, 0.0);
 
 vec4 calculatePixelColor(in Ray ray)
 {
-    Sphere sphere;
-    sphere.center = in_world_info.sphere_center;
-    sphere.radius = in_world_info.sphere_radius;
-
-    IntersectionResult result = Sphere_tryIntersect(sphere, ray);
-
-    if (result.intersection_occured)
     {
-        return vec4(result.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        Sphere sphere;
+        sphere.center = in_world_info.sphere_center;
+        sphere.radius = in_world_info.sphere_radius;
+
+        IntersectionResult result = Sphere_tryIntersect(sphere, ray);
+
+        if (result.intersection_occured)
+        {
+            return vec4(result.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        }
     }
-    else
+    
     {
-        return RayMissColor;
+        Cube cube;
+        cube.center = in_world_info.sphere_center + 10.0;
+        cube.edge_length = in_world_info.sphere_radius;
+
+        IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+        if (result.intersection_occured)
+        {
+            return vec4(result.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        }
     }
+
+    return RayMissColor;
 }
 
 
@@ -48,19 +62,16 @@ mat3 constructViewMatrix(vec3 forward, vec3 up)
 
 void main()
 {
-    ivec2 this_pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 image_size = imageSize(out_image);
+    const ivec2 this_pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 image_size = imageSize(out_image);
+    const float aspect_ratio = float(image_size.x) / float(image_size.y);
 
-    // Calculate the ray direction from the camera
-    vec2 normalized_coords = (vec2(this_pixel_coords) / vec2(image_size)) * 2.0 - 1.0;
+    const vec2 this_normalized_coord = (vec2(this_pixel_coords) / vec2(image_size)) * 2.0 - 1.0;
 
-    // Modify the code to handle non-square output images
-    float aspect_ratio = float(image_size.x) / float(image_size.y);
-    vec2 screen_coords = vec2(normalized_coords.x * aspect_ratio, normalized_coords.y);
+    vec2 screen_coords = vec2(this_normalized_coord.x * aspect_ratio, this_normalized_coord.y);
     
     vec3 camera_forward = normalize(in_world_info.camera_forward);
-    vec3 camera_up = vec3(0.0, 1.0, 0.0); // Assuming an "up" direction of (0,1,0)
-    mat3 view_matrix = constructViewMatrix(camera_forward, camera_up);
+    mat3 view_matrix = constructViewMatrix(camera_forward, WorldUpVector);
 
     Ray ray;
     ray.origin = in_world_info.camera_position;
