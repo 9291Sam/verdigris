@@ -73,6 +73,7 @@ vec4 calculatePixelColor(in Ray ray)
     if (bestIntersection.intersection_occured)
     {
         return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        // return vec4(0.0, bestIntersection.maybe_distance / 100.0, 0.0, 1.0); // Color based on the surface normal
     
     }
     else

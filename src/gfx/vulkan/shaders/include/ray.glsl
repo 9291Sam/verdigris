@@ -56,7 +56,7 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
         float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
 
         // Choose the smaller positive t value
-        float t = min(t1, t2);
+        float t = max(t1, t2); // TODO: what, why is this the max???
 
         // Calculate the intersection point
         vec3 intersectionPoint = Ray_at(ray, t);
