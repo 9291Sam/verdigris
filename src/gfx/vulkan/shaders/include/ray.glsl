@@ -16,6 +16,7 @@ vec3 Ray_at(in Ray self, in float t)
 struct IntersectionResult
 {
     bool intersection_occured;
+    float maybe_distance;
     vec3 maybe_normal;
 };
 
@@ -66,11 +67,10 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
         }
 
         // Calculate and return the color based on the intersection point
-        vec3 normal = normalize(intersectionPoint - self.center);
-
         IntersectionResult result;
         result.intersection_occured = true;
-        result.maybe_normal = normal;
+        result.maybe_distance = length(ray.origin - intersectionPoint);
+        result.maybe_normal = normalize(intersectionPoint - self.center);
         
         return result;
     }
@@ -88,7 +88,8 @@ struct Cube
 
 IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
 {
-    ray.direction = -ray.direction; // TODO: what
+    ray.direction = -ray.direction; // FIXME: what, this is terrible
+
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
     vec3 invdir = 1 / ray.direction;
@@ -112,25 +113,26 @@ IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
     tzmax = (bounds[1-int(invdir[2] < 0)].z - ray.origin.z) * invdir.z;
     
     if ((tmin > tzmax) || (tzmin > tmax))
-        return IntersectionResult_getMiss();
+        return IntersectionResult_getMiss();    
 
     if (tzmin > tmin)
         tmin = tzmin;
     if (tzmax < tmax)
         tmax = tzmax;
 
-    // IntersectionResult result;
-    // result.intersection_occured = true;
-    // result.maybe_normal = vec3(1.0, 1.0, 1.0);
-
-    // return result;
+    if (tmin < 0.0) {
+        // The intersection point is behind the ray's origin, consider it a miss
+        return IntersectionResult_getMiss();
+    }
 
 
     IntersectionResult result;
     result.intersection_occured = true;
 
     // Calculate the normal vector based on which face is hit
-    vec3 hit_point = ray.origin + tmin * ray.direction;
+    vec3 hit_point = ray.origin + tmin * ray.direction; // TODO: inverse?
+
+    result.maybe_distance = length(ray.origin - hit_point);
     vec3 normal;
     
     const float EPSILON = 0.001;
