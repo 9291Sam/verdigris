@@ -1,0 +1,115 @@
+#version 460
+
+#extension GL_EXT_scalar_block_layout : require
+
+#include <../include/voxel.glsl>
+#include <../include/ray.glsl>
+
+layout(local_size_x = 32, local_size_y = 32) in;
+
+layout(set = 0, binding = 0, rgba8_snorm) writeonly uniform image2D out_image;
+layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
+{
+    vec3 camera_position;
+    vec3 camera_forward;
+    vec3 sphere_center;
+    float _padd;
+    float sphere_radius;
+    float focal_length;
+} in_world_info;
+
+const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
+const vec3 WorldUpVector = vec3(0.0, 1.0, 0.0);
+
+vec4 calculatePixelColor(in Ray ray)
+{
+    IntersectionResult bestIntersection;
+    bestIntersection.intersection_occured = false;
+    {
+        Sphere sphere;
+        sphere.center = in_world_info.sphere_center;
+        sphere.radius = in_world_info.sphere_radius;
+
+        IntersectionResult result = Sphere_tryIntersect(sphere, ray);
+
+        if (!bestIntersection.intersection_occured ||
+            (result.intersection_occured && 
+            result.maybe_distance < bestIntersection.maybe_distance))
+        {
+            bestIntersection = result;
+        }
+    }
+    
+    {
+        Cube cube;
+        cube.center = in_world_info.sphere_center + 10.0;
+        cube.edge_length = in_world_info.sphere_radius;
+
+        IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+        if (!bestIntersection.intersection_occured ||
+            (result.intersection_occured && 
+            result.maybe_distance < bestIntersection.maybe_distance))
+        {
+            bestIntersection = result;
+        }
+    }
+
+    {
+        Cube cube;
+        cube.center = in_world_info.sphere_center + 4.2;
+        cube.edge_length = in_world_info.sphere_radius * 2.4;
+
+        IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+        if (!bestIntersection.intersection_occured ||
+            (result.intersection_occured && 
+            result.maybe_distance < bestIntersection.maybe_distance))
+        {
+            bestIntersection = result;
+        }
+    }
+
+    if (bestIntersection.intersection_occured)
+    {
+        return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
+        // return vec4(0.0, bestIntersection.maybe_distance / 100.0, 0.0, 1.0); // Color based on the surface normal
+    
+    }
+    else
+    {
+        return RayMissColor;
+    }
+}
+
+
+mat3 constructViewMatrix(vec3 forward, vec3 up)
+{
+    vec3 right = cross(up, forward);
+    up = cross(forward, right);
+    return mat3(right, up, -forward);
+}
+
+void main()
+{
+    const ivec2 this_pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 image_size = imageSize(out_image);
+    const float aspect_ratio = float(image_size.x) / float(image_size.y);
+
+    const vec2 this_normalized_coord = (vec2(this_pixel_coords) / vec2(image_size)) * 2.0 - 1.0;
+
+    vec2 screen_coords = vec2(this_normalized_coord.x * aspect_ratio, this_normalized_coord.y);
+    
+    vec3 camera_forward = normalize(in_world_info.camera_forward);
+    mat3 view_matrix = constructViewMatrix(camera_forward, WorldUpVector);
+
+    Ray ray;
+    ray.origin = in_world_info.camera_position;
+    ray.direction = normalize(view_matrix * vec3(screen_coords, in_world_info.focal_length));
+
+    imageStore(
+        out_image,
+        this_pixel_coords,
+        calculatePixelColor(ray)
+    );
+}

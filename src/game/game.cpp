@@ -78,7 +78,8 @@ namespace game
         this->renderer.getMenuState().lock(
             [&](gfx::ImGuiMenu::State& state)
             {
-                state.tps = 1 / this->getTickDeltaTimeSeconds();
+                state.tps             = 1 / this->getTickDeltaTimeSeconds();
+                state.player_position = this->player.getCamera().getPosition();
             });
     }
 

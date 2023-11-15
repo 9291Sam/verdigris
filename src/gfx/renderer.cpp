@@ -135,6 +135,30 @@ namespace gfx
              / static_cast<float>(height);
     }
 
+    // float gfx::Renderer::getFocalLength() const
+    // {
+    //     const auto [width, height] = this->window->getFramebufferSize();
+    //     float fovYRadians          = this->getFovYRadians();
+
+    //     // Calculate focal length using the field of view and image size
+    //     float focalLength =
+    //         static_cast<float>(width) / (2.0f * std::tan(fovYRadians
+    //         / 2.0f));
+
+    //     return focalLength;
+    // }
+    float gfx::Renderer::getFocalLength() const
+    {
+        // const auto [width, height] = this->window->getFramebufferSize();
+        // float fovYRadians          = this->getFovYRadians();
+
+        // // Assuming you're using glm::perspective for rasterization
+        // float focalLength = 1.0f / std::tan(fovYRadians / 2.0f);
+
+        // return focalLength;
+        return 1.0f;
+    }
+
     float gfx::Renderer::getAspectRatio() const
     {
         const auto [width, height] = this->window->getFramebufferSize();
@@ -274,50 +298,50 @@ namespace gfx
             this->swapchain.get(),
             this->allocator.get());
 
-        {
-            std::vector<std::future<void>> pipelineFutures {};
+        // {
+        //     std::vector<std::future<void>> pipelineFutures {};
 
-            magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
-                [&](vulkan::GraphicsPipelineType type)
-                {
-                    if (type == vulkan::GraphicsPipelineType::NoPipeline)
-                    {
-                        return;
-                    }
+        //     magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
+        //         [&](vulkan::GraphicsPipelineType type)
+        //         {
+        //             if (type == vulkan::GraphicsPipelineType::NoPipeline)
+        //             {
+        //                 return;
+        //             }
 
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getGraphicsPipeline(type);
-                        }));
-                });
+        //             pipelineFutures.push_back(std::async(
+        //                 std::launch::async,
+        //                 [this, type]
+        //                 {
+        //                     std::ignore =
+        //                         this->pipelines->getGraphicsPipeline(type);
+        //                 }));
+        //         });
 
-            magic_enum::enum_for_each<vulkan::ComputePipelineType>(
-                [&](vulkan::ComputePipelineType type)
-                {
-                    if (type == vulkan::ComputePipelineType::NoPipeline)
-                    {
-                        return;
-                    }
+        //     magic_enum::enum_for_each<vulkan::ComputePipelineType>(
+        //         [&](vulkan::ComputePipelineType type)
+        //         {
+        //             if (type == vulkan::ComputePipelineType::NoPipeline)
+        //             {
+        //                 return;
+        //             }
 
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getComputePipeline(type);
-                        }));
-                });
-        }
+        //             pipelineFutures.push_back(std::async(
+        //                 std::launch::async,
+        //                 [this, type]
+        //                 {
+        //                     std::ignore =
+        //                         this->pipelines->getComputePipeline(type);
+        //                 }));
+        //         });
+        // }
 
         this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
             *this,
             this->device.get(),
             this->allocator.get(),
             this->pipelines.get(),
-            vk::Extent2D {1024, 1024});
+            this->swapchain->getExtent());
 
         this->menu = std::make_unique<ImGuiMenu>(
             *this->window,

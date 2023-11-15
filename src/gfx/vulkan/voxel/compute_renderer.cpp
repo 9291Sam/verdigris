@@ -8,14 +8,17 @@
 #include <glm/vec4.hpp>
 #include <util/log.hpp>
 
-struct UploadInfo
+namespace
 {
-    glm::vec4 camera_position;
-    glm::vec4 camera_forward;
-    glm::vec4 sphere_center;
-    float     sphere_radius;
-    float     focal_length;
-};
+    struct UploadInfo
+    {
+        glm::vec4 camera_position;
+        glm::vec4 camera_forward;
+        glm::vec4 sphere_center;
+        float     sphere_radius;
+        float     focal_length;
+    };
+} // namespace
 
 namespace gfx::vulkan::voxel
 {
@@ -246,15 +249,15 @@ namespace gfx::vulkan::voxel
         UploadInfo info {
             .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
             .camera_forward {glm::vec4 {camera.getForwardVector(), 0.0f}},
-            .sphere_center {glm::vec4 {
-                18.0f, 5 + 5 * std::sin(this->time_alive), 0.0f, 0.0f}},
-            .sphere_radius {1.0f},
+            .sphere_center {glm::vec4 {18.0f, 0, 0.0f, 0.0f}},
+            .sphere_radius {2.0f},
             .focal_length {1.0f}};
 
         this->obj->transform.lock(
             [&](Transform& t)
             {
                 t.translation = info.sphere_center;
+                t.scale = glm::vec3 {1.0f, 1.0f, 1.0f} * info.sphere_radius;
             });
 
         info.camera_forward = glm::normalize(info.camera_forward);

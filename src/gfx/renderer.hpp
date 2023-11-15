@@ -51,6 +51,7 @@ namespace gfx
         [[nodiscard]] bool  isActionActive(Window::Action) const;
         [[nodiscard]] float getFovYRadians() const;
         [[nodiscard]] float getFovXRadians() const;
+        [[nodiscard]] float getFocalLength() const;
         [[nodiscard]] float getAspectRatio() const;
 
         void               setCamera(Camera);

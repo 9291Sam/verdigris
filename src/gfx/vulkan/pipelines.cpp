@@ -289,7 +289,7 @@ namespace gfx::vulkan
         case ComputePipelineType::RayCaster: {
             vk::UniqueShaderModule shader = createShaderFromFile(
                 this->device,
-                "src/gfx/vulkan/shaders/voxel/image_filler.comp.bin");
+                "src/gfx/vulkan/shaders/voxel/uber_voxel.comp.bin");
 
             std::array<vk::DescriptorSetLayout, 1> descriptorSetLayouts {
                 **this->allocator->getDescriptorSetLayout(
