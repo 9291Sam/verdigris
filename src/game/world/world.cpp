@@ -63,7 +63,7 @@ namespace game::world
         for (const Chunk& c : this->chunks)
         {
             // this function, while non const, doesn't change the chunk's
-            // storted state, thus this is fine
+            // ordering, thus this is fine
             const_cast<Chunk&>(c).updateDrawState(this->game.renderer);
         }
     }

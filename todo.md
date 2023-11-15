@@ -1,24 +1,13 @@
-include trimming
-better projection matrix
+Voxel ray tracing
 
-compute!
+combined images
 
+make Player blessed to continue moving when game ticking is stalled
 
-idea with my ray tracing
-when calculating a reflection since its all voxels anyway you can calculate "reflected" lighting by taking wayyyy fewer samples of the outside scene since you just csample at each voxel and then reflect backgit 
+make a buffer upload abstraction to test how much data can be uploaded per frame consistently
 
-make player movement blessed so its responsive during render tick holds
-install limits on buffer uploading per frame to prevent stuttering on uploads
+Add views of cpu and gpu memory usage in debug menu
 
-add views of system memory and gpu vram usage
+Add toggles for validation layers
 
-Voxels:
-
-1 voxel rendering
-1 voxel rendering with a moveable camera
-8 ^ 3 voxel naiieve rendering
-chunked rendering
-
-
-todo: add toggles for chaning logging level on the fly in the menu
-and enableing and disabiling validation
+Show logged messages to stderr, and log them to a file
