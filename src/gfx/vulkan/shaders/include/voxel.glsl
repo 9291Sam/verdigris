@@ -5,7 +5,7 @@
 #include "ray.glsl"
 
 struct Voxel
-{
+{  
     uint8_t srgb_r;
     uint8_t srgb_g;
     uint8_t srgb_b;
@@ -51,7 +51,7 @@ Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in Voxel self)
     }
 }
 
-vec4 Voxel_getColor(in Voxel self)
+vec4 Voxel_getLinearColor(in Voxel self)
 {
     return convertSRGBToLinear(vec4(
         self.srgb_r,
