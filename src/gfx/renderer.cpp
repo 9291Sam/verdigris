@@ -178,39 +178,10 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        auto updateAfterFrameFunc = [&]
-        {
-            if (this->window->isActionActive(
-                    Window::Action::ToggleConsole, true))
-            {
-                this->show_menu = !this->show_menu;
-            }
-
-            if (this->window->isActionActive(
-                    Window::Action::ToggleCursorAttachment, true))
-            {
-                if (this->is_cursor_attached)
-                {
-                    this->is_cursor_attached = false;
-                    this->window->detachCursor();
-                }
-                else
-                {
-                    this->is_cursor_attached = true;
-                    this->window->attachCursor();
-                }
-            }
-
-            this->menu_state.lock(
-                [&](ImGuiMenu::State& state)
-                {
-                    state.fps = 1 / this->getFrameDeltaTimeSeconds();
-                });
-        };
-
         // collect objects and draw the frame TODO: move to isolate thread
         {
-            vulkan::Frame& currentFrame = this->render_pass->getNextFrame();
+            auto [currentFrame, previousFence] =
+                this->render_pass->getNextFrame();
 
             std::future<void> menuRender = std::async(
                 std::launch::async,
@@ -245,15 +216,45 @@ namespace gfx
 
             menuRender.get();
 
+            util::logDebug("rendering frame");
+
             if (!currentFrame.render(
                     this->draw_camera,
                     rawObjects,
                     this->voxel_renderer.get(),
                     this->show_menu ? this->menu.get() : nullptr,
-                    updateAfterFrameFunc))
+                    previousFence))
             {
                 this->resize();
             }
+            util::logDebug("erendering frame");
+
+            if (this->window->isActionActive(
+                    Window::Action::ToggleConsole, true))
+            {
+                this->show_menu = !this->show_menu;
+            }
+
+            if (this->window->isActionActive(
+                    Window::Action::ToggleCursorAttachment, true))
+            {
+                if (this->is_cursor_attached)
+                {
+                    this->is_cursor_attached = false;
+                    this->window->detachCursor();
+                }
+                else
+                {
+                    this->is_cursor_attached = true;
+                    this->window->attachCursor();
+                }
+            }
+
+            this->menu_state.lock(
+                [&](ImGuiMenu::State& state)
+                {
+                    state.fps = 1 / this->getFrameDeltaTimeSeconds();
+                });
         }
 
         this->window->endFrame();

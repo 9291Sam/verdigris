@@ -6,6 +6,15 @@
 #include <gfx/imgui_menu.hpp>
 #include <util/log.hpp>
 
+namespace
+{
+
+    const std::uint64_t timeout =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::duration<std::uint64_t, std::ratio<1, 1>> {5})
+            .count();
+} // namespace
+
 namespace gfx::vulkan
 {
 
@@ -143,12 +152,26 @@ namespace gfx::vulkan
         return *this->render_pass;
     }
 
-    Frame& RenderPass::getNextFrame()
+    std::pair<Frame&, std::optional<vk::Fence>> RenderPass::getNextFrame()
     {
+        std::size_t previousIndex = this->next_frame_index;
+
         this->next_frame_index =
             (this->next_frame_index + 1) % this->frames.size();
 
-        return this->frames.at(this->next_frame_index);
+        util::logDebug(
+            "This index {} | previouis index {}",
+            this->next_frame_index,
+            previousIndex);
+
+        vulkan::Frame& nextFrame = this->frames[this->next_frame_index];
+        std::optional<vk::Fence> previousFence =
+            previousIndex == static_cast<std::size_t>(-1)
+                ? std::nullopt
+                : std::make_optional(
+                    this->frames[previousIndex].getFrameInFlightFence());
+
+        return {nextFrame, previousFence};
     }
 
     Frame::Frame()
@@ -197,12 +220,36 @@ namespace gfx::vulkan
             this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
     }
 
+    Frame::~Frame()
+    {
+        if (this->frame_in_flight)
+        {
+            const vk::Result result =
+                this->device->asLogicalDevice().waitForFences(
+                    *this->frame_in_flight,
+                    static_cast<vk::Bool32>(true),
+                    timeout);
+
+            util::assertFatal(
+                result == vk::Result::eSuccess,
+                "Failed to wait for frame to complete drawing {} | "
+                "timeout(ns)",
+                vk::to_string(result),
+                timeout);
+        }
+    }
+
+    vk::Fence Frame::getFrameInFlightFence() const
+    {
+        return *this->frame_in_flight;
+    }
+
     std::expected<void, Frame::ResizeNeeded> Frame::render(
         Camera                         camera,
         const std::span<const Object*> unsortedObjects,
         voxel::ComputeRenderer*        computeRenderer,
         ImGuiMenu*                     menu,
-        std::function<void()>          postFrameUploadFunc)
+        std::optional<vk::Fence>       previousFrameInFlightFence)
     {
         std::optional<bool> shouldResize = std::nullopt;
 
@@ -222,13 +269,8 @@ namespace gfx::vulkan
             vk::QueueFlagBits::eGraphics,
             [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
             {
-                const std::uint64_t timeout =
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(
-                        std::chrono::duration<std::uint64_t> {5})
-                        .count();
-
-                // TODO: should this synchronization be moved to the end so we
-                // can pre-draw stuff?
+                // TODO: should this synchronization be moved to the end so
+                // we can pre-draw stuff?
                 {
                     vk::Result result =
                         this->device->asLogicalDevice().waitForFences(
@@ -379,6 +421,28 @@ namespace gfx::vulkan
                     .pResults {nullptr},
                 };
 
+                if (previousFrameInFlightFence.has_value())
+                {
+                    util::logDebug("Waiting on fence");
+                    const vk::Result result =
+                        this->device->asLogicalDevice().waitForFences(
+                            *previousFrameInFlightFence,
+                            static_cast<vk::Bool32>(true),
+                            timeout);
+
+                    util::assertFatal(
+                        result == vk::Result::eSuccess,
+                        "Failed to wait for frame to complete drawing {} | "
+                        "timeout(ns)",
+                        vk::to_string(result),
+                        timeout);
+                    util::logDebug("fence wait complete");
+                }
+                else
+                {
+                    util::logDebug("no fence to wait on");
+                }
+
                 {
                     VkResult result =
                         VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
@@ -408,20 +472,19 @@ namespace gfx::vulkan
 
                 // we can do basically whatever the fuck we want since this
                 // thread is going to be stalled on rendering the frame.
-                postFrameUploadFunc();
 
-                const vk::Result result =
-                    this->device->asLogicalDevice().waitForFences(
-                        *this->frame_in_flight,
-                        static_cast<vk::Bool32>(true),
-                        timeout);
+                // const vk::Result result =
+                //     this->device->asLogicalDevice().waitForFences(
+                //         *this->frame_in_flight,
+                //         static_cast<vk::Bool32>(true),
+                //         timeout);
 
-                util::assertFatal(
-                    result == vk::Result::eSuccess,
-                    "Failed to wait for frame to complete drawing {} | "
-                    "timeout(ns)",
-                    vk::to_string(result),
-                    timeout);
+                // util::assertFatal(
+                //     result == vk::Result::eSuccess,
+                //     "Failed to wait for frame to complete drawing {} | "
+                //     "timeout(ns)",
+                //     vk::to_string(result),
+                //     timeout);
 
                 shouldResize = false;
                 return;

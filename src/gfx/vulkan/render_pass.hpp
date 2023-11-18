@@ -42,7 +42,10 @@ namespace gfx::vulkan
         RenderPass& operator= (RenderPass&&)      = delete;
 
         [[nodiscard]] vk::RenderPass operator* () const;
-        [[nodiscard]] Frame&         getNextFrame();
+
+        // This frame and (maybe) the previous frame's fence
+        [[nodiscard]] std::pair<Frame&, std::optional<vk::Fence>>
+        getNextFrame();
 
     private:
         vk::UniqueRenderPass render_pass;
@@ -68,12 +71,14 @@ namespace gfx::vulkan
             Device*,
             Swapchain*,
             vk::RenderPass);
-        ~Frame() = default;
+        ~Frame();
 
         Frame(const Frame&)                 = delete;
         Frame(Frame&&) noexcept             = default;
         Frame& operator= (const Frame&)     = delete;
         Frame& operator= (Frame&&) noexcept = default;
+
+        [[nodiscard]] vk::Fence getFrameInFlightFence() const;
 
         // @return {true}, is resize needed
         [[nodiscard]] std::expected<void, ResizeNeeded> render(
@@ -81,8 +86,7 @@ namespace gfx::vulkan
             std::span<const Object*>,
             voxel::ComputeRenderer*,
             ImGuiMenu*,
-            std::function<void()>
-                postFrameUploadFunc); // TODO: move only function
+            std::optional<vk::Fence> previousFrameInFlightFence);
 
     private:
         Device*                             device;
