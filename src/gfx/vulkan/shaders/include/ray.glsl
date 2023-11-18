@@ -40,7 +40,6 @@ bool isEqual(float a, float b, float epsilon) {
 
 IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
 {
-
     vec3 oc = ray.origin - self.center;
     float a = dot(ray.direction, ray.direction);
     float b = 2.0 * dot(oc, ray.direction);
@@ -120,7 +119,7 @@ IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
     if (tzmax < tmax)
         tmax = tzmax;
 
-    if (tmin < 0.0) {
+    if (tmin < 0.0){
         // The intersection point is behind the ray's origin, consider it a miss
         return IntersectionResult_getMiss();
     }

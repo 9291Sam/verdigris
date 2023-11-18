@@ -2,6 +2,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
 
 #include "util.glsl"
+#include "ray.glsl"
 
 struct Voxel
 {
