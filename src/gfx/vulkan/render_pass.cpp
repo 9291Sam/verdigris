@@ -274,6 +274,8 @@ namespace gfx::vulkan
         ImGuiMenu*                     menu,
         std::optional<vk::Fence>       previousFrameInFlightFence)
     {
+        util::logDebug("Entered frame::render");
+
         std::vector<const Object*> sortedObjects;
         sortedObjects.insert(
             sortedObjects.cend(),
@@ -290,15 +292,17 @@ namespace gfx::vulkan
 
         // TODO: should this synchronization be moved to the end so
         // we can pre-draw stuff?
-        {
-            vk::Result result = this->device->asLogicalDevice().waitForFences(
-                *this->frame_in_flight, static_cast<vk::Bool32>(true), timeout);
+        // {
+        //     vk::Result result =
+        //     this->device->asLogicalDevice().waitForFences(
+        //         previousFrameInFlightFence, static_cast<vk::Bool32>(true),
+        //         timeout);
 
-            util::assertFatal(
-                result == vk::Result::eSuccess,
-                "Failed to wait for render fence {}",
-                vk::to_string(result));
-        }
+        //     util::assertFatal(
+        //         result == vk::Result::eSuccess,
+        //         "Failed to wait for render fence {}",
+        //         vk::to_string(result));
+        // }
 
         std::uint32_t nextImageIndex = -1;
         {
@@ -462,12 +466,15 @@ namespace gfx::vulkan
                     }
 
                     {
+                        util::logDebug("presenting queue");
                         VkResult result =
                             VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
                                 static_cast<VkQueue>(queue),
                                 reinterpret_cast<
                                     const VkPresentInfoKHR*>( // NOLINT
                                     &presentInfo));
+
+                        util::logDebug("queue present complete");
 
                         if (result == VK_ERROR_OUT_OF_DATE_KHR
                             || result == VK_SUBOPTIMAL_KHR)
@@ -488,24 +495,10 @@ namespace gfx::vulkan
                                 vk::to_string(vk::Result {result}));
                         }
                     }
+
+                    util::logDebug("exiting present loop present complete");
                 }),
             "main graphics queue was not available");
-
-        // we can do basically whatever the fuck we want since this
-        // thread is going to be stalled on rendering the frame.
-
-        // const vk::Result result =
-        //     this->device->asLogicalDevice().waitForFences(
-        //         *this->frame_in_flight,
-        //         static_cast<vk::Bool32>(true),
-        //         timeout);
-
-        // util::assertFatal(
-        //     result == vk::Result::eSuccess,
-        //     "Failed to wait for frame to complete drawing {} | "
-        //     "timeout(ns)",
-        //     vk::to_string(result),
-        //     timeout);
 
         if (shouldResize.value()) // NOLINT
         {
