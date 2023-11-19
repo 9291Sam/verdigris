@@ -16,6 +16,8 @@ namespace
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),
             pCallbackData->pMessage);
 
+        // util::panic("kill");
+
         return static_cast<VkBool32>(false);
     }
 } // namespace

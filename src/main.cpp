@@ -12,7 +12,7 @@ int main()
 #ifdef NDEBUG
     util::setLoggingLevel(util::LoggingLevel::Log);
 #else
-    util::setLoggingLevel(util::LoggingLevel::Debug); // TODO: commandline args
+    util::setLoggingLevel(util::LoggingLevel::Trace); // TODO: commandline args
 #endif
 
     try
@@ -43,10 +43,12 @@ int main()
         shouldStop.store(true, std::memory_order_release);
 
         gameLoop.wait();
+
+        // util::logTrace
     }
     catch (const std::exception& e)
     {
-        util::logTrace("Verdigris crash | {}", e.what());
+        util::logFatal("Verdigris crash | {}", e.what());
     }
 
     util::removeGlobalLoggerRacy();

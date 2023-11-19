@@ -1,6 +1,8 @@
 #include "log.hpp"
+#include "threads.hpp"
 #include <atomic>
 #include <fmt/chrono.h>
+#include <fstream>
 #include <latch>
 
 namespace util
@@ -42,18 +44,22 @@ namespace util
         Logger& operator= (const Logger&) = delete;
         Logger& operator= (Logger&&)      = delete;
 
-        void send(std::string string);
+        void send(std::string);
+        void sendBlocking(std::string);
 
     private:
         std::unique_ptr<std::atomic<bool>> should_thread_close {};
         std::thread                        worker_thread;
         std::unique_ptr<moodycamel::ConcurrentQueue<std::string>> message_queue;
+        std::unique_ptr<Mutex<std::ofstream>> log_file_handle;
     };
 
     Logger::Logger()
         : should_thread_close {std::make_unique<std::atomic<bool>>(false)}
-        , message_queue {
-              std::make_unique<moodycamel::ConcurrentQueue<std::string>>()}
+        , message_queue {std::make_unique<
+              moodycamel::ConcurrentQueue<std::string>>()}
+        , log_file_handle {std::make_unique<util::Mutex<std::ofstream>>(
+              std::ofstream {"verdigris_log.txt"})}
     {
         std::latch threadStartLatch {1};
 
@@ -83,6 +89,15 @@ namespace util
                             sizeof(char),
                             temporary_string.size(),
                             stdout);
+
+                        this->log_file_handle->lock(
+                            [&](std::ofstream& stream)
+                            {
+                                std::ignore = stream.write(
+                                    temporary_string.c_str(),
+                                    static_cast<std::streamsize>(
+                                        temporary_string.size()));
+                            });
                     }
                 }
 
@@ -94,6 +109,15 @@ namespace util
                         sizeof(char),
                         temporary_string.size(),
                         stdout);
+
+                    this->log_file_handle->lock(
+                        [&](std::ofstream& stream)
+                        {
+                            std::ignore = stream.write(
+                                temporary_string.c_str(),
+                                static_cast<std::streamsize>(
+                                    temporary_string.size()));
+                        });
                 }
             }};
 
@@ -116,7 +140,29 @@ namespace util
             std::puts("Unable to send message to worker thread!\n");
             std::ignore =
                 std::fwrite(string.data(), sizeof(char), string.size(), stderr);
+
+            this->log_file_handle->lock(
+                [&](std::ofstream& stream)
+                {
+                    std::ignore = stream.write(
+                        string.c_str(),
+                        static_cast<std::streamsize>(string.size()));
+                });
         }
+    }
+
+    void Logger::sendBlocking(std::string string)
+    {
+        std::ignore =
+            std::fwrite(string.data(), sizeof(char), string.size(), stderr);
+
+        this->log_file_handle->lock(
+            [&](std::ofstream& stream)
+            {
+                std::ignore = stream.write(
+                    string.c_str(),
+                    static_cast<std::streamsize>(string.size()));
+            });
     }
 
     namespace
@@ -219,8 +265,8 @@ namespace util
 
         if (level >= LoggingLevel::Warn)
         {
-            std::ignore =
-                std::fwrite(output.data(), sizeof(char), output.size(), stderr);
+            LOGGER.load(std::memory_order_relaxed)
+                ->sendBlocking(std::move(output));
         }
         else
         {

@@ -135,10 +135,18 @@ namespace gfx::vulkan
         }
 
         // Collect created queues into their respective places
+        bool isFirstIteration = true;
         for (const QueueCreateInfoAndMetadata& q : metaDataQueueCreateInfos)
         {
             for (std::size_t i = 0; i < q.queue_create_info.queueCount; ++i)
             {
+                constexpr std::array<vk::QueueFlags, 3> testableFlags {
+                    vk::QueueFlagBits::eGraphics,
+                    vk::QueueFlagBits::eCompute,
+                    vk::QueueFlagBits::eTransfer};
+
+                // TODO: surely this can be done better
+
                 std::shared_ptr<Queue> queuePtr = std::make_shared<Queue>(
                     *this->logical_device,
                     this->logical_device->getQueue(
@@ -147,16 +155,35 @@ namespace gfx::vulkan
                     q.supports_surface,
                     q.family_index);
 
-                constexpr std::array<vk::QueueFlags, 3> testableFlags {
-                    vk::QueueFlagBits::eGraphics,
-                    vk::QueueFlagBits::eCompute,
-                    vk::QueueFlagBits::eTransfer};
-
-                for (vk::QueueFlags f : testableFlags)
+                if (i == 0 && isFirstIteration)
                 {
-                    if (queuePtr->getFlags() & f)
+                    for (vk::QueueFlags f : testableFlags)
                     {
-                        this->queues[f].push_back(queuePtr);
+                        util::assertFatal(
+                            static_cast<bool>(queuePtr->getFlags() & f),
+                            "queue 00 must be {} | {}",
+                            vk::to_string(f),
+                            i);
+                    }
+
+                    util::logTrace(
+                        "found main grapgics queue {}, i",
+                        vk::to_string(
+                            testableFlags[0] | testableFlags[1]
+                            | testableFlags[2]));
+
+                    this->main_graphics_queue = queuePtr;
+                }
+                else
+                {
+                    for (vk::QueueFlags f : testableFlags)
+                    {
+                        if (queuePtr->getFlags() & f)
+                        {
+                            util::logTrace(
+                                "Added queue of type {}", vk::to_string(f));
+                            this->queues[f].push_back(queuePtr);
+                        }
                     }
                 }
 
@@ -165,6 +192,8 @@ namespace gfx::vulkan
                     "Queue was not allocated | Flags: {}",
                     vk::to_string(queuePtr->getFlags()));
             }
+
+            isFirstIteration = false;
         }
 
         // sort so that theyre in the least unique order
@@ -267,13 +296,19 @@ namespace gfx::vulkan
         }
     }
 
+    const Queue& Device::getMainGraphicsQueue() const
+    {
+        return *this->main_graphics_queue;
+    }
+
     Queue::Queue(
         vk::Device     device,
         vk::Queue      queue,
         vk::QueueFlags flags_,
         bool           supportsSurface,
         std::uint32_t  queueFamilyIndex)
-        : flags {flags_}
+        : family_index {queueFamilyIndex}
+        , flags {flags_}
         , supports_surface {supportsSurface}
         , command_pool {nullptr}
         , queue_buffer_mutex {nullptr}
@@ -311,6 +346,10 @@ namespace gfx::vulkan
             {
                 // TODO: replace with dedicated thread_local
                 // pools for speed up if required
+                util::logDebug(
+                    "resetting commandbuffer @ {}",
+                    static_cast<void*>(*commandBuffer));
+
                 commandBuffer->reset();
 
                 func(queue, *commandBuffer);
@@ -357,6 +396,11 @@ namespace gfx::vulkan
     bool Queue::getSurfaceSupport() const
     {
         return this->supports_surface;
+    }
+
+    std::uint32_t Queue::getFamilyIndex() const
+    {
+        return this->family_index;
     }
 
     std::strong_ordering Queue::operator<=> (const Queue& o) const
