@@ -12,11 +12,11 @@ namespace
 {
     struct UploadInfo
     {
+        glm::mat4 inv_model_view_proj;
+        glm::mat4 model_view_proj;
         glm::vec4 camera_position;
-        glm::vec4 camera_forward;
         glm::vec4 sphere_center;
         float     sphere_radius;
-        float     focal_length;
     };
 } // namespace
 
@@ -246,12 +246,15 @@ namespace gfx::vulkan::voxel
         // TODO: move to a logical place
         this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
 
+        glm::mat4 modelViewProj =
+            camera.getPerspectiveMatrix(this->renderer, Transform {});
+
         UploadInfo info {
+            .inv_model_view_proj {glm::inverse(modelViewProj)},
+            .model_view_proj {modelViewProj},
             .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
-            .camera_forward {glm::vec4 {camera.getForwardVector(), 0.0f}},
             .sphere_center {glm::vec4 {18.0f, 0, 0.0f, 0.0f}},
-            .sphere_radius {2.0f},
-            .focal_length {1.0f}};
+            .sphere_radius {2.0f}};
 
         this->obj->transform.lock(
             [&](Transform& t)
@@ -259,8 +262,6 @@ namespace gfx::vulkan::voxel
                 t.translation = info.sphere_center;
                 t.scale = glm::vec3 {1.0f, 1.0f, 1.0f} * info.sphere_radius;
             });
-
-        info.camera_forward = glm::normalize(info.camera_forward);
 
         this->input_buffer.write(util::asBytes(&info));
 

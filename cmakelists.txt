@@ -300,6 +300,5 @@ compile_shader(verdigris
     src/gfx/vulkan/shaders/voxel.vert
     src/gfx/vulkan/shaders/voxel.frag
 
-    src/gfx/vulkan/shaders/voxel/image_filler.comp
     src/gfx/vulkan/shaders/voxel/uber_voxel.comp
 )
