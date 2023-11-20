@@ -54,23 +54,23 @@ vec4 calculatePixelColor(in Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occured = false;
 
-    {
-        Sphere sphere;
-        sphere.center = in_world_info.sphere_center;
-        sphere.radius = in_world_info.sphere_radius;
+    // {
+    //     Sphere sphere;
+    //     sphere.center = in_world_info.sphere_center;
+    //     sphere.radius = in_world_info.sphere_radius;
 
-        propagateIntersection(ray, sphere, bestIntersection);
-    }
+    //     propagateIntersection(ray, sphere, bestIntersection);
+    // }
     
-    {
-        Cube cube;
-        cube.center = in_world_info.sphere_center + 10.0;
-        cube.edge_length = in_world_info.sphere_radius;
+    // {
+    //     Cube cube;
+    //     cube.center = in_world_info.sphere_center + 10.0;
+    //     cube.edge_length = in_world_info.sphere_radius;
 
-        IntersectionResult result = Cube_tryIntersect(cube, ray);
+    //     IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-        propagateIntersection(ray, cube, bestIntersection);
-    }
+    //     propagateIntersection(ray, cube, bestIntersection);
+    // }
 
     {
         Cube cube;
@@ -96,9 +96,15 @@ vec4 calculatePixelColor(in Ray ray)
 void main()
 {
     const ivec2 pixel_xy = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 image_size = imageSize(out_image);  
 
+    const vec2 inter_pixel_delta =
+        vec2(1.0, 1.0) / vec2(image_size)
+        -
+        vec2(0.0, 0.0) / vec2(image_size);
+        
     const vec2 normalized_pixel_xy =
-        (vec2(pixel_xy) / vec2(imageSize(out_image))) * 2.0 - 1.0;
+        (vec2(pixel_xy) / vec2(image_size)) * 2.0 - 1.0 + (inter_pixel_delta / 2);
 
     const float nearPlaneDistance = 0.1;
     const float farPlaneDistance = 100000.0;
@@ -113,7 +119,7 @@ void main()
     farPoint /= farPoint.w;
     
     Ray ray;
-    ray.origin = in_world_info.camera_position;
+    ray.origin    = in_world_info.camera_position;
     ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
 
     imageStore(
