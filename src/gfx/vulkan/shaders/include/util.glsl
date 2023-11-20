@@ -19,4 +19,9 @@ vec4 convertLinearColorToSRGB(vec4 linearColor)
     return vec4(mix(higher, lower, cutoff), linearColor.a);
 }
 
+float map(float x, float in_min, float in_max, float out_min, float out_max)
+{
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_UTIL_GLSL

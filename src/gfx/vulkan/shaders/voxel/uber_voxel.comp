@@ -75,7 +75,7 @@ vec4 calculatePixelColor(in Ray ray)
     {
         Cube cube;
         cube.center = in_world_info.sphere_center;
-        cube.edge_length = in_world_info.sphere_radius * 2;
+        cube.edge_length = in_world_info.sphere_radius;
         
         IntersectionResult result = Cube_tryIntersect(cube, ray);
 
@@ -84,8 +84,7 @@ vec4 calculatePixelColor(in Ray ray)
 
     if (bestIntersection.intersection_occured)
     {
-        return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); // Color based on the surface normal
-        // return vec4(0.0, bestIntersection.maybe_distance / 100.0, 0.0, 1.0); // Color based on the surface normal
+        return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); 
     
     }
     else
@@ -96,25 +95,30 @@ vec4 calculatePixelColor(in Ray ray)
 
 void main()
 {
-    const ivec2 this_pixel_coords = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 image_size = imageSize(out_image);
-    const float aspect_ratio = float(image_size.x) / float(image_size.y);
+    const ivec2 pixel_xy = ivec2(gl_GlobalInvocationID.xy);
 
-    const vec2 this_normalized_coord = (vec2(this_pixel_coords) / vec2(image_size)) * 2.0 - 1.0;
+    const vec2 normalized_pixel_xy =
+        (vec2(pixel_xy) / vec2(imageSize(out_image))) * 2.0 - 1.0;
 
-    vec4 near_clip_position = vec4(this_normalized_coord, 0.1, 1.0);
+    const float nearPlaneDistance = 0.1;
+    const float farPlaneDistance = 100000.0;
 
-    vec4 intercalc_world_space_position = in_world_info.inv_model_view_proj * near_clip_position;
+    const vec4 nearScreenSpace = vec4(normalized_pixel_xy, nearPlaneDistance, 1.0);
+    const vec4 farScreenSpace  = vec4(normalized_pixel_xy,  farPlaneDistance, 1.0);
 
-    vec3 world_space_clip_position = intercalc_world_space_position.xyz / intercalc_world_space_position.w;
+    vec4 nearPoint = in_world_info.inv_model_view_proj * nearScreenSpace;
+    nearPoint /= nearPoint.w;
 
+    vec4 farPoint = in_world_info.inv_model_view_proj * farScreenSpace;
+    farPoint /= farPoint.w;
+    
     Ray ray;
     ray.origin = in_world_info.camera_position;
-    ray.direction = -normalize(world_space_clip_position- in_world_info.camera_position); // 
+    ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
 
     imageStore(
         out_image,
-        this_pixel_coords,
+        pixel_xy,
         calculatePixelColor(ray)
     );
 }
