@@ -158,13 +158,14 @@ namespace gfx::vulkan
 
         this->next_frame_index =
             (this->next_frame_index + 1) % this->frames.size();
+        vulkan::Frame& nextFrame = this->frames[this->next_frame_index];
 
         util::logDebug(
-            "This index {} | previouis index {}",
+            "This index {} | previouis index {} | addr: {}",
             this->next_frame_index,
-            previousIndex);
+            previousIndex,
+            (void*)(&nextFrame));
 
-        vulkan::Frame& nextFrame = this->frames[this->next_frame_index];
         std::optional<vk::Fence> previousFence =
             previousIndex == static_cast<std::size_t>(-1)
                 ? std::nullopt

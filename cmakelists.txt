@@ -196,8 +196,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             target_compile_options(verdigris PUBLIC -fsanitize=address)
             target_link_options(verdigris PUBLIC -fsanitize=address)
 
-            target_compile_options(verdigris PUBLIC -fsanitize=undefined)
-            target_link_options(verdigris PUBLIC -fsanitize=undefined)
+            # target_compile_options(verdigris PUBLIC -fsanitize=undefined)
+            # target_link_options(verdigris PUBLIC -fsanitize=undefined)
 
             # target_compile_options(verdigris PUBLIC -fsanitize=memory)
             # target_link_options(verdigris PUBLIC -fsanitize=memory)
@@ -262,25 +262,6 @@ find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
 if (APPLE)
     target_link_libraries(verdigris PUBLIC "-framework Cocoa -framework IOKit")
 endif ()
-
-# function(compile_shader target)
-#     cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT" "SOURCES")
-#     foreach (source ${arg_SOURCES})
-#         add_custom_command(
-#                 OUTPUT ${source}.${arg_FORMAT}
-#                 DEPENDS ${source}
-#                 DEPFILE ${source}.d
-#                 COMMAND
-#                 ${glslc_executable}
-#                 $<$<BOOL:${arg_ENV}>:--target-env=${arg_ENV}>
-#                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
-#                 -MD -MF ${source}.d
-#                 -o ${source}.${arg_FORMAT}
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}
-#         )
-#         target_sources(${target} PRIVATE ${source}.${arg_FORMAT})
-#     endforeach ()
-# endfunction()
 
 function(compile_shader target)
     cmake_parse_arguments(PARSE_ARGV 1 arg "" "ENV;FORMAT;INCLUDE_DIRS" "SOURCES")

@@ -1,6 +1,7 @@
 #include "log.hpp"
 #include <atomic>
 #include <fmt/chrono.h>
+#include <fstream>
 #include <latch>
 
 namespace util
@@ -60,7 +61,8 @@ namespace util
         this->worker_thread = std::thread {
             [this, loggerConstructionLatch = &threadStartLatch]
             {
-                std::string temporary_string {"INVALID MESSAGE"};
+                std::ofstream logFileHandle {"verdigris_log.txt"};
+                std::string   temporary_string {"INVALID MESSAGE"};
 
                 std::atomic<bool>* shouldThreadStop {
                     this->should_thread_close.get()};
@@ -83,6 +85,11 @@ namespace util
                             sizeof(char),
                             temporary_string.size(),
                             stdout);
+
+                        std::ignore = logFileHandle.write(
+                            temporary_string.data(),
+                            static_cast<std::streamsize>(
+                                temporary_string.size()));
                     }
                 }
 
@@ -94,6 +101,10 @@ namespace util
                         sizeof(char),
                         temporary_string.size(),
                         stdout);
+
+                    std::ignore = logFileHandle.write(
+                        temporary_string.data(),
+                        static_cast<std::streamsize>(temporary_string.size()));
                 }
             }};
 

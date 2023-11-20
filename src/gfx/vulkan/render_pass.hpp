@@ -26,7 +26,7 @@ namespace gfx::vulkan
     namespace voxel
     {
         class ComputeRenderer;
-    }
+    } // namespace voxel
 
     class RenderPass
     {
