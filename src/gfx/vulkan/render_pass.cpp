@@ -211,6 +211,29 @@ namespace gfx::vulkan
             .flags {vk::FenceCreateFlagBits::eSignaled},
         };
 
+        const vk::CommandPoolCreateInfo commandPoolCreateInfo {
+            .sType {vk::StructureType::eCommandPoolCreateInfo},
+            .pNext {nullptr},
+            .flags {vk::CommandPoolCreateFlagBits::eResetCommandBuffer},
+            .queueFamilyIndex {
+                this->device->getMainGraphicsQueue().getFamilyIndex()}};
+
+        this->command_pool =
+            this->device->asLogicalDevice().createCommandPoolUnique(
+                commandPoolCreateInfo);
+
+        const vk::CommandBufferAllocateInfo commandBufferAllocateInfo {
+            .sType {vk::StructureType::eCommandBufferAllocateInfo},
+            .pNext {nullptr},
+            .commandPool {*this->command_pool},
+            .level {vk::CommandBufferLevel::ePrimary},
+            .commandBufferCount {1}};
+
+        this->command_buffer = std::move(
+            this->device->asLogicalDevice()
+                .allocateCommandBuffersUnique(commandBufferAllocateInfo)
+                .at(0));
+
         this->image_available =
             this->device->asLogicalDevice().createSemaphoreUnique(
                 semaphoreCreateInfo);
@@ -252,7 +275,7 @@ namespace gfx::vulkan
         ImGuiMenu*                     menu,
         std::optional<vk::Fence>       previousFrameInFlightFence)
     {
-        std::optional<bool> shouldResize = std::nullopt;
+        util::logDebug("Entered frame::render");
 
         std::vector<const Object*> sortedObjects;
         sortedObjects.insert(
@@ -266,73 +289,66 @@ namespace gfx::vulkan
                 return *l < *r;
             });
 
-        this->device->accessQueue(
-            vk::QueueFlagBits::eGraphics,
-            [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+        this->device->asLogicalDevice().resetCommandPool(*this->command_pool);
+
+        // TODO: should this synchronization be moved to the end so
+        // we can pre-draw stuff?
+        // {
+        //     vk::Result result =
+        //     this->device->asLogicalDevice().waitForFences(
+        //         previousFrameInFlightFence, static_cast<vk::Bool32>(true),
+        //         timeout);
+
+        //     util::assertFatal(
+        //         result == vk::Result::eSuccess,
+        //         "Failed to wait for render fence {}",
+        //         vk::to_string(result));
+        // }
+
+        std::uint32_t nextImageIndex = -1;
+        {
+            const auto [result, maybeNextFrameBufferIndex] =
+                this->device->asLogicalDevice().acquireNextImageKHR(
+                    **this->swapchain, timeout, *this->image_available);
+
+            switch (result)
             {
-                // TODO: should this synchronization be moved to the end so
-                // we can pre-draw stuff?
-                {
-                    vk::Result result =
-                        this->device->asLogicalDevice().waitForFences(
-                            *this->frame_in_flight,
-                            static_cast<vk::Bool32>(true),
-                            timeout);
+            case vk::Result::eErrorOutOfDateKHR:
+                util::logTrace(
+                    "Acquired invalid next image. Are we in a "
+                    "resize?");
+                return std::unexpected(Frame::ResizeNeeded {});
 
-                    util::assertFatal(
-                        result == vk::Result::eSuccess,
-                        "Failed to wait for render fence {}",
-                        vk::to_string(result));
-                }
+            case vk::Result::eSuboptimalKHR:
+                util::logTrace(
+                    "Acquired suboptimal next image. Are we in a "
+                    "resize?");
+                [[fallthrough]];
+            case vk::Result::eSuccess:
+                nextImageIndex =
+                    static_cast<std::uint32_t>(maybeNextFrameBufferIndex);
+                break;
+            default:
+                util::panic(
+                    "Invalid acquireNextImage {}", vk::to_string(result));
+            }
+        }
 
-                std::uint32_t nextImageIndex = -1;
-                {
-                    const auto [result, maybeNextFrameBufferIndex] =
-                        this->device->asLogicalDevice().acquireNextImageKHR(
-                            **this->swapchain, timeout, *this->image_available);
+        this->device->asLogicalDevice().resetFences(*this->frame_in_flight);
 
-                    switch (result)
-                    {
-                    case vk::Result::eErrorOutOfDateKHR:
-                        util::logTrace(
-                            "Acquired invalid next image. Are we in a "
-                            "resize?");
-                        shouldResize = true;
-                        return;
+        const vk::CommandBufferBeginInfo commandBufferBeginInfo {
+            .sType {vk::StructureType::eCommandBufferBeginInfo},
+            .pNext {nullptr},
+            .flags {},
+            .pInheritanceInfo {nullptr},
+        };
 
-                    case vk::Result::eSuboptimalKHR:
-                        util::logTrace(
-                            "Acquired suboptimal next image. Are we in a "
-                            "resize?");
-                        [[fallthrough]];
-                    case vk::Result::eSuccess:
-                        nextImageIndex = static_cast<std::uint32_t>(
-                            maybeNextFrameBufferIndex);
-                        break;
-                    default:
-                        util::panic(
-                            "Invalid acquireNextImage {}",
-                            vk::to_string(result));
-                    }
-                }
+        this->command_buffer->begin(commandBufferBeginInfo);
 
-                this->device->asLogicalDevice().resetFences(
-                    *this->frame_in_flight);
+        constexpr std::array<float, 4> clearColor {0.01f, 0.03f, 0.04f, 1.0f};
 
-                const vk::CommandBufferBeginInfo commandBufferBeginInfo {
-                    .sType {vk::StructureType::eCommandBufferBeginInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .pInheritanceInfo {nullptr},
-                };
-
-                commandBuffer.begin(commandBufferBeginInfo);
-
-                constexpr std::array<float, 4> clearColor {
-                    0.01f, 0.03f, 0.04f, 1.0f};
-
-                // union initialization syntax my beloved :heart:
-                // clang-format off
+        // union initialization syntax my beloved :heart:
+        // clang-format off
                 std::array<vk::ClearValue, 2> clearValues
                 {
                     vk::ClearValue
@@ -354,142 +370,136 @@ namespace gfx::vulkan
                         }
                     }
                 };
-                // clang-format on
+        // clang-format on
 
-                vk::RenderPassBeginInfo renderPassBeginInfo {
-                    .sType {vk::StructureType::eRenderPassBeginInfo},
-                    .pNext {nullptr},
-                    .renderPass {this->render_pass},
-                    .framebuffer {*this->framebuffers->at(nextImageIndex)},
-                    .renderArea {vk::Rect2D {
-                        .offset {0, 0},
-                        .extent {this->swapchain->getExtent()},
-                    }},
-                    .clearValueCount {clearValues.size()},
-                    .pClearValues {clearValues.data()},
-                };
+        vk::RenderPassBeginInfo renderPassBeginInfo {
+            .sType {vk::StructureType::eRenderPassBeginInfo},
+            .pNext {nullptr},
+            .renderPass {this->render_pass},
+            .framebuffer {*this->framebuffers->at(nextImageIndex)},
+            .renderArea {vk::Rect2D {
+                .offset {0, 0},
+                .extent {this->swapchain->getExtent()},
+            }},
+            .clearValueCount {clearValues.size()},
+            .pClearValues {clearValues.data()},
+        };
 
-                if (computeRenderer != nullptr)
+        if (computeRenderer != nullptr)
+        {
+            computeRenderer->render(*this->command_buffer, camera);
+        }
+
+        this->command_buffer->beginRenderPass(
+            renderPassBeginInfo, vk::SubpassContents::eInline);
+
+        BindState bindState {};
+
+        for (const Object* o : sortedObjects)
+        {
+            o->bindAndDraw(*this->command_buffer, bindState, camera);
+        }
+
+        if (menu != nullptr)
+        {
+            menu->draw(*this->command_buffer);
+        }
+
+        this->command_buffer->endRenderPass();
+        this->command_buffer->end();
+
+        const vk::PipelineStageFlags waitStages =
+            vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+        vk::SubmitInfo submitInfo {
+            .sType {vk::StructureType::eSubmitInfo},
+            .pNext {nullptr},
+            .waitSemaphoreCount {1},
+            .pWaitSemaphores {&*this->image_available},
+            .pWaitDstStageMask {&waitStages},
+            .commandBufferCount {1},
+            .pCommandBuffers {&*this->command_buffer},
+            .signalSemaphoreCount {1},
+            .pSignalSemaphores {&*this->render_finished},
+        };
+
+        std::optional<bool> shouldResize = std::nullopt;
+
+        util::assertFatal(
+            this->device->getMainGraphicsQueue().tryAccess(
+                [&](vk::Queue queue, vk::CommandBuffer)
                 {
-                    computeRenderer->render(commandBuffer, camera);
-                }
+                    queue.submit(submitInfo);
 
-                commandBuffer.beginRenderPass(
-                    renderPassBeginInfo, vk::SubpassContents::eInline);
+                    vk::SwapchainKHR swapchainPtr = **this->swapchain;
 
-                BindState bindState {};
+                    vk::PresentInfoKHR presentInfo {
+                        .sType {vk::StructureType::ePresentInfoKHR},
+                        .pNext {nullptr},
+                        .waitSemaphoreCount {1},
+                        .pWaitSemaphores {&*this->render_finished},
+                        .swapchainCount {1},
+                        .pSwapchains {&swapchainPtr},
+                        .pImageIndices {&nextImageIndex},
+                        .pResults {nullptr},
+                    };
 
-                for (const Object* o : sortedObjects)
-                {
-                    o->bindAndDraw(commandBuffer, bindState, camera);
-                }
-
-                if (menu != nullptr)
-                {
-                    menu->draw(commandBuffer);
-                }
-
-                commandBuffer.endRenderPass();
-                commandBuffer.end();
-
-                const vk::PipelineStageFlags waitStages =
-                    vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-                vk::SubmitInfo submitInfo {
-                    .sType {vk::StructureType::eSubmitInfo},
-                    .pNext {nullptr},
-                    .waitSemaphoreCount {1},
-                    .pWaitSemaphores {&*this->image_available},
-                    .pWaitDstStageMask {&waitStages},
-                    .commandBufferCount {1},
-                    .pCommandBuffers {&commandBuffer},
-                    .signalSemaphoreCount {1},
-                    .pSignalSemaphores {&*this->render_finished},
-                };
-
-                queue.submit(submitInfo, *this->frame_in_flight);
-
-                vk::SwapchainKHR swapchainPtr = **this->swapchain;
-
-                vk::PresentInfoKHR presentInfo {
-                    .sType {vk::StructureType::ePresentInfoKHR},
-                    .pNext {nullptr},
-                    .waitSemaphoreCount {1},
-                    .pWaitSemaphores {&*this->render_finished},
-                    .swapchainCount {1},
-                    .pSwapchains {&swapchainPtr},
-                    .pImageIndices {&nextImageIndex},
-                    .pResults {nullptr},
-                };
-
-                if (previousFrameInFlightFence.has_value())
-                {
-                    util::logDebug("Waiting on fence");
-                    const vk::Result result =
-                        this->device->asLogicalDevice().waitForFences(
-                            *previousFrameInFlightFence,
-                            static_cast<vk::Bool32>(true),
-                            timeout);
-
-                    util::assertFatal(
-                        result == vk::Result::eSuccess,
-                        "Failed to wait for frame to complete drawing {} | "
-                        "timeout(ns)",
-                        vk::to_string(result),
-                        timeout);
-                    util::logDebug("fence wait complete");
-                }
-                else
-                {
-                    util::logDebug("no fence to wait on");
-                }
-
-                {
-                    VkResult result =
-                        VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
-                            static_cast<VkQueue>(queue),
-                            reinterpret_cast<const VkPresentInfoKHR*>( // NOLINT
-                                &presentInfo));
-
-                    if (result == VK_ERROR_OUT_OF_DATE_KHR
-                        || result == VK_SUBOPTIMAL_KHR)
+                    if (previousFrameInFlightFence.has_value())
                     {
-                        util::logTrace(
-                            "Present result {}",
-                            vk::to_string(vk::Result {result}));
+                        util::logDebug("Waiting on fence");
+                        const vk::Result result =
+                            this->device->asLogicalDevice().waitForFences(
+                                *previousFrameInFlightFence,
+                                static_cast<vk::Bool32>(true),
+                                timeout);
 
-                        shouldResize = true;
-                        return;
+                        util::assertFatal(
+                            result == vk::Result::eSuccess,
+                            "Failed to wait for frame to complete drawing {} | "
+                            "timeout(ns)",
+                            vk::to_string(result),
+                            timeout);
+                        util::logDebug("fence wait complete");
                     }
-                    else if (result == VK_SUCCESS)
-                    {}
                     else
                     {
-                        util::panic(
-                            "Unhandled error! {}",
-                            vk::to_string(vk::Result {result}));
+                        util::logDebug("no fence to wait on");
                     }
-                }
 
-                // we can do basically whatever the fuck we want since this
-                // thread is going to be stalled on rendering the frame.
+                    {
+                        util::logDebug("presenting queue");
+                        VkResult result =
+                            VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
+                                static_cast<VkQueue>(queue),
+                                reinterpret_cast<
+                                    const VkPresentInfoKHR*>( // NOLINT
+                                    &presentInfo));
 
-                // const vk::Result result =
-                //     this->device->asLogicalDevice().waitForFences(
-                //         *this->frame_in_flight,
-                //         static_cast<vk::Bool32>(true),
-                //         timeout);
+                        util::logDebug("queue present complete");
 
-                // util::assertFatal(
-                //     result == vk::Result::eSuccess,
-                //     "Failed to wait for frame to complete drawing {} | "
-                //     "timeout(ns)",
-                //     vk::to_string(result),
-                //     timeout);
+                        if (result == VK_ERROR_OUT_OF_DATE_KHR
+                            || result == VK_SUBOPTIMAL_KHR)
+                        {
+                            util::logTrace(
+                                "Present result {}",
+                                vk::to_string(vk::Result {result}));
 
-                shouldResize = false;
-                return;
-            });
+                            shouldResize = true;
+                            return;
+                        }
+                        else if (result == VK_SUCCESS)
+                        {}
+                        else
+                        {
+                            util::panic(
+                                "Unhandled error! {}",
+                                vk::to_string(vk::Result {result}));
+                        }
+                    }
+
+                    util::logDebug("exiting present loop present complete");
+                }),
+            "main graphics queue was not available");
 
         if (shouldResize.value()) // NOLINT
         {

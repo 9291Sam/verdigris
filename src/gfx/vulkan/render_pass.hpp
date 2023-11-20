@@ -94,9 +94,11 @@ namespace gfx::vulkan
         vk::RenderPass                      render_pass;
         std::vector<vk::UniqueFramebuffer>* framebuffers;
 
-        vk::UniqueSemaphore image_available;
-        vk::UniqueSemaphore render_finished;
-        vk::UniqueFence     frame_in_flight;
+        vk::UniqueSemaphore     image_available;
+        vk::UniqueSemaphore     render_finished;
+        vk::UniqueFence         frame_in_flight;
+        vk::UniqueCommandPool   command_pool;
+        vk::UniqueCommandBuffer command_buffer;
     };
 
 } // namespace gfx::vulkan
