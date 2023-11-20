@@ -51,6 +51,20 @@ void propagateIntersection(in Ray ray, in Cube cube, inout IntersectionResult ou
     } 
 }
 
+void propagateIntersection(in Ray ray, in Cube cube, vec4 color, inout IntersectionResult out_result)
+{
+    IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+    if (!out_result.intersection_occured ||
+        (result.intersection_occured && 
+        result.maybe_distance < out_result.maybe_distance))
+    {
+        result.maybe_color = color;
+
+        out_result = result;
+    } 
+}
+
 vec4 calculatePixelColor(in Ray ray)
 {
     IntersectionResult bestIntersection;
@@ -62,7 +76,8 @@ vec4 calculatePixelColor(in Ray ray)
         {
             for (uint k = 0; k < 8; ++k)
             {
-                if (Voxel_isVisible(in_world_info.voxels[i][j][k]))
+                Voxel thisVoxel = in_world_info.voxels[i][j][k];
+                if (Voxel_isVisible(thisVoxel))
                 {
                     Cube cube;
                     cube.center = vec3(i, j, k);
@@ -70,7 +85,14 @@ vec4 calculatePixelColor(in Ray ray)
 
                     IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-                    propagateIntersection(ray, cube, bestIntersection);
+                    vec4 srgbVoxelColor = vec4(
+                        thisVoxel.srgb_r,
+                        thisVoxel.srgb_g,
+                        thisVoxel.srgb_b,
+                        255.0
+                    ) / 255.0;
+
+                    propagateIntersection(ray, cube, convertSRGBToLinear(srgbVoxelColor), bestIntersection);
                 }
             }
         }
@@ -89,7 +111,8 @@ vec4 calculatePixelColor(in Ray ray)
 
     if (bestIntersection.intersection_occured)
     {
-        return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); 
+        // return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); 
+        return bestIntersection.maybe_color;
     
     }
     else

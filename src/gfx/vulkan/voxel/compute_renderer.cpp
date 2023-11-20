@@ -255,9 +255,9 @@ namespace gfx::vulkan::voxel
         Brick b {};
 
         b.voxels[0][0][0] = Voxel {
-            .srgb_r {255},
+            .srgb_r {2},
             .srgb_g {255},
-            .srgb_b {255},
+            .srgb_b {84},
             .alpha_or_emissive {128},
             .specular {0},
             .roughness {255},
@@ -267,7 +267,7 @@ namespace gfx::vulkan::voxel
 
         b.voxels[3][0][4] = Voxel {
             .srgb_r {255},
-            .srgb_g {255},
+            .srgb_g {76},
             .srgb_b {255},
             .alpha_or_emissive {128},
             .specular {0},
@@ -278,8 +278,8 @@ namespace gfx::vulkan::voxel
 
         b.voxels[0][3][4] = Voxel {
             .srgb_r {255},
-            .srgb_g {255},
-            .srgb_b {255},
+            .srgb_g {9},
+            .srgb_b {128},
             .alpha_or_emissive {128},
             .specular {0},
             .roughness {255},
@@ -288,9 +288,9 @@ namespace gfx::vulkan::voxel
         };
 
         b.voxels[6][2][2] = Voxel {
-            .srgb_r {255},
+            .srgb_r {128},
             .srgb_g {255},
-            .srgb_b {255},
+            .srgb_b {138},
             .alpha_or_emissive {128},
             .specular {0},
             .roughness {255},

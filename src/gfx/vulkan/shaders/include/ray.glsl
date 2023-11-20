@@ -18,6 +18,7 @@ struct IntersectionResult
     bool intersection_occured;
     float maybe_distance;
     vec3 maybe_normal;
+    vec4 maybe_color;
 };
 
 IntersectionResult IntersectionResult_getMiss()
@@ -70,6 +71,7 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
         result.intersection_occured = true;
         result.maybe_distance = length(ray.origin - intersectionPoint);
         result.maybe_normal = normalize(intersectionPoint - self.center);
+        result.maybe_color = vec4(0.0, 1.0, 1.0, 1.0);
         
         return result;
     }
@@ -150,6 +152,7 @@ IntersectionResult Cube_tryIntersect(in Cube self, in Ray ray)
         normal = vec3(0.0, 0.0, 1.0); // Hit back face
 
     result.maybe_normal = normal;
+    result.maybe_color = vec4(0.0, 1.0, 1.0, 1.0);
 
     return result;
 }
