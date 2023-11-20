@@ -57,6 +57,7 @@ namespace gfx
         void               setCamera(Camera);
         [[nodiscard]] bool continueTicking();
         void               drawFrame();
+        void               waitIdle();
 
     private:
         void resize();

@@ -160,12 +160,6 @@ namespace gfx::vulkan
             (this->next_frame_index + 1) % this->frames.size();
         vulkan::Frame& nextFrame = this->frames[this->next_frame_index];
 
-        util::logDebug(
-            "This index {} | previouis index {} | addr: {}",
-            this->next_frame_index,
-            previousIndex,
-            (void*)(&nextFrame));
-
         std::optional<vk::Fence> previousFence =
             previousIndex == static_cast<std::size_t>(-1)
                 ? std::nullopt
@@ -275,8 +269,6 @@ namespace gfx::vulkan
         ImGuiMenu*                     menu,
         std::optional<vk::Fence>       previousFrameInFlightFence)
     {
-        util::logDebug("Entered frame::render");
-
         std::vector<const Object*> sortedObjects;
         sortedObjects.insert(
             sortedObjects.cend(),
@@ -290,20 +282,6 @@ namespace gfx::vulkan
             });
 
         this->device->asLogicalDevice().resetCommandPool(*this->command_pool);
-
-        // TODO: should this synchronization be moved to the end so
-        // we can pre-draw stuff?
-        // {
-        //     vk::Result result =
-        //     this->device->asLogicalDevice().waitForFences(
-        //         previousFrameInFlightFence, static_cast<vk::Bool32>(true),
-        //         timeout);
-
-        //     util::assertFatal(
-        //         result == vk::Result::eSuccess,
-        //         "Failed to wait for render fence {}",
-        //         vk::to_string(result));
-        // }
 
         std::uint32_t nextImageIndex = -1;
         {
@@ -423,13 +401,13 @@ namespace gfx::vulkan
             .pSignalSemaphores {&*this->render_finished},
         };
 
-        std::optional<bool> shouldResize = std::nullopt;
+        bool shouldResize = false;
 
         util::assertFatal(
             this->device->getMainGraphicsQueue().tryAccess(
                 [&](vk::Queue queue, vk::CommandBuffer)
                 {
-                    queue.submit(submitInfo);
+                    queue.submit(submitInfo, *this->frame_in_flight);
 
                     vk::SwapchainKHR swapchainPtr = **this->swapchain;
 
@@ -446,7 +424,6 @@ namespace gfx::vulkan
 
                     if (previousFrameInFlightFence.has_value())
                     {
-                        util::logDebug("Waiting on fence");
                         const vk::Result result =
                             this->device->asLogicalDevice().waitForFences(
                                 *previousFrameInFlightFence,
@@ -455,27 +432,19 @@ namespace gfx::vulkan
 
                         util::assertFatal(
                             result == vk::Result::eSuccess,
-                            "Failed to wait for frame to complete drawing {} | "
-                            "timeout(ns)",
+                            "Failed to wait for frame to complete drawing {}"
+                            "| timeout {} ns ",
                             vk::to_string(result),
                             timeout);
-                        util::logDebug("fence wait complete");
-                    }
-                    else
-                    {
-                        util::logDebug("no fence to wait on");
                     }
 
                     {
-                        util::logDebug("presenting queue");
                         VkResult result =
                             VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
                                 static_cast<VkQueue>(queue),
                                 reinterpret_cast<
                                     const VkPresentInfoKHR*>( // NOLINT
                                     &presentInfo));
-
-                        util::logDebug("queue present complete");
 
                         if (result == VK_ERROR_OUT_OF_DATE_KHR
                             || result == VK_SUBOPTIMAL_KHR)
@@ -496,14 +465,13 @@ namespace gfx::vulkan
                                 vk::to_string(vk::Result {result}));
                         }
                     }
-
-                    util::logDebug("exiting present loop present complete");
-                }),
+                },
+                false),
             "main graphics queue was not available");
 
-        if (shouldResize.value()) // NOLINT
+        if (shouldResize)
         {
-            return std::unexpected(ResizeNeeded {});
+            return std::unexpected(Frame::ResizeNeeded {});
         }
         else
         {

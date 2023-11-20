@@ -203,6 +203,8 @@ namespace util
 
         // Used for similar reasons as above, we want relaxed loading
         std::atomic_thread_fence(std::memory_order_seq_cst);
+
+        logLog("Set logging level to {}", LoggingLevel_asString(level));
     }
 
     LoggingLevel getCurrentLevel()

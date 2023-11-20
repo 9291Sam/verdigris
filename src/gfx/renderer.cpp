@@ -216,8 +216,6 @@ namespace gfx
 
             menuRender.get();
 
-            util::logDebug("rendering frame");
-
             if (!currentFrame.render(
                     this->draw_camera,
                     rawObjects,
@@ -227,7 +225,6 @@ namespace gfx
             {
                 this->resize();
             }
-            util::logDebug("erendering frame");
 
             if (this->window->isActionActive(
                     Window::Action::ToggleConsole, true))
@@ -258,6 +255,11 @@ namespace gfx
         }
 
         this->window->endFrame();
+    }
+
+    void Renderer::waitIdle()
+    {
+        this->device->asLogicalDevice().waitIdle();
     }
 
     void Renderer::resize()

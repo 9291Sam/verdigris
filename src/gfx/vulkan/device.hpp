@@ -63,7 +63,8 @@ namespace gfx::vulkan
         Queue& operator= (Queue&&)      = delete;
 
         [[nodiscard]] bool tryAccess(
-            const std::function<void(vk::Queue, vk::CommandBuffer)>&) const;
+            const std::function<void(vk::Queue, vk::CommandBuffer)>&,
+            bool resetCommandBuffer = true) const;
         [[nodiscard]] bool           isInUse() const;
         [[nodiscard]] std::size_t    getNumberOfOperationsSupported() const;
         [[nodiscard]] vk::QueueFlags getFlags() const;

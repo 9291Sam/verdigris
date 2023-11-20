@@ -26,7 +26,10 @@ namespace game
         this->last_tick_duration = std::chrono::duration<float> {0.0};
     }
 
-    Game::~Game() = default;
+    Game::~Game()
+    {
+        this->renderer.waitIdle();
+    }
 
     float Game::getTickDeltaTimeSeconds() const
     {

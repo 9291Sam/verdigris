@@ -339,18 +339,16 @@ namespace gfx::vulkan
     }
 
     bool Queue::tryAccess(
-        const std::function<void(vk::Queue, vk::CommandBuffer)>& func) const
+        const std::function<void(vk::Queue, vk::CommandBuffer)>& func,
+        bool resetCommandBuffer) const
     {
         return this->queue_buffer_mutex->try_lock(
             [&](vk::Queue& queue, vk::UniqueCommandBuffer& commandBuffer)
             {
-                // TODO: replace with dedicated thread_local
-                // pools for speed up if required
-                util::logDebug(
-                    "resetting commandbuffer @ {}",
-                    static_cast<void*>(*commandBuffer));
-
-                commandBuffer->reset();
+                if (resetCommandBuffer)
+                {
+                    commandBuffer->reset();
+                }
 
                 func(queue, *commandBuffer);
             });
