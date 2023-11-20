@@ -109,12 +109,17 @@ namespace gfx::vulkan
             };
 
             vk::PhysicalDeviceFeatures deviceFeatures = {};
-            deviceFeatures.samplerAnisotropy = static_cast<vk::Bool32>(true);
-            deviceFeatures.fillModeNonSolid  = static_cast<vk::Bool32>(true);
+            deviceFeatures.samplerAnisotropy          = vk::True;
+            deviceFeatures.fillModeNonSolid           = vk::True;
+            deviceFeatures.shaderInt64                = vk::True;
 
-            const vk::DeviceCreateInfo deviceCreateInfo {
+            vk::PhysicalDeviceVulkan12Features device12Features {};
+            device12Features.shaderInt8                        = vk::True;
+            device12Features.uniformAndStorageBuffer8BitAccess = vk::True;
+
+            vk::DeviceCreateInfo deviceCreateInfo {
                 .sType {vk::StructureType::eDeviceCreateInfo},
-                .pNext {nullptr},
+                .pNext {static_cast<void*>(&device12Features)},
                 .flags {},
                 .queueCreateInfoCount {
                     static_cast<std::uint32_t>(deviceQueueCreateInfos.size())},

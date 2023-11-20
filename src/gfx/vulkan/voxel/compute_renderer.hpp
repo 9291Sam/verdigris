@@ -6,6 +6,7 @@
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/descriptors.hpp>
 #include <gfx/vulkan/image.hpp>
+#include <random>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -40,6 +41,7 @@ namespace gfx::vulkan::voxel
         ComputeRenderer& operator= (const ComputeRenderer&) = delete;
         ComputeRenderer& operator= (ComputeRenderer&&)      = delete;
 
+        void                   tick();
         void                   render(vk::CommandBuffer, const Camera&);
         const vulkan::Image2D& getImage() const;
 
@@ -51,7 +53,9 @@ namespace gfx::vulkan::voxel
 
         Image2D           output_image;
         vk::UniqueSampler output_image_sampler;
-        vulkan::Buffer    input_buffer;
+
+        vulkan::Buffer input_uniform_buffer;
+        vulkan::Buffer input_voxel_buffer;
 
         DescriptorSet set;
 
@@ -60,6 +64,11 @@ namespace gfx::vulkan::voxel
         float time_alive;
 
         static constexpr vk::Extent2D ShaderDispatchSize {32, 32};
+
+        std::atomic<Camera> camera;
+
+        std::mt19937 generator;
+        std::size_t  foo;
 
         // fixed world
         // dynamic size

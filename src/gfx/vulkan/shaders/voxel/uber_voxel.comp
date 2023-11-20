@@ -8,10 +8,10 @@
 layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0, binding = 0, rgba8_snorm) writeonly uniform image2D out_image;
+// uniforms for everything else
+// storage buffers for voxels
 layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
 {
-    Voxel[8][8][8] voxels;
-
     mat4 inv_model_view_proj;
     mat4 model_view_proj;
 
@@ -22,7 +22,13 @@ layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
     float _pad1;
 
     float sphere_radius;
+
 } in_world_info;
+
+layout(set = 0, binding = 2, std430) readonly buffer Voxels
+{
+    Voxel voxels[8][8][8];
+} in_voxels;
 
 const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
 const vec3 WorldUpVector = vec3(0.0, 1.0, 0.0);
@@ -76,7 +82,7 @@ vec4 calculatePixelColor(in Ray ray)
         {
             for (uint k = 0; k < 8; ++k)
             {
-                Voxel thisVoxel = in_world_info.voxels[i][j][k];
+                Voxel thisVoxel = in_voxels.voxels[i][j][k];
                 if (Voxel_isVisible(thisVoxel))
                 {
                     Cube cube;

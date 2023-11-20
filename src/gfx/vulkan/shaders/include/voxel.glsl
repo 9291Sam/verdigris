@@ -24,6 +24,7 @@ struct Voxel
     /// 1 - anisotropic?
     /// [2, 255] UB
     uint8_t special;
+    // uint64_t padding;
 };
 
 #define Voxel_AlphaEmissiveState uint

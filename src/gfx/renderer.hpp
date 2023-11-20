@@ -47,6 +47,7 @@ namespace gfx
         [[nodiscard]] const util::Mutex<ImGuiMenu::State>& getMenuState() const;
         [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
         [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
+        [[nodiscard]] Camera        getCamera() const;
 
         [[nodiscard]] bool  isActionActive(Window::Action) const;
         [[nodiscard]] float getFovYRadians() const;

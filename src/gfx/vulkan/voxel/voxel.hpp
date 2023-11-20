@@ -26,9 +26,10 @@ namespace gfx::vulkan::voxel
         /// 1 - anisotropic?
         /// [2, 255] UB
         std::uint8_t special;
+        // std::uint64_t padding;
     };
 
-    static_assert(sizeof(Voxel) == sizeof(std::uint64_t));
+    // static_assert(sizeof(Voxel) == sizeof(std::uint64_t) * 2);
 
     struct Brick
     {

@@ -28,7 +28,7 @@ namespace gfx::vulkan
         : dynamic_loader {} // NOLINT
         , instance {nullptr}
         , debug_messenger {nullptr}
-        , vulkan_api_version {VK_API_VERSION_1_2}
+        , vulkan_api_version {vk::makeApiVersion(0, 1, 2, 261)}
     {
         {
             util::assertFatal(

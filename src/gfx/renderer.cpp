@@ -247,6 +247,8 @@ namespace gfx
                 }
             }
 
+            this->voxel_renderer->tick();
+
             this->menu_state.lock(
                 [&](ImGuiMenu::State& state)
                 {

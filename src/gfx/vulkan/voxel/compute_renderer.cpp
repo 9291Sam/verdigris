@@ -14,14 +14,19 @@ namespace gfx::vulkan::voxel
 
     namespace
     {
-        struct UploadInfo
+        struct UniformUploadInfo
         {
-            Brick     voxels;
             glm::mat4 inv_model_view_proj;
             glm::mat4 model_view_proj;
             glm::vec4 camera_position;
             glm::vec4 sphere_center;
-            float     sphere_radius;
+
+            float sphere_radius;
+        };
+
+        struct VoxelUploadInfo
+        {
+            Brick voxels;
         };
     } // namespace
 
@@ -46,6 +51,8 @@ namespace gfx::vulkan::voxel
               vk::ImageTiling::eOptimal,
               vk::MemoryPropertyFlagBits::eDeviceLocal}
         , time_alive {0.0f}
+        , camera {Camera {glm::vec3 {}}}
+        , generator {std::random_device {}()}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -73,30 +80,46 @@ namespace gfx::vulkan::voxel
                     .unnormalizedCoordinates {},
                 });
 
-        this->input_buffer = vulkan::Buffer {
+        this->input_uniform_buffer = vulkan::Buffer {
             this->allocator,
-            sizeof(UploadInfo),
+            sizeof(UniformUploadInfo),
             vk::BufferUsageFlagBits::eUniformBuffer
                 | vk::BufferUsageFlagBits::eTransferDst,
             vk::MemoryPropertyFlagBits::eDeviceLocal
                 | vk::MemoryPropertyFlagBits::eHostVisible};
 
-        UploadInfo info {};
+        this->input_voxel_buffer = vulkan::Buffer {
+            this->allocator,
+            sizeof(VoxelUploadInfo),
+            vk::BufferUsageFlagBits::eStorageBuffer
+                | vk::BufferUsageFlagBits::eTransferDst,
+            vk::MemoryPropertyFlagBits::eDeviceLocal
+                | vk::MemoryPropertyFlagBits::eHostVisible};
 
-        this->input_buffer.write(util::asBytes(&info));
+        UniformUploadInfo uniformInfo {};
+        VoxelUploadInfo   voxelInfo {};
+
+        this->input_uniform_buffer.write(util::asBytes(&uniformInfo));
+        this->input_voxel_buffer.write(util::asBytes(&voxelInfo));
 
         const vk::DescriptorImageInfo imageBindInfo {
             .sampler {*this->output_image_sampler},
             .imageView {*this->output_image},
             .imageLayout {vk::ImageLayout::eGeneral}};
 
-        const vk::DescriptorBufferInfo bufferBindInfo {
-            .buffer {*this->input_buffer},
+        const vk::DescriptorBufferInfo uniformBufferBindInfo {
+            .buffer {*this->input_uniform_buffer},
             .offset {0},
-            .range {sizeof(UploadInfo)},
+            .range {sizeof(UniformUploadInfo)},
         };
 
-        const std::array<vk::WriteDescriptorSet, 2> setUpdateInfo {
+        const vk::DescriptorBufferInfo storageBufferBindInfo {
+            .buffer {*this->input_voxel_buffer},
+            .offset {0},
+            .range {sizeof(VoxelUploadInfo)},
+        };
+
+        const std::array<vk::WriteDescriptorSet, 3> setUpdateInfo {
             vk::WriteDescriptorSet {
                 .sType {vk::StructureType::eWriteDescriptorSet},
                 .pNext {nullptr},
@@ -117,7 +140,18 @@ namespace gfx::vulkan::voxel
                 .descriptorCount {1},
                 .descriptorType {vk::DescriptorType::eUniformBuffer},
                 .pImageInfo {nullptr},
-                .pBufferInfo {&bufferBindInfo},
+                .pBufferInfo {&uniformBufferBindInfo},
+                .pTexelBufferView {nullptr}},
+            vk::WriteDescriptorSet {
+                .sType {vk::StructureType::eWriteDescriptorSet},
+                .pNext {nullptr},
+                .dstSet {*this->set},
+                .dstBinding {2},
+                .dstArrayElement {0},
+                .descriptorCount {1},
+                .descriptorType {vk::DescriptorType::eStorageBuffer},
+                .pImageInfo {nullptr},
+                .pBufferInfo {&storageBufferBindInfo},
                 .pTexelBufferView {nullptr}},
         };
 
@@ -243,88 +277,75 @@ namespace gfx::vulkan::voxel
 
     ComputeRenderer::~ComputeRenderer() = default;
 
-    void ComputeRenderer::render(
-        vk::CommandBuffer commandBuffer, const Camera& camera)
+    void ComputeRenderer::tick()
     {
         // TODO: move to a logical place
         this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
 
+        Camera c = this->camera;
+
         glm::mat4 modelViewProj =
-            camera.getPerspectiveMatrix(this->renderer, Transform {});
+            c.getPerspectiveMatrix(this->renderer, Transform {});
 
         Brick b {};
 
-        b.voxels[0][0][0] = Voxel {
-            .srgb_r {2},
-            .srgb_g {255},
-            .srgb_b {84},
-            .alpha_or_emissive {128},
-            .specular {0},
-            .roughness {255},
-            .metallic {0},
-            .special {0},
-        };
+        std::uniform_int_distribution<std::uint8_t> dist {0, 255};
 
-        b.voxels[3][0][4] = Voxel {
-            .srgb_r {255},
-            .srgb_g {76},
-            .srgb_b {255},
-            .alpha_or_emissive {128},
-            .specular {0},
-            .roughness {255},
-            .metallic {0},
-            .special {0},
-        };
+        for (auto& x1 : b.voxels)
+        {
+            for (auto& x2 : x1)
+            {
+                for (Voxel& voxel : x2)
+                {
+                    ++this->foo;
+                    if (this->foo % dist(generator) == 0
+                        || this->foo % dist(generator) == 0)
+                    {
+                        voxel = Voxel {
+                            .srgb_r {dist(generator)},
+                            .srgb_g {dist(generator)},
+                            .srgb_b {dist(generator)},
+                            .alpha_or_emissive {128},
+                            .specular {0},
+                            .roughness {255},
+                            .metallic {0},
+                            .special {0},
+                        };
+                    }
+                    else
+                    {
+                        voxel = Voxel {};
+                    }
+                }
+            }
+        }
 
-        b.voxels[0][3][4] = Voxel {
-            .srgb_r {255},
-            .srgb_g {9},
-            .srgb_b {128},
-            .alpha_or_emissive {128},
-            .specular {0},
-            .roughness {255},
-            .metallic {0},
-            .special {0},
-        };
-
-        b.voxels[6][2][2] = Voxel {
-            .srgb_r {128},
-            .srgb_g {255},
-            .srgb_b {138},
-            .alpha_or_emissive {128},
-            .specular {0},
-            .roughness {255},
-            .metallic {0},
-            .special {0},
-        };
-
-        b.voxels[3][7][7] = Voxel {
-            .srgb_r {255},
-            .srgb_g {255},
-            .srgb_b {255},
-            .alpha_or_emissive {128},
-            .specular {0},
-            .roughness {255},
-            .metallic {0},
-            .special {0},
-        };
-
-        UploadInfo info {
-            .voxels {b},
+        UniformUploadInfo uniformUploadInfo {
             .inv_model_view_proj {glm::inverse(modelViewProj)},
             .model_view_proj {modelViewProj},
-            .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},
-            .sphere_center {glm::vec4 {18.0f, 0, 0.0f, 0.0f}},
-            .sphere_radius {2.0f}};
+            .camera_position {glm::vec4 {c.getPosition(), 0.0f}},
+            .sphere_center {glm::vec4 {18.0f, 2.5f, 3.0f, 0.0f}},
+            .sphere_radius {2.0f},
+        };
+
+        VoxelUploadInfo voxelUploadInfo {.voxels {b}};
 
         this->obj->transform.lock(
             [&](Transform& t)
             {
-                t.translation = info.sphere_center;
-                t.scale = glm::vec3 {1.0f, 1.0f, 1.0f} * info.sphere_radius;
+                t.translation = uniformUploadInfo.sphere_center;
+                t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
+                        * uniformUploadInfo.sphere_radius;
             });
 
-        this->input_buffer.write(util::asBytes(&info));
+        this->input_uniform_buffer.write(util::asBytes(&uniformUploadInfo));
+        this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
+    }
+
+    void
+    ComputeRenderer::render(vk::CommandBuffer commandBuffer, const Camera& c)
+    {
+        this->camera = c;
 
         const vulkan::ComputePipeline& pipeline =
             this->pipeline_manager->getComputePipeline(
