@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 #define SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 
+#include <array>
 #include <cstdint>
 
 namespace gfx::vulkan::voxel
@@ -14,8 +15,9 @@ namespace gfx::vulkan::voxel
         /// [0, 127]   - Transluscent
         /// 128        - Opaque
         /// [129, 255] - Emissive
-        std::uint8_t alpha_emissive;
+        std::uint8_t alpha_or_emissive;
 
+        // TODO: there's too much information here
         std::uint8_t specular;
         std::uint8_t roughness;
         std::uint8_t metallic;
@@ -24,6 +26,13 @@ namespace gfx::vulkan::voxel
         /// 1 - anisotropic?
         /// [2, 255] UB
         std::uint8_t special;
+    };
+
+    static_assert(sizeof(Voxel) == sizeof(std::uint64_t));
+
+    struct Brick
+    {
+        std::array<std::array<std::array<Voxel, 8>, 8>, 8> voxels;
     };
 } // namespace gfx::vulkan::voxel
 

@@ -1,4 +1,5 @@
 #include "compute_renderer.hpp"
+#include "voxel.hpp"
 #include <gfx/renderer.hpp>
 #include <gfx/vulkan/allocator.hpp>
 #include <gfx/vulkan/buffer.hpp>
@@ -8,20 +9,22 @@
 #include <glm/vec4.hpp>
 #include <util/log.hpp>
 
-namespace
-{
-    struct UploadInfo
-    {
-        glm::mat4 inv_model_view_proj;
-        glm::mat4 model_view_proj;
-        glm::vec4 camera_position;
-        glm::vec4 sphere_center;
-        float     sphere_radius;
-    };
-} // namespace
-
 namespace gfx::vulkan::voxel
 {
+
+    namespace
+    {
+        struct UploadInfo
+        {
+            Brick     voxels;
+            glm::mat4 inv_model_view_proj;
+            glm::mat4 model_view_proj;
+            glm::vec4 camera_position;
+            glm::vec4 sphere_center;
+            float     sphere_radius;
+        };
+    } // namespace
+
     ComputeRenderer::ComputeRenderer(
         const Renderer&  renderer_,
         Device*          device_,
@@ -249,7 +252,65 @@ namespace gfx::vulkan::voxel
         glm::mat4 modelViewProj =
             camera.getPerspectiveMatrix(this->renderer, Transform {});
 
+        Brick b {};
+
+        b.voxels[0][0][0] = Voxel {
+            .srgb_r {255},
+            .srgb_g {255},
+            .srgb_b {255},
+            .alpha_or_emissive {128},
+            .specular {0},
+            .roughness {255},
+            .metallic {0},
+            .special {0},
+        };
+
+        b.voxels[3][0][4] = Voxel {
+            .srgb_r {255},
+            .srgb_g {255},
+            .srgb_b {255},
+            .alpha_or_emissive {128},
+            .specular {0},
+            .roughness {255},
+            .metallic {0},
+            .special {0},
+        };
+
+        b.voxels[0][3][4] = Voxel {
+            .srgb_r {255},
+            .srgb_g {255},
+            .srgb_b {255},
+            .alpha_or_emissive {128},
+            .specular {0},
+            .roughness {255},
+            .metallic {0},
+            .special {0},
+        };
+
+        b.voxels[6][2][2] = Voxel {
+            .srgb_r {255},
+            .srgb_g {255},
+            .srgb_b {255},
+            .alpha_or_emissive {128},
+            .specular {0},
+            .roughness {255},
+            .metallic {0},
+            .special {0},
+        };
+
+        b.voxels[3][7][7] = Voxel {
+            .srgb_r {255},
+            .srgb_g {255},
+            .srgb_b {255},
+            .alpha_or_emissive {128},
+            .specular {0},
+            .roughness {255},
+            .metallic {0},
+            .special {0},
+        };
+
         UploadInfo info {
+            .voxels {b},
             .inv_model_view_proj {glm::inverse(modelViewProj)},
             .model_view_proj {modelViewProj},
             .camera_position {glm::vec4 {camera.getPosition(), 0.0f}},

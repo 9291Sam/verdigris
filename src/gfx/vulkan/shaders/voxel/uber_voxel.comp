@@ -10,6 +10,8 @@ layout(local_size_x = 32, local_size_y = 32) in;
 layout(set = 0, binding = 0, rgba8_snorm) writeonly uniform image2D out_image;
 layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
 {
+    Voxel[8][8][8] voxels;
+
     mat4 inv_model_view_proj;
     mat4 model_view_proj;
 
@@ -54,23 +56,26 @@ vec4 calculatePixelColor(in Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occured = false;
 
-    // {
-    //     Sphere sphere;
-    //     sphere.center = in_world_info.sphere_center;
-    //     sphere.radius = in_world_info.sphere_radius;
+    for (uint i = 0; i < 8; ++i)
+    {
+        for (uint j = 0; j < 8; ++j)
+        {
+            for (uint k = 0; k < 8; ++k)
+            {
+                if (Voxel_isVisible(in_world_info.voxels[i][j][k]))
+                {
+                    Cube cube;
+                    cube.center = vec3(i, j, k);
+                    cube.edge_length = 0.5;
 
-    //     propagateIntersection(ray, sphere, bestIntersection);
-    // }
-    
-    // {
-    //     Cube cube;
-    //     cube.center = in_world_info.sphere_center + 10.0;
-    //     cube.edge_length = in_world_info.sphere_radius;
+                    IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-    //     IntersectionResult result = Cube_tryIntersect(cube, ray);
+                    propagateIntersection(ray, cube, bestIntersection);
+                }
+            }
+        }
+    }
 
-    //     propagateIntersection(ray, cube, bestIntersection);
-    // }
 
     {
         Cube cube;
@@ -100,7 +105,7 @@ void main()
 
     const vec2 inter_pixel_delta =
         vec2(1.0, 1.0) / vec2(image_size)
-        -
+        - /* for clarity */
         vec2(0.0, 0.0) / vec2(image_size);
         
     const vec2 normalized_pixel_xy =

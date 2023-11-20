@@ -35,6 +35,18 @@ const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Transluscent = 0;
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Opaque = 1;
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Emissive = 2;
 
+bool Voxel_isVisible(in Voxel self)
+{
+    if (self.alpha_or_emissive == 0)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in Voxel self)
 {
     if (self.alpha_or_emissive == 128)
