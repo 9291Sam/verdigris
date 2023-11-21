@@ -44,7 +44,7 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
         float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
 
         // Use the smaller positive solution
-        float t = max(t1, t2);
+        float t = min(t1, t2);
 
         vec3 intersection_point = ray.origin + t * ray.direction;
 
