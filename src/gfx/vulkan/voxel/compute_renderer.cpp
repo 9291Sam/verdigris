@@ -289,7 +289,14 @@ namespace gfx::vulkan::voxel
 
         Brick b {};
 
-        std::uniform_int_distribution<std::uint8_t> dist {0, 255};
+        // ok, for some blessed reason, you can't have a uniform int
+        // distribution over some types, including char
+        std::uniform_int_distribution<std::uint16_t> dist {1, 255};
+
+        auto distFunc = [&] -> std::uint8_t
+        {
+            return static_cast<std::uint8_t>(dist(this->generator));
+        };
 
         for (auto& x1 : b.voxels)
         {
@@ -298,13 +305,13 @@ namespace gfx::vulkan::voxel
                 for (Voxel& voxel : x2)
                 {
                     ++this->foo;
-                    if (this->foo % dist(generator) == 0
-                        || this->foo % dist(generator) == 0)
+                    if (this->foo % distFunc() == 0
+                        || this->foo % distFunc() == 0)
                     {
                         voxel = Voxel {
-                            .srgb_r {dist(generator)},
-                            .srgb_g {dist(generator)},
-                            .srgb_b {dist(generator)},
+                            .srgb_r {distFunc()},
+                            .srgb_g {distFunc()},
+                            .srgb_b {distFunc()},
                             .alpha_or_emissive {128},
                             .specular {0},
                             .roughness {255},

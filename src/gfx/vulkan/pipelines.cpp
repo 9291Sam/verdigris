@@ -6,6 +6,7 @@
 #include "swapchain.hpp"
 #include "util/log.hpp"
 #include <fstream>
+
 namespace
 {
     vk::UniqueShaderModule

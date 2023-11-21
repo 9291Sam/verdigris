@@ -280,8 +280,10 @@ function(compile_shader target)
                 COMMAND
                 ${glslc_executable}
                 $<$<BOOL:${arg_ENV}>:--target-env=${arg_ENV}>
+                $<$<BOOL:${arg_SPV}>:--target-spv=${arg_SPV}>
                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
                 $<$<BOOL:${arg_INCLUDE_DIRS}>:-I${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include>
+                -O # enable opts
                 -MD -MF ${source}.d
                 -o ${source}.${arg_FORMAT}
                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}
@@ -291,7 +293,8 @@ function(compile_shader target)
 endfunction()
 
 compile_shader(verdigris
-    ENV vulkan1.0
+    ENV vulkan1.2
+    SPV spv1.6
     FORMAT bin
     INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include"
     SOURCES

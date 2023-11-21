@@ -12,7 +12,7 @@ int main()
 #ifdef NDEBUG
     util::setLoggingLevel(util::LoggingLevel::Log);
 #else
-    util::setLoggingLevel(util::LoggingLevel::Debug); // TODO: commandline args
+    util::setLoggingLevel(util::LoggingLevel::Trace); // TODO: commandline args
 #endif
 
     try

@@ -44,8 +44,8 @@ namespace gfx::vulkan
             };
 
             this->physical_device = *std::max_element(
-                physicalDevices.begin(),
-                physicalDevices.end(),
+                physicalDevices.cbegin(),
+                physicalDevices.cend(),
                 [&](vk::PhysicalDevice deviceL, vk::PhysicalDevice deviceR)
                 {
                     return rateDevice(deviceL) < rateDevice(deviceR);
@@ -116,6 +116,7 @@ namespace gfx::vulkan
             vk::PhysicalDeviceVulkan12Features device12Features {};
             device12Features.shaderInt8                        = vk::True;
             device12Features.uniformAndStorageBuffer8BitAccess = vk::True;
+            device12Features.storageBuffer8BitAccess           = vk::True;
 
             vk::DeviceCreateInfo deviceCreateInfo {
                 .sType {vk::StructureType::eDeviceCreateInfo},
@@ -171,12 +172,6 @@ namespace gfx::vulkan
                             i);
                     }
 
-                    util::logTrace(
-                        "found main grapgics queue {}, i",
-                        vk::to_string(
-                            testableFlags[0] | testableFlags[1]
-                            | testableFlags[2]));
-
                     this->main_graphics_queue = queuePtr;
                 }
                 else
@@ -185,8 +180,6 @@ namespace gfx::vulkan
                     {
                         if (queuePtr->getFlags() & f)
                         {
-                            util::logTrace(
-                                "Added queue of type {}", vk::to_string(f));
                             this->queues[f].push_back(queuePtr);
                         }
                     }
