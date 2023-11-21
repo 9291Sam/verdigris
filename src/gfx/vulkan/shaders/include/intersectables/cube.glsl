@@ -13,8 +13,6 @@ struct Cube
 
 IntersectionResult Cube_tryIntersect(const Cube self, in Ray ray)
 {
-    ray.direction = -ray.direction; // FIXME: what, this is terrible
-
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
     vec3 invdir = 1 / ray.direction;

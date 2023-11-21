@@ -130,10 +130,20 @@ vec4 calculatePixelColor(const Ray ray)
         propagateIntersection(ray, cube, bestIntersection);
     }
 
+    {
+        Sphere sphere;
+        sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
+        sphere.radius = in_world_info.sphere_radius;
+
+        IntersectionResult result = Sphere_tryIntersect(sphere, ray);
+
+        propagateIntersection(ray, sphere, bestIntersection);
+    }
+
     if (bestIntersection.intersection_occured)
     {
-        return bestIntersection.maybe_color
-             * vec4(bestIntersection.maybe_normal + 2.5 / 5, 1.0);
+        // return bestIntersection.maybe_color
+        return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
     }
     else
     {
@@ -170,6 +180,10 @@ void main()
     Ray ray;
     ray.origin    = in_world_info.camera_position;
     ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
+
+    // tbh, I *really* don't know why this needs to be inverted, however if you
+    // do so, all of the math everywhere else works out so much better
+    ray.direction = -ray.direction;
 
     imageStore(out_image, pixel_xy, calculatePixelColor(ray));
 }
