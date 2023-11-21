@@ -3,11 +3,13 @@
 
 #include "voxel.glsl"
 
+const uint VoxelBrick_EdgeLength = 12;
 struct VoxelBrick
 {
-    Voxel[8][8][8] voxels;
-}
+    Voxel[VoxelBrick_EdgeLength][VoxelBrick_EdgeLength]
+         [VoxelBrick_EdgeLength] voxels;
+};
 
-IntersectionResult VoxelBrick_tryIntersect(in const Brick self,  )
+// IntersectionResult VoxelBrick_tryIntersect(const in Brick self, )
 
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_VOXEL_BRICK_GLSL

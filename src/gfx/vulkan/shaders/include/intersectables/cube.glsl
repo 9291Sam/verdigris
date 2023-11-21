@@ -19,8 +19,8 @@ IntersectionResult Cube_tryIntersect(const Cube self, in Ray ray)
 
     vec3 invdir = 1 / ray.direction;
 
-    vec3 bounds[2] =
-        vec3[2](self.center - self.edge_length, self.center + self.edge_length);
+    vec3 bounds[2] = vec3[2](
+        self.center - self.edge_length / 2, self.center + self.edge_length / 2);
 
     tmin  = (bounds[int(invdir[0] < 0)].x - ray.origin.x) * invdir.x;
     tmax  = (bounds[1 - int(invdir[0] < 0)].x - ray.origin.x) * invdir.x;

@@ -33,7 +33,7 @@ namespace gfx::vulkan::voxel
 
     struct Brick
     {
-        std::array<std::array<std::array<Voxel, 8>, 8>, 8> voxels;
+        std::array<std::array<std::array<Voxel, 12>, 12>, 12> voxels;
     };
 } // namespace gfx::vulkan::voxel
 

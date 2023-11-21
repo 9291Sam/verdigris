@@ -4,11 +4,11 @@
 #ifndef SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
 #define SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
 
-#include "util.glsl"
 #include "ray.glsl"
+#include "util.glsl"
 
 struct Voxel
-{  
+{
     uint8_t srgb_r;
     uint8_t srgb_g;
     uint8_t srgb_b;
@@ -31,15 +31,15 @@ struct Voxel
 
 #define Voxel_AlphaEmissiveState uint
 
-vec4 Voxel_getColor(in const Voxel);
-bool Voxel_isVisible(in const Voxel);
-Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in const Voxel);
+bool                     Voxel_isVisible(const in Voxel);
+vec4                     Voxel_getLinearColor(const in Voxel);
+Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(const in Voxel);
 
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Transluscent = 0;
-const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Opaque = 1;
-const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Emissive = 2;
+const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Opaque       = 1;
+const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Emissive     = 2;
 
-bool Voxel_isVisible(in const Voxel self)
+bool Voxel_isVisible(const in Voxel self)
 {
     if (self.alpha_or_emissive == 0)
     {
@@ -51,7 +51,7 @@ bool Voxel_isVisible(in const Voxel self)
     }
 }
 
-Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in const Voxel self)
+Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(const in Voxel self)
 {
     if (self.alpha_or_emissive == 128)
     {
@@ -67,14 +67,15 @@ Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in const Voxel self)
     }
 }
 
-vec4 Voxel_getLinearColor(in const Voxel self)
+vec4 Voxel_getLinearColor(const in Voxel self)
 {
-    return convertSRGBToLinear(vec4(
-        self.srgb_r,
-        self.srgb_g,
-        self.srgb_b, 
-        float(self.alpha_or_emissive) / 128.0
-    ));
+    return convertSRGBToLinear(
+        vec4(
+            self.srgb_r,
+            self.srgb_g,
+            self.srgb_b,
+            float(self.alpha_or_emissive) * 2)
+        / 255.0);
 }
 
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
