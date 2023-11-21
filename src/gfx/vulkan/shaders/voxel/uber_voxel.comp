@@ -181,8 +181,8 @@ void main()
     ray.origin    = in_world_info.camera_position;
     ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
 
-    // tbh, I *really* don't know why this needs to be inverted, however if you
-    // do so, all of the math everywhere else works out so much better
+    // we invert the ray's direction as a resukt of how screenspace coordinates
+    // work in vulkan., -1, -1 actually is positive in our cooridnate system
     ray.direction = -ray.direction;
 
     imageStore(out_image, pixel_xy, calculatePixelColor(ray));
