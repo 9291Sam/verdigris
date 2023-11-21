@@ -1,77 +1,82 @@
 #version 460
-
 #extension GL_EXT_scalar_block_layout : require
 
-#include <../include/voxel.glsl>
-#include <../include/ray.glsl>
+#include <intersectables/cube.glsl>
+#include <intersectables/sphere.glsl>
+#include <ray.glsl>
+#include <voxel.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
 
-layout(set = 0, binding = 0, rgba8_snorm) writeonly uniform image2D out_image;
-// uniforms for everything else
-// storage buffers for voxels
-layout(set = 0, binding = 1, std430) readonly uniform WorldInfo
+layout(set = 0, binding = 0, rgba8_snorm) writeonly
+    restrict uniform image2D out_image;
+layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
 {
     mat4 inv_model_view_proj;
     mat4 model_view_proj;
 
-    vec3 camera_position;
+    vec3  camera_position;
     float _pad0;
 
-    vec3 sphere_center;
+    vec3  sphere_center;
     float _pad1;
 
     float sphere_radius;
-
-} in_world_info;
-
-layout(set = 0, binding = 2, std430) readonly buffer Voxels
+}
+in_world_info;
+layout(set = 0, binding = 2, std430) readonly restrict buffer Voxels
 {
     Voxel voxels[8][8][8];
-} in_voxels;
+}
+in_voxels;
 
 const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
-const vec3 WorldUpVector = vec3(0.0, 1.0, 0.0);
 
-void propagateIntersection(in Ray ray, in Sphere sphere, inout IntersectionResult out_result)
+void propagateIntersection(
+    const Ray ray, const Sphere sphere, inout IntersectionResult out_result)
 {
-    IntersectionResult result = Sphere_tryIntersect(sphere, ray);
+    const IntersectionResult result = Sphere_tryIntersect(sphere, ray);
 
-    if (!out_result.intersection_occured ||
-        (result.intersection_occured && 
-        result.maybe_distance < out_result.maybe_distance))
+    if (!out_result.intersection_occured
+        || (result.intersection_occured
+            && result.maybe_distance < out_result.maybe_distance))
     {
         out_result = result;
-    } 
+    }
 }
 
-void propagateIntersection(in Ray ray, in Cube cube, inout IntersectionResult out_result)
+void propagateIntersection(
+    const Ray ray, const Cube cube, inout IntersectionResult out_result)
+{
+    const IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+    if (!out_result.intersection_occured
+        || (result.intersection_occured
+            && result.maybe_distance < out_result.maybe_distance))
+    {
+        out_result = result;
+    }
+}
+
+void propagateIntersection(
+    const Ray                ray,
+    const Cube               cube,
+    const vec4               color,
+    inout IntersectionResult out_result)
 {
     IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-    if (!out_result.intersection_occured ||
-        (result.intersection_occured && 
-        result.maybe_distance < out_result.maybe_distance))
-    {
-        out_result = result;
-    } 
-}
-
-void propagateIntersection(in Ray ray, in Cube cube, vec4 color, inout IntersectionResult out_result)
-{
-    IntersectionResult result = Cube_tryIntersect(cube, ray);
-
-    if (!out_result.intersection_occured ||
-        (result.intersection_occured && 
-        result.maybe_distance < out_result.maybe_distance))
+    if (!out_result.intersection_occured
+        || (result.intersection_occured
+            && result.maybe_distance < out_result.maybe_distance))
     {
         result.maybe_color = color;
 
         out_result = result;
-    } 
+    }
 }
 
-vec4 calculatePixelColor(in Ray ray)
+vec4 calculatePixelColor(const Ray ray)
 {
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occured = false;
@@ -86,30 +91,33 @@ vec4 calculatePixelColor(in Ray ray)
                 if (Voxel_isVisible(thisVoxel))
                 {
                     Cube cube;
-                    cube.center = vec3(i, j, k);
+                    cube.center      = vec3(i, j, k);
                     cube.edge_length = 0.5;
 
                     IntersectionResult result = Cube_tryIntersect(cube, ray);
 
                     vec4 srgbVoxelColor = vec4(
-                        thisVoxel.srgb_r,
-                        thisVoxel.srgb_g,
-                        thisVoxel.srgb_b,
-                        255.0
-                    ) / 255.0;
+                                              thisVoxel.srgb_r,
+                                              thisVoxel.srgb_g,
+                                              thisVoxel.srgb_b,
+                                              255.0)
+                                        / 255.0;
 
-                    propagateIntersection(ray, cube, convertSRGBToLinear(srgbVoxelColor), bestIntersection);
+                    propagateIntersection(
+                        ray,
+                        cube,
+                        convertSRGBToLinear(srgbVoxelColor),
+                        bestIntersection);
                 }
             }
         }
     }
 
-
     {
         Cube cube;
-        cube.center = in_world_info.sphere_center;
+        cube.center      = in_world_info.sphere_center;
         cube.edge_length = in_world_info.sphere_radius;
-        
+
         IntersectionResult result = Cube_tryIntersect(cube, ray);
 
         propagateIntersection(ray, cube, bestIntersection);
@@ -117,9 +125,7 @@ vec4 calculatePixelColor(in Ray ray)
 
     if (bestIntersection.intersection_occured)
     {
-        // return vec4(bestIntersection.maybe_normal * 0.5 + 0.5, 1.0); 
         return bestIntersection.maybe_color;
-    
     }
     else
     {
@@ -129,36 +135,33 @@ vec4 calculatePixelColor(in Ray ray)
 
 void main()
 {
-    const ivec2 pixel_xy = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 image_size = imageSize(out_image);  
+    const ivec2 pixel_xy   = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 image_size = imageSize(out_image);
 
-    const vec2 inter_pixel_delta =
-        vec2(1.0, 1.0) / vec2(image_size)
-        - /* for clarity */
-        vec2(0.0, 0.0) / vec2(image_size);
-        
-    const vec2 normalized_pixel_xy =
-        (vec2(pixel_xy) / vec2(image_size)) * 2.0 - 1.0 + (inter_pixel_delta / 2);
+    const vec2 inter_pixel_delta = vec2(1.0, 1.0) / vec2(image_size)
+                                 - /* for clarity */
+                                   vec2(0.0, 0.0) / vec2(image_size);
+
+    const vec2 normalized_pixel_xy = (vec2(pixel_xy) / vec2(image_size)) * 2.0
+                                   - 1.0 + (inter_pixel_delta / 2);
 
     const float nearPlaneDistance = 0.1;
-    const float farPlaneDistance = 100000.0;
+    const float farPlaneDistance  = 100000.0;
 
-    const vec4 nearScreenSpace = vec4(normalized_pixel_xy, nearPlaneDistance, 1.0);
-    const vec4 farScreenSpace  = vec4(normalized_pixel_xy,  farPlaneDistance, 1.0);
+    const vec4 nearScreenSpace =
+        vec4(normalized_pixel_xy, nearPlaneDistance, 1.0);
+    const vec4 farScreenSpace =
+        vec4(normalized_pixel_xy, farPlaneDistance, 1.0);
 
     vec4 nearPoint = in_world_info.inv_model_view_proj * nearScreenSpace;
     nearPoint /= nearPoint.w;
 
     vec4 farPoint = in_world_info.inv_model_view_proj * farScreenSpace;
     farPoint /= farPoint.w;
-    
+
     Ray ray;
     ray.origin    = in_world_info.camera_position;
     ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
 
-    imageStore(
-        out_image,
-        pixel_xy,
-        calculatePixelColor(ray)
-    );
+    imageStore(out_image, pixel_xy, calculatePixelColor(ray));
 }

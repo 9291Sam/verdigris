@@ -1,6 +1,9 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : enable
 
+#ifndef SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
+#define SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
+
 #include "util.glsl"
 #include "ray.glsl"
 
@@ -24,19 +27,19 @@ struct Voxel
     /// 1 - anisotropic?
     /// [2, 255] UB
     uint8_t special;
-    // uint64_t padding;
 };
 
 #define Voxel_AlphaEmissiveState uint
 
-Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in Voxel);
-vec4 Voxel_getColor(in Voxel);
+vec4 Voxel_getColor(in const Voxel);
+bool Voxel_isVisible(in const Voxel);
+Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in const Voxel);
 
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Transluscent = 0;
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Opaque = 1;
 const Voxel_AlphaEmissiveState Voxel_AlphaEmissiveState_Emissive = 2;
 
-bool Voxel_isVisible(in Voxel self)
+bool Voxel_isVisible(in const Voxel self)
 {
     if (self.alpha_or_emissive == 0)
     {
@@ -48,7 +51,7 @@ bool Voxel_isVisible(in Voxel self)
     }
 }
 
-Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in Voxel self)
+Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in const Voxel self)
 {
     if (self.alpha_or_emissive == 128)
     {
@@ -64,7 +67,7 @@ Voxel_AlphaEmissiveState Voxel_getAlphaEmissiveState(in Voxel self)
     }
 }
 
-vec4 Voxel_getLinearColor(in Voxel self)
+vec4 Voxel_getLinearColor(in const Voxel self)
 {
     return convertSRGBToLinear(vec4(
         self.srgb_r,
@@ -73,3 +76,5 @@ vec4 Voxel_getLinearColor(in Voxel self)
         float(self.alpha_or_emissive) / 128.0
     ));
 }
+
+#endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
