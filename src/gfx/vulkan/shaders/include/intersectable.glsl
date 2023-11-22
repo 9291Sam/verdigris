@@ -3,10 +3,10 @@
 
 struct IntersectionResult
 {
-    bool intersection_occured;
+    bool  intersection_occured;
     float maybe_distance;
-    vec3 maybe_normal;
-    vec4 maybe_color;
+    vec3  maybe_normal;
+    vec4  maybe_color;
 };
 
 IntersectionResult IntersectionResult_getMiss()
@@ -15,6 +15,17 @@ IntersectionResult IntersectionResult_getMiss()
     result.intersection_occured = false;
 
     return result;
+}
+
+void propagateIntersection(
+    inout IntersectionResult bestIntersection, const IntersectionResult result)
+{
+    if (!bestIntersection.intersection_occured
+        || (result.intersection_occured
+            && result.maybe_distance < bestIntersection.maybe_distance))
+    {
+        bestIntersection = result;
+    }
 }
 
 #endif // SRX_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLE_GLSL

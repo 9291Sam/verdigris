@@ -33,50 +33,6 @@ in_voxels;
 
 const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-void propagateIntersection(
-    const Ray ray, const Sphere sphere, inout IntersectionResult out_result)
-{
-    const IntersectionResult result = Sphere_tryIntersect(sphere, ray);
-
-    if (!out_result.intersection_occured
-        || (result.intersection_occured
-            && result.maybe_distance < out_result.maybe_distance))
-    {
-        out_result = result;
-    }
-}
-
-void propagateIntersection(
-    const Ray ray, const Cube cube, inout IntersectionResult out_result)
-{
-    const IntersectionResult result = Cube_tryIntersect(cube, ray);
-
-    if (!out_result.intersection_occured
-        || (result.intersection_occured
-            && result.maybe_distance < out_result.maybe_distance))
-    {
-        out_result = result;
-    }
-}
-
-void propagateIntersection(
-    const Ray                ray,
-    const Cube               cube,
-    const vec4               color,
-    inout IntersectionResult out_result)
-{
-    IntersectionResult result = Cube_tryIntersect(cube, ray);
-
-    if (!out_result.intersection_occured
-        || (result.intersection_occured
-            && result.maybe_distance < out_result.maybe_distance))
-    {
-        result.maybe_color = color;
-
-        out_result = result;
-    }
-}
-
 void tryIntersectVoxelVolume(const Ray ray, inout IntersectionResult out_result)
 {
     Cube brickOuterCube;
@@ -105,8 +61,7 @@ void tryIntersectVoxelVolume(const Ray ray, inout IntersectionResult out_result)
 
                     IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-                    propagateIntersection(
-                        ray, cube, Voxel_getLinearColor(thisVoxel), out_result);
+                    propagateIntersection(out_result, result);
                 }
             }
         }
@@ -125,9 +80,7 @@ vec4 calculatePixelColor(const Ray ray)
         cube.center      = in_world_info.sphere_center;
         cube.edge_length = in_world_info.sphere_radius;
 
-        IntersectionResult result = Cube_tryIntersect(cube, ray);
-
-        propagateIntersection(ray, cube, bestIntersection);
+        propagateIntersection(bestIntersection, Cube_tryIntersect(cube, ray));
     }
 
     {
@@ -135,14 +88,12 @@ vec4 calculatePixelColor(const Ray ray)
         sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
         sphere.radius = in_world_info.sphere_radius;
 
-        IntersectionResult result = Sphere_tryIntersect(sphere, ray);
-
-        propagateIntersection(ray, sphere, bestIntersection);
+        propagateIntersection(
+            bestIntersection, Sphere_tryIntersect(sphere, ray));
     }
 
     if (bestIntersection.intersection_occured)
     {
-        // return bestIntersection.maybe_color
         return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
     }
     else
