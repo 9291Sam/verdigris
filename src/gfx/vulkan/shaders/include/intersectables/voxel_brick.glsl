@@ -1,16 +1,21 @@
 #ifndef SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_VOXEL_BRICK_GLSL
 #define SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_VOXEL_BRICK_GLSL
 
+#include "cube.glsl"
 #include "voxel.glsl"
+#include <descriptors.glsl>
+#include <intersectable.glsl>
+#include <ray.glsl>
 
 const uint VoxelBrick_EdgeLength = 12;
+
 struct VoxelBrick
 {
     Voxel[VoxelBrick_EdgeLength][VoxelBrick_EdgeLength]
          [VoxelBrick_EdgeLength] voxels;
 };
 
-IntersectionResult VoxelBrick_tryIntersect(in VoxelBrick self, const Ray ray)
+IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray)
 {
     Cube brickOuterCube;
     brickOuterCube.center = vec3(
@@ -33,7 +38,7 @@ IntersectionResult VoxelBrick_tryIntersect(in VoxelBrick self, const Ray ray)
         {
             for (uint k = 0; k < VoxelBrick_EdgeLength; ++k)
             {
-                Voxel thisVoxel = self.voxels[i][j][k];
+                Voxel thisVoxel = in_voxels.brick[offset].voxels[i][j][k];
 
                 if (Voxel_isVisible(thisVoxel))
                 {

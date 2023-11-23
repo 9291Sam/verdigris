@@ -4,7 +4,6 @@
 #ifndef SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
 #define SRC_GFX_VULKAN_SHADERS_INCLUDE_VOXEL_GLSL
 
-#include "ray.glsl"
 #include "util.glsl"
 
 struct Voxel
