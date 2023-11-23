@@ -12,7 +12,7 @@ namespace gfx::vulkan::voxel
         std::uint8_t srgb_g;
         std::uint8_t srgb_b;
 
-        /// [0, 127]   - Transluscent
+        /// [0, 127]   - Translucent
         /// 128        - Opaque
         /// [129, 255] - Emissive
         std::uint8_t alpha_or_emissive;
@@ -26,14 +26,13 @@ namespace gfx::vulkan::voxel
         /// 1 - anisotropic?
         /// [2, 255] UB
         std::uint8_t special;
-        // std::uint64_t padding;
     };
 
-    // static_assert(sizeof(Voxel) == sizeof(std::uint64_t) * 2);
+    static_assert(sizeof(Voxel) == sizeof(std::uint64_t));
 
     struct Brick
     {
-        std::array<std::array<std::array<Voxel, 12>, 12>, 12> voxels;
+        std::array<std::array<std::array<Voxel, 8>, 8>, 8> voxels;
     };
 } // namespace gfx::vulkan::voxel
 

@@ -1,11 +1,23 @@
 #version 460
 #extension GL_EXT_scalar_block_layout : require
 
+#include <intersectables/cube.glsl>
+#include <intersectables/sphere.glsl>
+#include <ray.glsl>
+#include <voxel.glsl>
+
 layout(local_size_x = 32, local_size_y = 32) in;
+
+const uint VoxelBrick_EdgeLength = 8;
+struct VoxelBrick
+{
+    Voxel[VoxelBrick_EdgeLength][VoxelBrick_EdgeLength]
+         [VoxelBrick_EdgeLength] voxels;
+};
+IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray);
 
 layout(set = 0, binding = 0, rgba8_snorm) writeonly
     restrict uniform image2D out_image;
-
 layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
 {
     mat4 inv_model_view_proj;
@@ -20,60 +32,13 @@ layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
     float sphere_radius;
 }
 in_world_info;
-
 layout(set = 0, binding = 2, std430) readonly restrict buffer Voxels
 {
     VoxelBrick[] brick;
 }
 in_voxels;
 
-#include <descriptors.glsl>
-#include <intersectables/cube.glsl>
-#include <intersectables/sphere.glsl>
-#include <intersectables/voxel_brick.glsl>
-#include <ray.glsl>
-#include <voxel.glsl>
-
-const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
-
-vec4 calculatePixelColor(const Ray ray)
-{
-    IntersectionResult bestIntersection;
-    bestIntersection.intersection_occured = false;
-
-    propagateIntersection(bestIntersection, VoxelBrick_tryIntersect(0, ray));
-
-    {
-        Cube cube;
-        cube.center      = in_world_info.sphere_center;
-        cube.edge_length = in_world_info.sphere_radius;
-
-        propagateIntersection(bestIntersection, Cube_tryIntersect(cube, ray));
-    }
-
-    {
-        Sphere sphere;
-        sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
-        sphere.radius = in_world_info.sphere_radius;
-
-        propagateIntersection(
-            bestIntersection, Sphere_tryIntersect(sphere, ray));
-    }
-
-    if (bestIntersection.intersection_occured)
-    {
-        return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
-    }
-    else
-    {
-        return RayMissColor;
-    }
-}
-
-void foo(out int a)
-{
-    a = a;
-}
+vec4 calculatePixelColor(const Ray ray);
 
 void main()
 {
@@ -110,4 +75,79 @@ void main()
     ray.direction = -ray.direction;
 
     imageStore(out_image, pixel_xy, calculatePixelColor(ray));
+}
+
+vec4 calculatePixelColor(const Ray ray)
+{
+    IntersectionResult bestIntersection;
+    bestIntersection.intersection_occured = false;
+
+    propagateIntersection(bestIntersection, VoxelBrick_tryIntersect(0, ray));
+
+    {
+        Cube cube;
+        cube.center      = in_world_info.sphere_center;
+        cube.edge_length = in_world_info.sphere_radius;
+
+        propagateIntersection(bestIntersection, Cube_tryIntersect(cube, ray));
+    }
+
+    {
+        Sphere sphere;
+        sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
+        sphere.radius = in_world_info.sphere_radius;
+
+        propagateIntersection(
+            bestIntersection, Sphere_tryIntersect(sphere, ray));
+    }
+
+    if (bestIntersection.intersection_occured)
+    {
+        return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
+    }
+    else
+    {
+        const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
+        return RayMissColor;
+    }
+}
+
+IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray)
+{
+    Cube brickOuterCube;
+    brickOuterCube.center = vec3(
+        VoxelBrick_EdgeLength / 2,
+        VoxelBrick_EdgeLength / 2,
+        VoxelBrick_EdgeLength / 2);
+
+    brickOuterCube.edge_length = VoxelBrick_EdgeLength + 1;
+
+    IntersectionResult result = IntersectionResult_getMiss();
+
+    if (!Cube_tryIntersect(brickOuterCube, ray).intersection_occured)
+    {
+        return IntersectionResult_getMiss();
+    }
+
+    for (uint i = 0; i < VoxelBrick_EdgeLength; ++i)
+    {
+        for (uint j = 0; j < VoxelBrick_EdgeLength; ++j)
+        {
+            for (uint k = 0; k < VoxelBrick_EdgeLength; ++k)
+            {
+                Voxel thisVoxel = in_voxels.brick[offset].voxels[i][j][k];
+
+                if (Voxel_isVisible(thisVoxel))
+                {
+                    Cube cube;
+                    cube.center      = vec3(i, j, k);
+                    cube.edge_length = 1.0;
+
+                    propagateIntersection(result, Cube_tryIntersect(cube, ray));
+                }
+            }
+        }
+    }
+
+    return result;
 }
