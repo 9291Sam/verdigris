@@ -38,4 +38,14 @@ bool isApproxEqual(const in float a, const in float b)
     return abs(a - b) < VERDIGRIS_EPSILON;
 }
 
+float maxComponent(const vec3 vec)
+{
+    return max(vec.x, max(vec.y, vec.z));
+}
+
+float minComponent(const vec3 vec)
+{
+    return min(vec.x, min(vec.y, vec.z));
+}
+
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_UTIL_GLSL
