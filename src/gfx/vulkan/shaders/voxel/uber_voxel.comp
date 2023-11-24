@@ -14,7 +14,10 @@ struct VoxelBrick
     Voxel[VoxelBrick_EdgeLength][VoxelBrick_EdgeLength]
          [VoxelBrick_EdgeLength] voxels;
 };
-IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray);
+IntersectionResult
+VoxelBrick_tryIntersect(vec3 center, const uint edgeLength, const Ray ray);
+IntersectionResult
+VoxelBrick_tryIntersect(uint offset, vec3 brickCorner, const Ray ray);
 
 layout(set = 0, binding = 0, rgba8_snorm) writeonly
     restrict uniform image2D out_image;
@@ -80,9 +83,10 @@ void main()
 vec4 calculatePixelColor(const Ray ray)
 {
     IntersectionResult bestIntersection;
-    bestIntersection.intersection_occured = false;
+    bestIntersection.intersection_occurred = false;
 
-    propagateIntersection(bestIntersection, VoxelBrick_tryIntersect(0, ray));
+    propagateIntersection(
+        bestIntersection, VoxelBrick_tryIntersect(0, vec3(0, 0, 0), ray));
 
     {
         Cube cube;
@@ -101,7 +105,7 @@ vec4 calculatePixelColor(const Ray ray)
             bestIntersection, Sphere_tryIntersect(sphere, ray));
     }
 
-    if (bestIntersection.intersection_occured)
+    if (bestIntersection.intersection_occurred)
     {
         return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
     }
@@ -112,42 +116,159 @@ vec4 calculatePixelColor(const Ray ray)
     }
 }
 
-IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray)
+IntersectionResult
+VoxelBrick_tryIntersect(uint offset, vec3 brickCorner, const Ray ray)
 {
-    Cube brickOuterCube;
-    brickOuterCube.center = vec3(
-        VoxelBrick_EdgeLength / 2,
-        VoxelBrick_EdgeLength / 2,
-        VoxelBrick_EdgeLength / 2);
+    const float VoxelBrick_EdgeLength = 8.0;
 
-    brickOuterCube.edge_length = VoxelBrick_EdgeLength + 1;
+    // Calculate the voxel brick position
+    vec3 brickPos =
+        brickCorner
+        + vec3(float(offset % 8), float((offset / 8) % 8), float(offset / 64));
 
-    IntersectionResult result = IntersectionResult_getMiss();
+    vec3 X      = brickPos;
+    vec3 step   = sign(ray.direction);
+    vec3 tDelta = abs(1.0 / ray.direction);
+    vec3 tMax   = tDelta * 0.5;
 
-    if (!Cube_tryIntersect(brickOuterCube, ray).intersection_occured)
-    {
-        return IntersectionResult_getMiss();
-    }
-
-    for (uint i = 0; i < VoxelBrick_EdgeLength; ++i)
-    {
-        for (uint j = 0; j < VoxelBrick_EdgeLength; ++j)
+    for (int i = 0; i < 100; i++)
+    { // Adjust the number of iterations as needed
+        if (tMax.x < tMax.y)
         {
-            for (uint k = 0; k < VoxelBrick_EdgeLength; ++k)
+            if (tMax.x < tMax.z)
             {
-                Voxel thisVoxel = in_voxels.brick[offset].voxels[i][j][k];
-
-                if (Voxel_isVisible(thisVoxel))
+                X.x += step.x;
+                if (X.x < brickCorner.x
+                    || X.x >= brickCorner.x + VoxelBrick_EdgeLength)
                 {
-                    Cube cube;
-                    cube.center      = vec3(i, j, k);
-                    cube.edge_length = 1.0;
-
-                    propagateIntersection(result, Cube_tryIntersect(cube, ray));
+                    return IntersectionResult_getMiss();
                 }
+                tMax.x += tDelta.x;
             }
+            else
+            {
+                X.z += step.z;
+                if (X.z < brickCorner.z
+                    || X.z >= brickCorner.z + VoxelBrick_EdgeLength)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                X.y += step.y;
+                if (X.y < brickCorner.y
+                    || X.y >= brickCorner.y + VoxelBrick_EdgeLength)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.y += tDelta.y;
+            }
+            else
+            {
+                X.z += step.z;
+                if (X.z < brickCorner.z
+                    || X.z >= brickCorner.z + VoxelBrick_EdgeLength)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.z += tDelta.z;
+            }
+        }
+
+        // Check intersection with the voxel at X
+        Cube voxelCube;
+        voxelCube.center      = X + 0.5;
+        voxelCube.edge_length = 1.0;
+
+        IntersectionResult result = Cube_tryIntersect(voxelCube, ray);
+        if (result.intersection_occurred)
+        {
+            return result;
         }
     }
 
-    return result;
+    return IntersectionResult_getMiss();
+}
+IntersectionResult
+VoxelBrick_tryIntersect(vec3 center, const uint edgeLength, const Ray ray)
+{
+    const uint outerBoundSize = edgeLength;
+
+    uint fEdgeLength = uint(VoxelBrick_EdgeLength);
+
+    // Calculate the voxel brick position
+    vec3 brickPos = center
+                  + vec3(
+                        float(1 % fEdgeLength),
+                        float((1 / fEdgeLength) % fEdgeLength),
+                        float(1 / (fEdgeLength * fEdgeLength)));
+
+    vec3 X      = brickPos;
+    vec3 step   = sign(ray.direction) * outerBoundSize;
+    vec3 tDelta = abs(1.0 / ray.direction);
+    vec3 tMax   = tDelta * 0.5;
+
+    for (int i = 0; i < 100; i++)
+    { // Adjust the number of iterations as needed
+        if (tMax.x < tMax.y)
+        {
+            if (tMax.x < tMax.z)
+            {
+                X.x += step.x;
+                if (X.x == center.x)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.x += tDelta.x;
+            }
+            else
+            {
+                X.z += step.z;
+                if (X.z == center.z)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                X.y += step.y;
+                if (X.y == center.y)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.y += tDelta.y;
+            }
+            else
+            {
+                X.z += step.z;
+                if (X.z == center.z)
+                {
+                    return IntersectionResult_getMiss();
+                }
+                tMax.z += tDelta.z;
+            }
+        }
+
+        // Check intersection with the voxel at X
+        Cube voxelCube;
+        voxelCube.center      = X + 0.5;
+        voxelCube.edge_length = 1.0;
+
+        IntersectionResult result = Cube_tryIntersect(voxelCube, ray);
+        if (result.intersection_occurred)
+        {
+            return result;
+        }
+    }
+
+    return IntersectionResult_getMiss();
 }

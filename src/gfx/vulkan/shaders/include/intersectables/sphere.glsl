@@ -43,8 +43,8 @@ IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
 
         // Calculate and return the color based on the intersection point
         IntersectionResult result;
-        result.intersection_occured = true;
-        result.maybe_distance       = length(ray.origin - intersectionPoint);
+        result.intersection_occurred = true;
+        result.maybe_distance        = length(ray.origin - intersectionPoint);
         result.maybe_normal = normalize(intersectionPoint - self.center);
         result.maybe_color  = vec4(1.0, 1.0, 1.0, 1.0);
 

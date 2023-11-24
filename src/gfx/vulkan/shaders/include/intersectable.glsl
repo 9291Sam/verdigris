@@ -3,7 +3,7 @@
 
 struct IntersectionResult
 {
-    bool  intersection_occured;
+    bool  intersection_occurred;
     float maybe_distance;
     vec3  maybe_normal;
     vec4  maybe_color;
@@ -12,7 +12,7 @@ struct IntersectionResult
 IntersectionResult IntersectionResult_getMiss()
 {
     IntersectionResult result;
-    result.intersection_occured = false;
+    result.intersection_occurred = false;
 
     return result;
 }
@@ -20,8 +20,8 @@ IntersectionResult IntersectionResult_getMiss()
 void propagateIntersection(
     inout IntersectionResult bestIntersection, const IntersectionResult result)
 {
-    if (!bestIntersection.intersection_occured
-        || (result.intersection_occured
+    if (!bestIntersection.intersection_occurred
+        || (result.intersection_occurred
             && result.maybe_distance < bestIntersection.maybe_distance))
     {
         bestIntersection = result;

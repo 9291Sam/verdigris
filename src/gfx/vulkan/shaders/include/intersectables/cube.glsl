@@ -63,7 +63,7 @@ IntersectionResult Cube_tryIntersect(const Cube self, in Ray ray)
     }
 
     IntersectionResult result;
-    result.intersection_occured = true;
+    result.intersection_occurred = true;
 
     // Calculate the normal vector based on which face is hit
     vec3 hit_point = ray.origin + tmin * ray.direction; // TODO: inverse?
