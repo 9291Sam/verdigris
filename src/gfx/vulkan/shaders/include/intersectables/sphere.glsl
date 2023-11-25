@@ -9,7 +9,7 @@ struct Sphere
     float radius;
 };
 
-IntersectionResult Sphere_tryIntersect(in Sphere self, in Ray ray)
+IntersectionResult Sphere_tryIntersect(const Sphere self, in Ray ray)
 {
     // FIXME: whats wrong with this. it works, but why is this inverted and we
     // have a max...

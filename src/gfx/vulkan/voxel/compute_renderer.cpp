@@ -298,6 +298,8 @@ namespace gfx::vulkan::voxel
             return static_cast<std::uint8_t>(dist(this->generator));
         };
 
+        this->foo = 0;
+
         for (auto& x1 : b.voxels)
         {
             for (auto& x2 : x1)
@@ -305,8 +307,7 @@ namespace gfx::vulkan::voxel
                 for (Voxel& voxel : x2)
                 {
                     ++this->foo;
-                    if (this->foo % distFunc() == 0
-                        || this->foo % distFunc() == 0)
+                    if (this->foo % 2 == 0 || this->foo % 3 == 0)
                     {
                         voxel = Voxel {
                             .srgb_r {distFunc()},
