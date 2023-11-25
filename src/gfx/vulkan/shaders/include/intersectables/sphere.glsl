@@ -9,51 +9,46 @@ struct Sphere
     float radius;
 };
 
-IntersectionResult Sphere_tryIntersect(const Sphere self, in Ray ray)
+// Stolen straight from https://gamedev.stackexchange.com/a/96487
+// It's just so much better than I could write
+IntersectionResult Sphere_tryIntersect(const Sphere self, const Ray ray)
 {
-    // FIXME: whats wrong with this. it works, but why is this inverted and we
-    // have a max...
-    ray.direction = -ray.direction;
+    const vec3 m = ray.origin - self.center;
 
-    vec3  oc = ray.origin - self.center;
-    float a  = dot(ray.direction, ray.direction);
-    float b  = 2.0 * dot(oc, ray.direction);
-    float c  = dot(oc, oc) - self.radius * self.radius;
+    const float b = dot(m, ray.direction);
+    const float c = dot(m, m) - self.radius * self.radius;
 
-    // Calculate the discriminant to determine if there's an intersection
-    float discriminant = b * b - 4.0 * a * c;
-
-    if (discriminant > 0.0)
-    {
-        // Ray intersects the sphere
-        // Calculate the value of t for the two possible intersection points
-        float t1 = (-b - sqrt(discriminant)) / (2.0 * a);
-        float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
-
-        // Choose the smaller positive t value
-        float t = max(t1, t2); // TODO: wait, what??, why is this the max???
-
-        // Calculate the intersection point
-        vec3 intersectionPoint = Ray_at(ray, t);
-
-        if (dot(intersectionPoint - ray.origin, ray.direction) > 0.0)
-        {
-            return IntersectionResult_getMiss();
-        }
-
-        // Calculate and return the color based on the intersection point
-        IntersectionResult result;
-        result.intersection_occurred = true;
-        result.maybe_distance        = length(ray.origin - intersectionPoint);
-        result.maybe_normal = normalize(intersectionPoint - self.center);
-        result.maybe_color  = vec4(1.0, 1.0, 1.0, 1.0);
-
-        return result;
-    }
-    else
+    // Exit if r’s origin outside s (c > 0) and r pointing away from s (b > 0)
+    if (c > 0.0 && b > 0.0)
     {
         return IntersectionResult_getMiss();
     }
+    const float discr = b * b - c;
+
+    // A negative discriminant corresponds to ray missing sphere
+    if (discr < 0.0)
+    {
+        return IntersectionResult_getMiss();
+    }
+
+    // Ray now found to intersect sphere, compute smallest t value of
+    // intersection
+    const float t = -b - sqrt(discr);
+
+    // If t is negative, ray started inside sphere so exit
+    if (t < 0.0f)
+    {
+        return IntersectionResult_getMiss();
+    }
+    const vec3 hitPoint = Ray_at(ray, t);
+
+    IntersectionResult result;
+    result.intersection_occurred = true;
+    result.maybe_distance        = length(ray.origin - hitPoint);
+    result.maybe_normal          = normalize(hitPoint - self.center);
+    result.maybe_color           = vec4(1.0, 1.0, 1.0, 1.0);
+
+    return result;
 }
 
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_SPHERE_GLSL

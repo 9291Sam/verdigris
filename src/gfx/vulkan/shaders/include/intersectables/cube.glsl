@@ -26,6 +26,9 @@ bool Cube_contains(const Cube self, const vec3 point)
     }
 }
 
+// Stolen from
+// https://studenttheses.uu.nl/bitstream/handle/20.500.12932/20460/final.pdf
+// Appendix A Ray-Box intersection algorithm
 IntersectionResult Cube_tryIntersect(const Cube self, const Ray ray)
 {
     const vec3 p0 = self.center - (self.edge_length / 2);
@@ -84,6 +87,10 @@ IntersectionResult Cube_tryIntersect(const Cube self, const Ray ray)
     else if (isApproxEqual(hitPoint.z, p0.z))
     {
         normal = vec3(0.0, 0.0, 1.0); // Hit back face
+    }
+    else
+    {
+        normal = vec3(0.0, 0.0, 0.0); // null case
     }
 
     result.maybe_normal = normal;

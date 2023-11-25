@@ -5,14 +5,17 @@
 #error VOXEL_BRICK_IMPL_ARRAY must be defined
 #endif //  VOXEL_BRICK_IMPL_ARRAY
 
-IntersectionResult VoxelBrick_tryIntersect(const uint offset, const Ray ray)
+IntersectionResult
+VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, Ray ray)
 {
     Cube brickOuterCube;
-    brickOuterCube.center = vec3(
-        VoxelBrick_EdgeLength / 2,
-        VoxelBrick_EdgeLength / 2,
-        VoxelBrick_EdgeLength / 2);
+    brickOuterCube.center = cornerPos
+                          + vec3(
+                                VoxelBrick_EdgeLength / 2,
+                                VoxelBrick_EdgeLength / 2,
+                                VoxelBrick_EdgeLength / 2);
 
+    // +1 is for the fact that the voxels arent perfecetly ccentered
     brickOuterCube.edge_length = VoxelBrick_EdgeLength + 1;
 
     IntersectionResult result = IntersectionResult_getMiss();
@@ -34,11 +37,12 @@ IntersectionResult VoxelBrick_tryIntersect(const uint offset, const Ray ray)
 
                 if (Voxel_isVisible(thisVoxel))
                 {
-                    Cube cube;
-                    cube.center      = vec3(i, j, k);
-                    cube.edge_length = 1.0;
+                    Sphere cube;
+                    cube.center = vec3(i, j, k) * 1.0 + cornerPos;
+                    cube.radius = 0.5;
 
-                    propagateIntersection(result, Cube_tryIntersect(cube, ray));
+                    propagateIntersection(
+                        result, Sphere_tryIntersect(cube, ray));
                 }
             }
         }
