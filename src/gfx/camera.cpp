@@ -24,6 +24,7 @@ namespace gfx
         glm::mat4 projection = glm::perspective(
             renderer.getFovYRadians(),
             renderer.getAspectRatio(),
+            // NOTE: these are hardcoded into uber_voxel.comp, do not change
             0.1f,       // NOLINT
             100000.0f); // NOLINT
 

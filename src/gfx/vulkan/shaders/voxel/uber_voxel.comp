@@ -27,49 +27,24 @@ layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
 in_world_info;
 layout(set = 0, binding = 2, std430) readonly restrict buffer Voxels
 {
-    VoxelBrick[] brick;
+    VoxelBrick[] bricks;
 }
 in_voxels;
 
+#define VOXEL_BRICK_IMPL_ARRAY in_voxels.bricks
+
 #include <intersectables/voxel_brick_impl.glsl>
 
+#undef VOXEL_BRICK_IMPL_ARRAY
+
 vec4 calculatePixelColor(const Ray ray);
+Ray  generateRay(const ivec2 pixelXY);
 
 void main()
 {
-    const ivec2 pixel_xy   = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 image_size = imageSize(out_image);
+    const ivec2 pixelXY = ivec2(gl_GlobalInvocationID.xy);
 
-    const vec2 inter_pixel_delta = vec2(1.0, 1.0) / vec2(image_size)
-                                 - /* for clarity */
-                                   vec2(0.0, 0.0) / vec2(image_size);
-
-    const vec2 normalized_pixel_xy = (vec2(pixel_xy) / vec2(image_size)) * 2.0
-                                   - 1.0 + (inter_pixel_delta / 2);
-
-    const float nearPlaneDistance = 0.1;
-    const float farPlaneDistance  = 100000.0;
-
-    const vec4 nearScreenSpace =
-        vec4(normalized_pixel_xy, nearPlaneDistance, 1.0);
-    const vec4 farScreenSpace =
-        vec4(normalized_pixel_xy, farPlaneDistance, 1.0);
-
-    vec4 nearPoint = in_world_info.inv_model_view_proj * nearScreenSpace;
-    nearPoint /= nearPoint.w;
-
-    vec4 farPoint = in_world_info.inv_model_view_proj * farScreenSpace;
-    farPoint /= farPoint.w;
-
-    Ray ray;
-    ray.origin    = in_world_info.camera_position;
-    ray.direction = normalize(farPoint.xyz - nearPoint.xyz);
-
-    // we invert the ray's direction as a resukt of how screenspace coordinates
-    // work in vulkan., -1, -1 actually is positive in our cooridnate system
-    ray.direction = -ray.direction;
-
-    imageStore(out_image, pixel_xy, calculatePixelColor(ray));
+    imageStore(out_image, pixelXY, calculatePixelColor(generateRay(pixelXY)));
 }
 
 vec4 calculatePixelColor(const Ray ray)
@@ -105,4 +80,41 @@ vec4 calculatePixelColor(const Ray ray)
         const vec4 RayMissColor = vec4(0.0, 0.0, 0.0, 0.0);
         return RayMissColor;
     }
+}
+
+Ray generateRay(const ivec2 pixelXY)
+{
+    const ivec2 outImageSize = imageSize(out_image);
+
+    const vec2 interPixelDelta = vec2(1.0, 1.0) / vec2(outImageSize);
+    //                             - /* for clarity */
+    //                              vec2(0.0, 0.0) / vec2(outImageSize);
+
+    const vec2 normalizedPixelXY = (vec2(pixelXY) / vec2(outImageSize)) * 2.0
+                                 - 1.0 + (interPixelDelta / 2);
+
+    // NOTE: these are hardcoded into camera.cpp, do not change
+    const float nearPlaneDistance = 0.1;
+    const float farPlaneDistance  = 100000.0;
+
+    const vec4 nearScreenSpace =
+        vec4(normalizedPixelXY, nearPlaneDistance, 1.0);
+    const vec4 farScreenSpace = vec4(normalizedPixelXY, farPlaneDistance, 1.0);
+
+    vec4 nearPoint = in_world_info.inv_model_view_proj * nearScreenSpace;
+    nearPoint /= nearPoint.w;
+
+    vec4 farPoint = in_world_info.inv_model_view_proj * farScreenSpace;
+    farPoint /= farPoint.w;
+
+    Ray ray;
+    ray.origin    = in_world_info.camera_position;
+    // we invert the ray's direction as a result of how screenspace coordinates
+    // work in vulkan.
+    // we want the screenspace cordinate -1 -1 to actually be pointed in the
+    // (+, +, +) octant, so negating this value accomplishes this.
+    // This is a nice sideeffect of the coordinate system chosen
+    ray.direction = -normalize(farPoint.xyz - nearPoint.xyz);
+
+    return ray;
 }

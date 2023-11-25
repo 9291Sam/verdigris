@@ -1,6 +1,10 @@
 #ifndef SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_VOXEL_BRICK_IMPL_GLSL
 #define SRC_GFX_VULKAN_SHADERS_INCLUDE_INTERSECTABLES_VOXEL_BRICK_IMPL_GLSL
 
+#ifndef VOXEL_BRICK_IMPL_ARRAY
+#error VOXEL_BRICK_IMPL_ARRAY must be defined
+#endif //  VOXEL_BRICK_IMPL_ARRAY
+
 IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray)
 {
     Cube brickOuterCube;
@@ -24,7 +28,8 @@ IntersectionResult VoxelBrick_tryIntersect(uint offset, const Ray ray)
         {
             for (uint k = 0; k < VoxelBrick_EdgeLength; ++k)
             {
-                Voxel thisVoxel = in_voxels.brick[offset].voxels[i][j][k];
+                Voxel thisVoxel =
+                    VOXEL_BRICK_IMPL_ARRAY[offset].voxels[i][j][k];
 
                 if (Voxel_isVisible(thisVoxel))
                 {
