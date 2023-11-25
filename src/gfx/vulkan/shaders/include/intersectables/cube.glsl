@@ -11,13 +11,28 @@ struct Cube
     float edge_length;
 };
 
+bool Cube_contains(const Cube self, const vec3 point)
+{
+    const vec3 p0 = self.center - (self.edge_length / 2);
+    const vec3 p1 = self.center + (self.edge_length / 2);
+
+    if (all(lessThan(p0, point)) && all(lessThan(point, p1)))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 IntersectionResult Cube_tryIntersect(const Cube self, const Ray ray)
 {
     const vec3 p0 = self.center - (self.edge_length / 2);
     const vec3 p1 = self.center + (self.edge_length / 2);
 
     // ray starts inside the cube, we want nothing rendererd
-    if (all(lessThan(p0, ray.origin)) && all(lessThan(ray.origin, p1)))
+    if (Cube_contains(self, ray.origin))
     {
         return IntersectionResult_getMiss();
     }

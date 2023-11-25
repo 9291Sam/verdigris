@@ -31,11 +31,14 @@ float map(
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-#define VERDIGRIS_EPSILON 0.001
+#define VERDIGRIS_EPSILON_MULTIPLIER 0.00001
 
-bool isApproxEqual(const in float a, const in float b)
+bool isApproxEqual(const float a, const float b)
 {
-    return abs(a - b) < VERDIGRIS_EPSILON;
+    const float maxMagnitude = max(abs(a), abs(b));
+    const float epsilon      = maxMagnitude * VERDIGRIS_EPSILON_MULTIPLIER;
+
+    return abs(a - b) < epsilon;
 }
 
 float maxComponent(const vec3 vec)
