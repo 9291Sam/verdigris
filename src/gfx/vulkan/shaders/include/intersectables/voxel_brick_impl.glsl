@@ -6,6 +6,50 @@
 #endif //  VOXEL_BRICK_IMPL_ARRAY
 
 IntersectionResult
+VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
+{
+    Cube boundingCube;
+    boundingCube.center = cornerPos
+                        + vec3(
+                              VoxelBrick_EdgeLength / 2,
+                              VoxelBrick_EdgeLength / 2,
+                              VoxelBrick_EdgeLength / 2);
+    // +1 is for the fact that the voxels are centered at 0.5 offsets
+    boundingCube.edge_length = VoxelBrick_EdgeLength + 1;
+
+    ivec3 voxelStartIndexChecked;
+
+    if (!Cube_contains(boundingCube, ray.origin))
+    {
+        IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
+
+        // The ray starts doesn't even hit this brick, it's a miss
+        if (!result.intersection_occurred)
+        {
+            return IntersectionResult_getMiss();
+        }
+        else // the brick does get hit by the ray
+        {
+            voxelStartIndexChecked = ivec3(result.maybe_hit_point - ray.origin);
+        }
+    }
+
+    const Voxel thisVoxel =
+        VOXEL_BRICK_IMPL_ARRAY[offset]
+            .voxels[voxelStartIndexChecked.x][voxelStartIndexChecked.y]
+                   [voxelStartIndexChecked.z];
+
+    if (Voxel_isVisible(thisVoxel))
+    {
+        Sphere cube;
+        cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
+        cube.radius = 0.5;
+
+        return Sphere_tryIntersect(cube, ray);
+    }
+}
+
+IntersectionResult
 VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, Ray ray)
 {
     Cube brickOuterCube;

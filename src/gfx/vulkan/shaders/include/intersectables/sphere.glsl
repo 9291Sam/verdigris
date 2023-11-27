@@ -45,6 +45,7 @@ IntersectionResult Sphere_tryIntersect(const Sphere self, const Ray ray)
     IntersectionResult result;
     result.intersection_occurred = true;
     result.maybe_distance        = length(ray.origin - hitPoint);
+    result.maybe_hit_point       = hitPoint;
     result.maybe_normal          = normalize(hitPoint - self.center);
     result.maybe_color           = vec4(1.0, 1.0, 1.0, 1.0);
 

@@ -327,27 +327,27 @@ namespace gfx::vulkan
 
         // union initialization syntax my beloved :heart:
         // clang-format off
-                std::array<vk::ClearValue, 2> clearValues
+        std::array<vk::ClearValue, 2> clearValues
+        {
+            vk::ClearValue
+            {
+                .color
                 {
-                    vk::ClearValue
+                    vk::ClearColorValue {clearColor}
+                }
+            },
+            vk::ClearValue
+            {
+                .depthStencil
+                {
+                    vk::ClearDepthStencilValue
                     {
-                        .color
-                        {
-                            vk::ClearColorValue {clearColor}
-                        }
-                    },
-                    vk::ClearValue
-                    {
-                        .depthStencil
-                        {
-                            vk::ClearDepthStencilValue
-                            {
-                                .depth {1.0f},
-                                .stencil {0}
-                            }
-                        }
+                        .depth {1.0f},
+                        .stencil {0}
                     }
-                };
+                }
+            }
+        };
         // clang-format on
 
         vk::RenderPassBeginInfo renderPassBeginInfo {

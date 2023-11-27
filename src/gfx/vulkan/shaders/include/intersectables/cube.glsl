@@ -61,6 +61,7 @@ IntersectionResult Cube_tryIntersect(const Cube self, const Ray ray)
     IntersectionResult result;
     result.intersection_occurred = true;
     result.maybe_distance        = length(ray.origin - hitPoint);
+    result.maybe_hit_point       = hitPoint;
 
     vec3 normal;
 
@@ -155,6 +156,7 @@ IntersectionResult Cube_tryIntersectFast(const Cube self, in Ray ray)
 
     // Calculate the normal vector based on which face is hit
     vec3 hit_point = ray.origin + tmin * ray.direction; // TODO: inverse?
+    result.maybe_hit_point = hit_point;
 
     result.maybe_distance = length(ray.origin - hit_point);
     vec3 normal;

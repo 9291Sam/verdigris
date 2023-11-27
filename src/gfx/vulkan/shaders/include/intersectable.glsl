@@ -5,6 +5,7 @@ struct IntersectionResult
 {
     bool  intersection_occurred;
     float maybe_distance;
+    vec3  maybe_hit_point;
     vec3  maybe_normal;
     vec4  maybe_color;
 };
