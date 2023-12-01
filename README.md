@@ -2,9 +2,7 @@
 An experimental rasterizing and raytracing voxel renderer with the goal of creating endless, fully editable, semi-realistic landscapes and natural scenes.
 
 ## Demonstration video
-<video width="80%" height="auto" controls style="max-width: 100%;">
-  <source src="rt_raster_test.mp4" type="video/mp4">
-</video>
+https://github.com/9291Sam/verdigris/assets/25729215/5086dd9f-a24e-44ef-8fa5-76f0865e7c9a
 
 ### Features
 - 25 512^3 voxel chunks being generated concurrently
