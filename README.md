@@ -1,23 +1,23 @@
 # Verdigris
-An experimental voxel renderer with the goal of creating endless fully editable landscapes. The goal is not to have realism, however there is a specific art style in mind
+An experimental rasterizing and raytracing voxel renderer with the goal of creating endless, fully editable, semi-realistic landscapes and natural scenes.
 
-I have plans to turn this into an adventure game with an extremely specific art style, however that goal is still many, *many* years away at a minimum
+## Demonstration video
+<video width="80%" height="auto" controls style="max-width: 100%;">
+  <source src="rt_raster_test.mp4" type="video/mp4">
+</video>
 
-
-## Demonstration
-[![embed_chunking_test.mp4](embed_chunking_test.mp4)](embed_chunking_test.mp4)
-
+### Features
 - 25 512^3 voxel chunks being generated concurrently
-- Compute shader raytracing a sphere at a position aligned with a rasterized object
+- Compute shader raytracing at aligned positions with rasterized objects
+- Isolated render and tick threads
 - Pervasive use of fork-join parallelism
-- Isolated render and tick loops
-- Probably a lot more, feel free to ask me questions. Discord: `9291Sam`
+- Probably a lot more, this has been my personal project for a bit. Feel free to ask me questions. Discord: `9291Sam`
 
 
-## Build Instructions
-
+## Build Instructions 
 1. Clone the repo
-2. Download the vulkan sdk [![https://vulkan.lunarg.com/](https://vulkan.lunarg.com/)](https://vulkan.lunarg.com/)
-3. Configure cmake (other dependencies should be downloaded and automatically built)
-    - NOTE: this may take a while (5 minutes++ for first configure, ~10s after)
-    - NOTE: ninja is the only tested generator
+2. Download and install the vulkan sdk at https://vulkan.lunarg.com
+3. Configure cmake 
+    - All dependencies will be populated and automatically built
+    - This may take a while, up to 5 minutes for first configure, ~10s after
+    - **Ninja is the only tested generator**

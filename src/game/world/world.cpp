@@ -43,7 +43,7 @@ namespace game::world
         : game {game_}
         , chunks {}
     {
-        std::int32_t radius = 0;
+        std::int32_t radius = 2;
 
         for (std::int32_t x = -radius; x <= radius; x++)
         {

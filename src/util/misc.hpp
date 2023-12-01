@@ -260,7 +260,17 @@ namespace util
     template<UnsignedInteger I>
     constexpr I ceilingDivide(I top, I bottom) noexcept
     {
-        return top / bottom + (top % bottom != 0);
+        I div = top / bottom;
+        I mod = top % bottom;
+
+        if (mod == 0) // exact divider
+        {
+            return div;
+        }
+        else // theres left over, round up
+        {
+            return div + 1;
+        }
     }
 
     template<class T>

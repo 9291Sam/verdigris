@@ -16,7 +16,7 @@ namespace game
         const float MoveScale        = this->game.renderer.isActionActive(
                                     gfx::Window::Action::PlayerSprint)
                                          ? 125.0f
-                                         : 5.0f;
+                                         : 25.0f;
         const float rotateSpeedScale = 1.0f;
 
         this->camera.addPosition(
