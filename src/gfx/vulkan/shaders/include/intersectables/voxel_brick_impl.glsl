@@ -30,32 +30,100 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
         }
         else // the brick does get hit by the ray
         {
-            voxelStartIndexChecked = ivec3(result.maybe_hit_point - ray.origin);
+            voxelStartIndexChecked = ivec3(result.maybe_hit_point - cornerPos);
         }
-    }
-
-    const Voxel thisVoxel =
-        VOXEL_BRICK_IMPL_ARRAY[offset]
-            .voxels[voxelStartIndexChecked.x][voxelStartIndexChecked.y]
-                   [voxelStartIndexChecked.z];
-
-    if (Voxel_isVisible(thisVoxel))
-    {
-        // Sphere cube;
-        // cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
-        // cube.radius = 0.5;
-
-        // return Sphere_tryIntersect(cube, ray);
-        IntersectionResult result;
-        result.intersection_occurred = true;
-        result.maybe_distance        = 0.1; // ength(ray.origin - hitPoint);
-        result.maybe_hit_point       = vec3(0.0);
-        result.maybe_normal          = vec3(1.0);
-        result.maybe_color           = vec4(1.0, 1.0, 1.0, 1.0);
     }
     else
     {
-        return IntersectionResult_getMiss();
+        voxelStartIndexChecked =
+            ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength);
+    }
+
+    // if (Voxel_isVisible(thisVoxel))
+    // {
+    //     Sphere cube;
+    //     cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
+    //     cube.radius = 0.5;
+
+    //     return Sphere_tryIntersect(cube, ray);
+    // }
+
+    // Assuming the following are defined:
+    vec3 rayDir;    // The direction of the ray
+    vec3 rayOrigin; // The origin of the ray
+    vec3 voxelSize; // The size of the voxel
+
+    vec3  tMax;
+    vec3  tDelta;
+    ivec3 step;
+    ivec3 voxel;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        // Determine the voxel that the ray starts in
+        voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
+
+        // Determine the direction of the ray
+        if (rayDir[i] < 0)
+        {
+            step[i]   = -1;
+            tMax[i]   = (rayOrigin[i] - voxel[i] * voxelSize[i]) / rayDir[i];
+            tDelta[i] = voxelSize[i] / -rayDir[i];
+        }
+        else
+        {
+            step[i] = 1;
+            tMax[i] =
+                ((voxel[i] + 1) * voxelSize[i] - rayOrigin[i]) / rayDir[i];
+            tDelta[i] = voxelSize[i] / rayDir[i];
+        }
+    }
+
+    while (true)
+    {
+        // Process voxel at voxel.x, voxel.y, voxel.z here
+        if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
+                                .voxels[voxel.x][voxel.y][voxel.z]))
+        {
+            Sphere cube;
+            cube.center = voxel * 1.0 + cornerPos;
+            cube.radius = 0.5;
+
+            return Sphere_tryIntersect(cube, ray);
+        }
+
+        if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel, ivec3(7))))
+        {
+            return IntersectionResult_getMiss();
+        }
+
+        // Move to next voxel
+        if (tMax.x < tMax.y)
+        {
+            if (tMax.x < tMax.z)
+            {
+                voxel.x += step.x;
+                tMax.x += tDelta.x;
+            }
+            else
+            {
+                voxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                voxel.y += step.y;
+                tMax.y += tDelta.y;
+            }
+            else
+            {
+                voxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
     }
 }
 
