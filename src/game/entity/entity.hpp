@@ -22,6 +22,10 @@ namespace game::entity
         Entity& operator= (const Entity&) = delete;
         Entity& operator= (Entity&&)      = delete;
 
+        // This function will be called concurrently with other Entity's tick
+        // fuctions. It is safe to mark a field mutable if and only if it only
+        // accessed by one tick function. If there is direct communication
+        // between other entities, that's a race without synchronization
         virtual void     tick() const = 0;
         virtual explicit operator std::string () const;
 

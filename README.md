@@ -12,7 +12,7 @@ https://github.com/9291Sam/verdigris/assets/25729215/5086dd9f-a24e-44ef-8fa5-76f
 - Probably a lot more, this has been my personal project for a bit. Feel free to ask me questions. Discord: `9291Sam`
 
 
-## Build Instructions 
+### Build Instructions 
 1. Clone the repo
 2. Download and install the vulkan sdk at https://vulkan.lunarg.com
 3. Configure cmake 

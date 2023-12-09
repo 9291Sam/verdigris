@@ -41,11 +41,21 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
 
     if (Voxel_isVisible(thisVoxel))
     {
-        Sphere cube;
-        cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
-        cube.radius = 0.5;
+        // Sphere cube;
+        // cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
+        // cube.radius = 0.5;
 
-        return Sphere_tryIntersect(cube, ray);
+        // return Sphere_tryIntersect(cube, ray);
+        IntersectionResult result;
+        result.intersection_occurred = true;
+        result.maybe_distance        = 0.1; // ength(ray.origin - hitPoint);
+        result.maybe_hit_point       = vec3(0.0);
+        result.maybe_normal          = vec3(1.0);
+        result.maybe_color           = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+    else
+    {
+        return IntersectionResult_getMiss();
     }
 }
 
