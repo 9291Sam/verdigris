@@ -49,9 +49,9 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
     // }
 
     // Assuming the following are defined:
-    vec3 rayDir;    // The direction of the ray
-    vec3 rayOrigin; // The origin of the ray
-    vec3 voxelSize; // The size of the voxel
+    // vec3 rayDir;    // The direction of the ray
+    // vec3 rayOrigin; // The origin of the ray
+    // vec3 voxelSize; // The size of the voxel
 
     vec3  tMax;
     vec3  tDelta;
