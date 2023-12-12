@@ -31,6 +31,9 @@ namespace util
         std::source_location                  location,
         std::chrono::system_clock::time_point time);
 
+// TODO: see if theres a way to move that fmt stuff to the other thread, take a
+// fmt string, validate it at compile time and then just memcpy the args over
+// and construct later
 #define MAKE_LOGGER(LEVEL) /* NOLINT */                                        \
     template<class... Ts>                                                      \
     struct log##LEVEL                                                          \

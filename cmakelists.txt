@@ -219,7 +219,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
         target_compile_options(verdigris PUBLIC -Wno-c++98-compat)
         target_compile_options(verdigris PUBLIC -Wno-c++98-compat-pedantic)
         target_compile_options(verdigris PUBLIC -Wno-missing-prototypes)
-        target_compile_options(verdigris PUBLIC -Wno-reserved-macro-identifier)
         target_compile_options(verdigris PUBLIC -Wno-pre-c++20-compat)
         target_compile_options(verdigris PUBLIC -Wno-braced-scalar-init)
         target_compile_options(verdigris PUBLIC -Wno-old-style-cast)
