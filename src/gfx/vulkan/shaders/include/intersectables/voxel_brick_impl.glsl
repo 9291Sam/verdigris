@@ -30,13 +30,16 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
         }
         else // the brick does get hit by the ray
         {
-            voxelStartIndexChecked = ivec3(result.maybe_hit_point - cornerPos);
+            voxelStartIndexChecked =
+                ivec3(result.maybe_hit_point - cornerPos + 0.5);
         }
     }
     else
     {
+        // voxelStartIndexChecked =
+        //     ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength);
         voxelStartIndexChecked =
-            ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength);
+            ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength + 0.5);
     }
 
     // if (Voxel_isVisible(thisVoxel))
@@ -56,12 +59,12 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
     vec3  tMax;
     vec3  tDelta;
     ivec3 step;
-    ivec3 voxel;
+    ivec3 voxel = voxelStartIndexChecked;
 
     for (int i = 0; i < 3; ++i)
     {
         // Determine the voxel that the ray starts in
-        voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
+        // voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
 
         // Determine the direction of the ray
         if (rayDir[i] < 0)
@@ -85,11 +88,18 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
         if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
                                 .voxels[voxel.x][voxel.y][voxel.z]))
         {
-            Sphere cube;
-            cube.center = voxel * 1.0 + cornerPos;
-            cube.radius = 0.5;
+            // IntersectionResult result;
+            // result.intersection_occurred = true;
+            // result.maybe_distance        = 0.0;
+            // result.maybe_normal          = vec3(1);
+            // result.maybe_hit_point       = vec3(1);
+            // result.maybe_color           = vec4(1);
+            // // // result
+            Cube cube;
+            cube.center      = voxel * 1.0 + cornerPos;
+            cube.edge_length = 1.0;
 
-            return Sphere_tryIntersect(cube, ray);
+            return Cube_tryIntersect(cube, ray);
         }
 
         if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel, ivec3(7))))
@@ -159,12 +169,11 @@ VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, Ray ray)
 
                 if (Voxel_isVisible(thisVoxel))
                 {
-                    Sphere cube;
-                    cube.center = vec3(i, j, k) * 1.0 + cornerPos;
-                    cube.radius = 0.5;
+                    Cube cube;
+                    cube.center      = vec3(i, j, k) * 1.0 + cornerPos;
+                    cube.edge_length = 1.0;
 
-                    propagateIntersection(
-                        result, Sphere_tryIntersect(cube, ray));
+                    propagateIntersection(result, Cube_tryIntersect(cube, ray));
                 }
             }
         }
