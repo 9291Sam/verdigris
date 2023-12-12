@@ -5,17 +5,146 @@
 #error VOXEL_BRICK_IMPL_ARRAY must be defined
 #endif //  VOXEL_BRICK_IMPL_ARRAY
 
+// IntersectionResult
+// VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray
+// ray)
+// {
+//     Cube boundingCube;
+//     boundingCube.center = cornerPos
+//                         + vec3(
+//                               VoxelBrick_EdgeLength / 2,
+//                               VoxelBrick_EdgeLength / 2,
+//                               VoxelBrick_EdgeLength / 2);
+//     // +1 is for the fact that the voxels are centered at 0.5 offsets
+//     boundingCube.edge_length = VoxelBrick_EdgeLength + 1;
+
+//     ivec3 voxelStartIndexChecked;
+
+//     if (!Cube_contains(boundingCube, ray.origin))
+//     {
+//         IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
+
+//         // The ray starts doesn't even hit this brick, it's a miss
+//         if (!result.intersection_occurred)
+//         {
+//             return IntersectionResult_getMiss();
+//         }
+//         else // the brick does get hit by the ray
+//         {
+//             voxelStartIndexChecked =
+//                 ivec3(result.maybe_hit_point - cornerPos + 0.5);
+//         }
+//     }
+//     else
+//     {
+//         // voxelStartIndexChecked =
+//         //     ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength);
+//         voxelStartIndexChecked =
+//             ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength + 0.5);
+//     }
+
+//     // if (Voxel_isVisible(thisVoxel))
+//     // {
+//     //     Sphere cube;
+//     //     cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
+//     //     cube.radius = 0.5;
+
+//     //     return Sphere_tryIntersect(cube, ray);
+//     // }
+
+//     // Assuming the following are defined:
+//     vec3 rayDir    = ray.direction; // The direction of the ray
+//     vec3 rayOrigin = ray.origin;    // The origin of the ray
+//     vec3 voxelSize = vec3(1);       // The size of the voxel
+
+//     vec3  tMax;
+//     vec3  tDelta;
+//     ivec3 step;
+//     ivec3 voxel = voxelStartIndexChecked;
+
+//     for (int i = 0; i < 3; ++i)
+//     {
+//         // Determine the voxel that the ray starts in
+//         // voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
+
+//         // Determine the direction of the ray
+//         if (rayDir[i] < 0)
+//         {
+//             step[i]   = -1;
+//             tMax[i]   = (rayOrigin[i] - voxel[i] * voxelSize[i]) / rayDir[i];
+//             tDelta[i] = voxelSize[i] / -rayDir[i];
+//         }
+//         else
+//         {
+//             step[i] = 1;
+//             tMax[i] =
+//                 ((voxel[i] + 1) * voxelSize[i] - rayOrigin[i]) / rayDir[i];
+//             tDelta[i] = voxelSize[i] / rayDir[i];
+//         }
+//     }
+
+//     while (true)
+//     {
+//         // Process voxel at voxel.x, voxel.y, voxel.z here
+//         if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
+//                                 .voxels[voxel.x][voxel.y][voxel.z]))
+//         {
+//             // IntersectionResult result;
+//             // result.intersection_occurred = true;
+//             // result.maybe_distance        = 0.0;
+//             // result.maybe_normal          = vec3(1);
+//             // result.maybe_hit_point       = vec3(1);
+//             // result.maybe_color           = vec4(1);
+//             // // // result
+//             Cube cube;
+//             cube.center      = voxel * 1.0 + cornerPos;
+//             cube.edge_length = 1.0;
+
+//             return Cube_tryIntersect(cube, ray);
+//         }
+
+//         if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel,
+//         ivec3(7))))
+//         {
+//             return IntersectionResult_getMiss();
+//         }
+
+//         // Move to next voxel
+//         if (tMax.x < tMax.y)
+//         {
+//             if (tMax.x < tMax.z)
+//             {
+//                 voxel.x += step.x;
+//                 tMax.x += tDelta.x;
+//             }
+//             else
+//             {
+//                 voxel.z += step.z;
+//                 tMax.z += tDelta.z;
+//             }
+//         }
+//         else
+//         {
+//             if (tMax.y < tMax.z)
+//             {
+//                 voxel.y += step.y;
+//                 tMax.y += tDelta.y;
+//             }
+//             else
+//             {
+//                 voxel.z += step.z;
+//                 tMax.z += tDelta.z;
+//             }
+//         }
+//     }
+// }
+
 IntersectionResult
 VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
 {
     Cube boundingCube;
-    boundingCube.center = cornerPos
-                        + vec3(
-                              VoxelBrick_EdgeLength / 2,
-                              VoxelBrick_EdgeLength / 2,
-                              VoxelBrick_EdgeLength / 2);
-    // +1 is for the fact that the voxels are centered at 0.5 offsets
-    boundingCube.edge_length = VoxelBrick_EdgeLength + 1;
+    boundingCube.center      = cornerPos + vec3(VoxelBrick_EdgeLength / 2);
+    boundingCube.edge_length = VoxelBrick_EdgeLength;
 
     ivec3 voxelStartIndexChecked;
 
@@ -23,38 +152,22 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
     {
         IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
 
-        // The ray starts doesn't even hit this brick, it's a miss
         if (!result.intersection_occurred)
         {
             return IntersectionResult_getMiss();
         }
-        else // the brick does get hit by the ray
+        else
         {
-            voxelStartIndexChecked =
-                ivec3(result.maybe_hit_point - cornerPos + 0.5);
+            voxelStartIndexChecked = ivec3(result.maybe_hit_point - cornerPos);
         }
     }
     else
     {
-        // voxelStartIndexChecked =
-        //     ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength);
-        voxelStartIndexChecked =
-            ivec3((ray.origin - cornerPos) / VoxelBrick_EdgeLength + 0.5);
+        voxelStartIndexChecked = ivec3((ray.origin - cornerPos));
     }
 
-    // if (Voxel_isVisible(thisVoxel))
-    // {
-    //     Sphere cube;
-    //     cube.center = voxelStartIndexChecked * 1.0 + cornerPos;
-    //     cube.radius = 0.5;
-
-    //     return Sphere_tryIntersect(cube, ray);
-    // }
-
-    // Assuming the following are defined:
-    vec3 rayDir    = ray.direction; // The direction of the ray
-    vec3 rayOrigin = ray.origin;    // The origin of the ray
-    vec3 voxelSize = vec3(1);       // The size of the voxel
+    vec3 rayDir    = normalize(ray.direction);
+    vec3 voxelSize = vec3(1);
 
     vec3  tMax;
     vec3  tDelta;
@@ -63,51 +176,40 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
 
     for (int i = 0; i < 3; ++i)
     {
-        // Determine the voxel that the ray starts in
-        // voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
-
-        // Determine the direction of the ray
         if (rayDir[i] < 0)
         {
             step[i]   = -1;
-            tMax[i]   = (rayOrigin[i] - voxel[i] * voxelSize[i]) / rayDir[i];
-            tDelta[i] = voxelSize[i] / -rayDir[i];
+            tMax[i]   = (voxel[i] * voxelSize[i] - ray.origin[i]) / rayDir[i];
+            tDelta[i] = -voxelSize[i] / rayDir[i];
         }
         else
         {
             step[i] = 1;
             tMax[i] =
-                ((voxel[i] + 1) * voxelSize[i] - rayOrigin[i]) / rayDir[i];
+                ((voxel[i] + 1) * voxelSize[i] - ray.origin[i]) / rayDir[i];
             tDelta[i] = voxelSize[i] / rayDir[i];
         }
     }
 
     while (true)
     {
-        // Process voxel at voxel.x, voxel.y, voxel.z here
         if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
                                 .voxels[voxel.x][voxel.y][voxel.z]))
         {
-            // IntersectionResult result;
-            // result.intersection_occurred = true;
-            // result.maybe_distance        = 0.0;
-            // result.maybe_normal          = vec3(1);
-            // result.maybe_hit_point       = vec3(1);
-            // result.maybe_color           = vec4(1);
-            // // // result
             Cube cube;
-            cube.center      = voxel * 1.0 + cornerPos;
+            cube.center      = (voxel + 0.5) + cornerPos;
             cube.edge_length = 1.0;
 
             return Cube_tryIntersect(cube, ray);
         }
 
-        if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel, ivec3(7))))
+        if (any(lessThan(voxel, ivec3(0)))
+            || any(greaterThan(
+                voxel, ivec3(7)))) // Adjusted to include 8 as the upper limit
         {
             return IntersectionResult_getMiss();
         }
 
-        // Move to next voxel
         if (tMax.x < tMax.y)
         {
             if (tMax.x < tMax.z)
