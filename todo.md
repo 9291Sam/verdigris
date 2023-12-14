@@ -11,3 +11,5 @@ Add views of cpu and gpu memory usage in debug menu
 Add toggles for validation layers
 
 Show logged messages to stderr, and log them to a file
+
+event system (set player position)

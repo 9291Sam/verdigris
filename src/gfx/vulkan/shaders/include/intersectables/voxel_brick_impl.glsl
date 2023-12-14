@@ -139,104 +139,59 @@
 //     }
 // }
 
+// IntersectionResult result;
+
+// result.intersection_occurred = true;
+// result.maybe_distance        = 0.0;
+// result.maybe_hit_point       = ray.origin;
+// result.maybe_normal          = vec3(0.0);
+// result.maybe_color           = vec4(
+//     vec3(voxelStartIndexChecked) / float(VoxelBrick_EdgeLength), 1.0);
+
+// return result;
+
 IntersectionResult
 VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
 {
     Cube boundingCube;
-    boundingCube.center      = cornerPos + vec3(VoxelBrick_EdgeLength / 2);
+    boundingCube.center =
+        cornerPos + vec3(VoxelBrick_EdgeLength / 2) - 0.5 * Voxel_Size;
     boundingCube.edge_length = VoxelBrick_EdgeLength;
 
     ivec3 voxelStartIndexChecked;
-
-    if (!Cube_contains(boundingCube, ray.origin))
     {
-        IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
-
-        if (!result.intersection_occurred)
+        // the ray starts inside the cube, it's really easy to get the
+        // coordinates of the ray
+        if (Cube_contains(boundingCube, ray.origin))
         {
-            return IntersectionResult_getMiss();
+            voxelStartIndexChecked =
+                ivec3(ray.origin - cornerPos + 0.5 * Voxel_Size); // floor
         }
-        else
+        else // we have to trace to the cube
         {
-            voxelStartIndexChecked = ivec3(result.maybe_hit_point - cornerPos);
-        }
-    }
-    else
-    {
-        voxelStartIndexChecked = ivec3((ray.origin - cornerPos));
-    }
+            IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
 
-    vec3 rayDir    = normalize(ray.direction);
-    vec3 voxelSize = vec3(1);
+            // this ray daesnt even hit this cube, exit
+            if (!result.intersection_occurred)
+            {
+                return IntersectionResult_getMiss();
+            }
 
-    vec3  tMax;
-    vec3  tDelta;
-    ivec3 step;
-    ivec3 voxel = voxelStartIndexChecked;
-
-    for (int i = 0; i < 3; ++i)
-    {
-        if (rayDir[i] < 0)
-        {
-            step[i]   = -1;
-            tMax[i]   = (voxel[i] * voxelSize[i] - ray.origin[i]) / rayDir[i];
-            tDelta[i] = -voxelSize[i] / rayDir[i];
-        }
-        else
-        {
-            step[i] = 1;
-            tMax[i] =
-                ((voxel[i] + 1) * voxelSize[i] - ray.origin[i]) / rayDir[i];
-            tDelta[i] = voxelSize[i] / rayDir[i];
+            voxelStartIndexChecked =
+                ivec3(result.maybe_hit_point - cornerPos + 0.5 * Voxel_Size);
         }
     }
 
-    while (true)
-    {
-        if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
-                                .voxels[voxel.x][voxel.y][voxel.z]))
-        {
-            Cube cube;
-            cube.center      = (voxel + 0.5) + cornerPos;
-            cube.edge_length = 1.0;
+    IntersectionResult result;
 
-            return Cube_tryIntersect(cube, ray);
-        }
+    result.intersection_occurred = true;
+    result.maybe_distance        = 0.0;
+    result.maybe_hit_point       = ray.origin;
+    result.maybe_normal          = vec3(0.0);
+    result.maybe_color =
+        vec4(vec3(voxelStartIndexChecked) / VoxelBrick_EdgeLength, 1.0);
 
-        if (any(lessThan(voxel, ivec3(0)))
-            || any(greaterThan(
-                voxel, ivec3(7)))) // Adjusted to include 8 as the upper limit
-        {
-            return IntersectionResult_getMiss();
-        }
-
-        if (tMax.x < tMax.y)
-        {
-            if (tMax.x < tMax.z)
-            {
-                voxel.x += step.x;
-                tMax.x += tDelta.x;
-            }
-            else
-            {
-                voxel.z += step.z;
-                tMax.z += tDelta.z;
-            }
-        }
-        else
-        {
-            if (tMax.y < tMax.z)
-            {
-                voxel.y += step.y;
-                tMax.y += tDelta.y;
-            }
-            else
-            {
-                voxel.z += step.z;
-                tMax.z += tDelta.z;
-            }
-        }
-    }
+    return result;
 }
 
 IntersectionResult
