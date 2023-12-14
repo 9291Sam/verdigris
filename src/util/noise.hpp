@@ -105,7 +105,7 @@ namespace util
     constexpr inline glm::vec2
     randomGradient(glm::vec<N, std::int64_t> vector, std::uint64_t seed)
     {
-        std::size_t workingSeed {0};
+        std::size_t workingSeed {seed};
 
         for (std::size_t i = 0; i < N; ++i)
         {
@@ -150,25 +150,25 @@ namespace util
     constexpr inline float
     perlin(glm::vec2 vector, std::uint64_t seed) // TODO: make generic
     {
-        const glm::vec<2, std::int64_t> BottomLeftGrid {
+        const glm::vec<2, std::int64_t> bottomLeftGrid {
             static_cast<std::int64_t>(std::floor(vector.x)),
             static_cast<std::int64_t>(std::floor(vector.y)),
         };
 
         const glm::vec<2, std::int64_t> TopRightGrid {
-            BottomLeftGrid + glm::vec<2, std::int64_t> {1LL, 1LL}};
+            bottomLeftGrid + glm::vec<2, std::int64_t> {1LL, 1LL}};
 
         const glm::vec<2, std::int64_t> BottomRightGrid {
-            BottomLeftGrid.x, TopRightGrid.y};
+            bottomLeftGrid.x, TopRightGrid.y};
 
         const glm::vec<2, std::int64_t> TopLeftGrid {
-            TopRightGrid.x, BottomLeftGrid.y};
+            TopRightGrid.x, bottomLeftGrid.y};
 
         const glm::vec2 OffsetIntoGrid {
-            vector - static_cast<glm::vec2>(BottomLeftGrid)};
+            vector - static_cast<glm::vec2>(bottomLeftGrid)};
 
         const float LeftGradient = quarticInterpolate(
-            dotGridGradient(BottomLeftGrid, vector, seed),
+            dotGridGradient(bottomLeftGrid, vector, seed),
             dotGridGradient(TopLeftGrid, vector, seed),
             OffsetIntoGrid.x);
 

@@ -55,7 +55,7 @@ namespace util
                             "Key was already in Registrar!");
                     }
 
-                    this->map[std::move(key)] = std::move(value);
+                    this->map.insert({std::move(key), std::move(value)});
 
                     this->map_size.fetch_add(1, std::memory_order_acq_rel);
 
