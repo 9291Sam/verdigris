@@ -105,7 +105,10 @@ namespace gfx::vulkan
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef __APPLE__
                 VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
-#endif // __APPLE__
+#endif          // __APPLE__
+                // #ifndef NDEBUG
+                //                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+                // #endif
             };
 
             vk::PhysicalDeviceFeatures deviceFeatures = {};

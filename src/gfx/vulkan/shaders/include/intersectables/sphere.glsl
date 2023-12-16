@@ -23,19 +23,19 @@ IntersectionResult Sphere_tryIntersect(const Sphere self, const Ray ray)
     {
         return IntersectionResult_getMiss();
     }
-    const float discr = b * b - c;
+    const float discriminant = b * b - c;
 
     // A negative discriminant corresponds to ray missing sphere
-    if (discr < 0.0)
+    if (discriminant < 0.0)
     {
         return IntersectionResult_getMiss();
     }
 
     // Ray now found to intersect sphere, compute smallest t value of
     // intersection
-    const float t = -b - sqrt(discr);
+    const float t = -b - sqrt(discriminant);
 
-    // If t is negative, ray started inside sphere so exit
+    // If t is negative, ray started inside sphere, we exit
     if (t < 0.0f)
     {
         return IntersectionResult_getMiss();

@@ -5,6 +5,7 @@
 #include <intersectables/sphere.glsl>
 #include <intersectables/voxel_brick_def.glsl>
 #include <ray.glsl>
+#include <util.glsl>
 #include <voxel.glsl>
 
 layout(local_size_x = 32, local_size_y = 32) in;
@@ -83,8 +84,8 @@ vec4 calculatePixelColor(const Ray ray)
 
     if (bestIntersection.intersection_occurred)
     {
-        // return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
-        return bestIntersection.maybe_color;
+        return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
+        // return bestIntersection.maybe_color;
     }
     else
     {
