@@ -108,8 +108,7 @@ find_package(Vulkan REQUIRED)
 
 
 # Executable
-
-add_executable(verdigris
+set(VERDIGRIS_SOURCES
     src/main.cpp
 
 
@@ -149,6 +148,9 @@ add_executable(verdigris
     src/util/misc.cpp
     src/util/uuid.cpp
 )
+
+add_executable(verdigris ${VERDIGRIS_SOURCES})
+
 target_link_libraries(verdigris PUBLIC
     fmt::fmt concurrentqueue glfw
     gcem VulkanMemoryAllocator imgui magic_enum

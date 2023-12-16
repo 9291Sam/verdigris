@@ -26,40 +26,25 @@ Checks: >
   -readability-magic-numbers,
   -cppcoreguidelines-pro-type-union-access
 
-#probablly should renable the magic number lints eventually
-
-# CheckOptions:
-#   - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-#     value: true
-
+WarningsAsErrors: "*"
 
 CheckOptions:
-  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
-    value: true
-
-
-# misc-non-private-member-variables-in-classes
-# IgnoreClassesWithAllMemberVariablesBeingPublic
-  
-# WarningsAsErrors: "*"
-
-# CheckOptions:
-#   - { key: readability-identifier-naming.NamespaceCase,          value: camelBack }
-#   - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
-#   - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
-#   - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }
-#   - { key: readability-identifier-naming.FunctionCase,           value: camelBack  }
-#   - { key: readability-identifier-naming.VariableCase,           value: camelBack, lower_case }
-#   - { key: readability-identifier-naming.PrivateMemberSuffix,    value:          }
-#   - { key: readability-identifier-naming.ProtectedMemberSuffix,  value:          }
-#   - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
-#   - { key: readability-identifier-naming.EnumConstantCase,         value: CamelCase }
-#   - { key: readability-identifier-naming.EnumConstantPrefix,       value:          }
-#   - { key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase }
-#   - { key: readability-identifier-naming.ConstexprVariablePrefix,  value:          }
-#   - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase }
-#   - { key: readability-identifier-naming.GlobalConstantPrefix,     value: k         }
-#   - { key: readability-identifier-naming.MemberConstantCase,       value: CamelCase }
-#   - { key: readability-identifier-naming.MemberConstantPrefix,     value: k         }
-#   - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase }
-#   - { key: readability-identifier-naming.StaticConstantPrefix,     value: k         }
+  - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true       }
+  - { key: readability-identifier-naming.NamespaceCase,                     value: camelBack  }
+  - { key: readability-identifier-naming.ClassCase,                         value: CamelCase  }
+  - { key: readability-identifier-naming.StructCase,                        value: CamelCase  }
+  - { key: readability-identifier-naming.TypeAliasCase,                     value: CamelCase  }
+  - { key: readability-identifier-naming.TypedefCase,                       value: CamelCase  }
+  - { key: readability-identifier-naming.ValueTemplateParameterCase,        value: CamelCase  }
+  - { key: readability-identifier-naming.TemplateParameterCase,             value: CamelCase  }
+  - { key: readability-identifier-naming.FunctionCase,                      value: camelBack  }
+  - { key: readability-identifier-naming.LocalVariableCase,                 value: camelBack  }
+  - { key: readability-identifier-naming.MemberCase,                        value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase,                     value: camelBack  }
+  - { key: readability-identifier-naming.MethodCase,                        value: camelBack  }
+  - { key: readability-identifier-naming.MacroDefinitionCase,               value: UPPER_CASE }
+  - { key: readability-identifier-naming.EnumConstantCase,                  value: CamelCase  }
+  - { key: readability-identifier-naming.ConstexprVariableCase,             value: CamelCase  }
+  - { key: readability-identifier-naming.GlobalConstantCase,                value: CamelCase  }
+  - { key: readability-identifier-naming.MemberConstantCase,                value: CamelCase  }
+  - { key: readability-identifier-naming.StaticConstantCase,                value: CamelCase  }
