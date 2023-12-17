@@ -10,7 +10,7 @@ namespace util
 
     namespace
     {
-        const char* LoggingLevel_asString(LoggingLevel level)
+        const char* LoggingLevel_asString(LoggingLevel level) // NOLINT
         {
             switch (level)
             {
@@ -67,7 +67,7 @@ namespace util
             [this, loggerConstructionLatch = &threadStartLatch]
             {
                 std::ofstream logFileHandle {"verdigris_log.txt"};
-                std::string   temporary_string {"INVALID MESSAGE"};
+                std::string   temporaryString {"INVALID MESSAGE"};
 
                 std::atomic<bool>* shouldThreadStop {
                     this->should_thread_close.get()};
@@ -83,41 +83,41 @@ namespace util
                 // Main loop
                 while (!shouldThreadStop->load(std::memory_order_acquire))
                 {
-                    if (messageQueue->try_dequeue(temporary_string))
+                    if (messageQueue->try_dequeue(temporaryString))
                     {
                         std::ignore = std::fwrite(
-                            temporary_string.data(),
+                            temporaryString.data(),
                             sizeof(char),
-                            temporary_string.size(),
+                            temporaryString.size(),
                             stdout);
 
                         this->log_file_handle->lock(
                             [&](std::ofstream& stream)
                             {
                                 std::ignore = stream.write(
-                                    temporary_string.c_str(),
+                                    temporaryString.c_str(),
                                     static_cast<std::streamsize>(
-                                        temporary_string.size()));
+                                        temporaryString.size()));
                             });
                     }
                 }
 
                 // Cleanup loop
-                while (messageQueue->try_dequeue(temporary_string))
+                while (messageQueue->try_dequeue(temporaryString))
                 {
                     std::ignore = std::fwrite(
-                        temporary_string.data(),
+                        temporaryString.data(),
                         sizeof(char),
-                        temporary_string.size(),
+                        temporaryString.size(),
                         stdout);
 
                     this->log_file_handle->lock(
                         [&](std::ofstream& stream)
                         {
                             std::ignore = stream.write(
-                                temporary_string.c_str(),
+                                temporaryString.c_str(),
                                 static_cast<std::streamsize>(
-                                    temporary_string.size()));
+                                    temporaryString.size()));
                         });
                 }
             }};
@@ -238,25 +238,25 @@ namespace util
             }(),
             [&] // 1 location
             {
-                constexpr std::array<std::string_view, 2> FOLDER_IDENTIFIERS {
+                constexpr std::array<std::string_view, 2> FolderIdentifiers {
                     "/src/", "/inc/"};
-                std::string raw_file_name {location.file_name()};
+                std::string rawFileName {location.file_name()};
 
                 std::size_t index = std::string::npos;
 
-                for (std::string_view str : FOLDER_IDENTIFIERS)
+                for (std::string_view str : FolderIdentifiers)
                 {
                     if (index != std::string::npos)
                     {
                         break;
                     }
 
-                    index = raw_file_name.find(str);
+                    index = rawFileName.find(str);
                 }
 
                 return fmt::format(
                     "{}:{}:{}",
-                    raw_file_name.substr(index + 1),
+                    rawFileName.substr(index + 1),
                     location.line(),
                     location.column());
             }(),

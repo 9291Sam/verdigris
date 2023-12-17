@@ -310,9 +310,11 @@ namespace gfx::vulkan::voxel
                     if (this->foo % 2 == 0 || this->foo % 3 == 0)
                     {
                         voxel = Voxel {
-                            .srgb_r {distFunc()},
-                            .srgb_g {distFunc()},
-                            .srgb_b {distFunc()},
+                            .srgb_r {static_cast<std::uint8_t>(this->foo / 7)},
+                            .srgb_g {
+                                static_cast<std::uint8_t>(this->foo * 3 / 4)},
+                            .srgb_b {static_cast<std::uint8_t>(
+                                this->foo * 2345 / 14)},
                             .alpha_or_emissive {128},
                             .specular {0},
                             .roughness {255},

@@ -84,8 +84,8 @@ vec4 calculatePixelColor(const Ray ray)
 
     if (bestIntersection.intersection_occurred)
     {
-        return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
-        // return bestIntersection.maybe_color;
+        // return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
+        return bestIntersection.maybe_color;
     }
     else
     {

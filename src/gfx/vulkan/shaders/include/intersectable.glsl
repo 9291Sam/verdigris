@@ -25,7 +25,7 @@ IntersectionResult IntersectionResult_getError()
     result.intersection_occurred = true;
     result.maybe_distance        = -1.0;
     result.maybe_hit_point       = vec3(0.0);
-    result.maybe_normal          = vec3(0.0);
+    result.maybe_normal          = vec3(1.0, 0.0, 1.0);
     result.maybe_color           = vec4(1.0, 0.0, 1.0, 1.0);
 
     return result;

@@ -187,88 +187,53 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
         }
     }
 
-    if (any(greaterThan(voxelStartIndexChecked, ivec3(7))))
+    vec3  tMax;
+    vec3  tDelta = vec3(Voxel_Size) / ray.direction;
+    ivec3 step   = ivec3(sign(ray.direction) * Voxel_Size);
+    ivec3 voxel  = voxelStartIndexChecked;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        if (ray.direction[i] < 0)
+        {
+            tMax[i] =
+                (ray.origin[i] - voxel[i] * Voxel_Size) / ray.direction[i];
+        }
+        else
+        {
+            tMax[i] = ((voxel[i] + 1) * Voxel_Size - ray.origin[i])
+                    / ray.direction[i];
+        }
+    }
+
+    if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel, ivec3(7))))
     {
         return IntersectionResult_getError();
     }
 
-    // Assuming the following are defined:
-    vec3 rayDir    = ray.direction; // The direction of the ray
-    vec3 rayOrigin = ray.origin;    // The origin of the ray
-    vec3 voxelSize = vec3(1);       // The size of the voxel
-
-    vec3  tMax;
-    vec3  tDelta;
-    ivec3 step;
-    ivec3 voxel = voxelStartIndexChecked;
-
-    for (int i = 0; i < 3; ++i)
+    if (Voxel_isVisible(
+            VOXEL_BRICK_IMPL_ARRAY[offset].voxels[voxel.x][voxel.y][voxel.z]))
     {
-        // Determine the voxel that the ray starts in
-        // voxel[i] = int(floor(rayOrigin[i] / voxelSize[i]));
+        Cube cube;
+        cube.center      = voxel * Voxel_Size + cornerPos;
+        cube.edge_length = Voxel_Size;
 
-        // Determine the direction of the ray
-        if (rayDir[i] < 0)
+        IntersectionResult resu = Cube_tryIntersect(cube, ray);
+
+        resu.maybe_color = Voxel_getLinearColor(
+            VOXEL_BRICK_IMPL_ARRAY[offset].voxels[voxel.x][voxel.y][voxel.z]);
+
+        if (resu.intersection_occurred)
         {
-            step[i]   = -1;
-            tMax[i]   = (rayOrigin[i] - voxel[i] * voxelSize[i]) / rayDir[i];
-            tDelta[i] = voxelSize[i] / -rayDir[i];
+            return resu;
         }
         else
         {
-            step[i] = 1;
-            tMax[i] =
-                ((voxel[i] + 1) * voxelSize[i] - rayOrigin[i]) / rayDir[i];
-            tDelta[i] = voxelSize[i] / rayDir[i];
+            return IntersectionResult_getError();
         }
     }
 
-    while (true)
-    {
-        // Process voxel at voxel.x, voxel.y, voxel.z here
-        if (Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
-                                .voxels[voxel.x][voxel.y][voxel.z]))
-        {
-            Cube cube;
-            cube.center      = voxel * Voxel_Size + cornerPos;
-            cube.edge_length = Voxel_Size;
-
-            return Cube_tryIntersect(cube, ray);
-        }
-
-        if (any(lessThan(voxel, ivec3(0))) || any(greaterThan(voxel, ivec3(7))))
-        {
-            return IntersectionResult_getMiss();
-        }
-
-        // Move to next voxel
-        if (tMax.x < tMax.y)
-        {
-            if (tMax.x < tMax.z)
-            {
-                voxel.x += step.x;
-                tMax.x += tDelta.x;
-            }
-            else
-            {
-                voxel.z += step.z;
-                tMax.z += tDelta.z;
-            }
-        }
-        else
-        {
-            if (tMax.y < tMax.z)
-            {
-                voxel.y += step.y;
-                tMax.y += tDelta.y;
-            }
-            else
-            {
-                voxel.z += step.z;
-                tMax.z += tDelta.z;
-            }
-        }
-    }
+    return IntersectionResult_getMiss();
 }
 
 // if (Voxel_isVisible(
@@ -327,7 +292,11 @@ VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, Ray ray)
                     cube.center      = vec3(i, j, k) * 1.0 + cornerPos;
                     cube.edge_length = 1.0;
 
-                    propagateIntersection(result, Cube_tryIntersect(cube, ray));
+                    IntersectionResult resu = Cube_tryIntersect(cube, ray);
+
+                    resu.maybe_color = Voxel_getLinearColor(thisVoxel);
+
+                    propagateIntersection(result, resu);
                 }
             }
         }
