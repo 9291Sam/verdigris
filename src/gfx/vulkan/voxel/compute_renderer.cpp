@@ -53,6 +53,7 @@ namespace gfx::vulkan::voxel
         , time_alive {0.0f}
         , camera {Camera {glm::vec3 {}}}
         , generator {std::random_device {}()}
+        , foo {0}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -171,14 +172,14 @@ namespace gfx::vulkan::voxel
             vk::QueueFlagBits::eCompute,
             [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
             {
-                const vk::CommandBufferBeginInfo BeginInfo {
+                const vk::CommandBufferBeginInfo beginInfo {
                     .sType {vk::StructureType::eCommandBufferBeginInfo},
                     .pNext {nullptr},
                     .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
                     .pInheritanceInfo {nullptr},
                 };
 
-                commandBuffer.begin(BeginInfo);
+                commandBuffer.begin(beginInfo);
 
                 // we need to change the layout on the first time
                 this->output_image.transitionLayout(
@@ -192,7 +193,7 @@ namespace gfx::vulkan::voxel
 
                 commandBuffer.end();
 
-                const vk::SubmitInfo SubmitInfo {
+                const vk::SubmitInfo submitInfo {
                     .sType {vk::StructureType::eSubmitInfo},
                     .pNext {nullptr},
                     .waitSemaphoreCount {0},
@@ -204,7 +205,7 @@ namespace gfx::vulkan::voxel
                     .pSignalSemaphores {nullptr},
                 };
 
-                queue.submit(SubmitInfo, *endTransferFence);
+                queue.submit(submitInfo, *endTransferFence);
             });
 
         const vk::Result result = this->device->asLogicalDevice().waitForFences(

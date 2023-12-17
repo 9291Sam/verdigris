@@ -20,6 +20,8 @@ namespace gfx::vulkan::voxel
     {
         this->index = other.index;
         other.index = BrickHandleInvalidIndex;
+
+        return *this;
     }
 
     bool BrickHandle::isValid() const

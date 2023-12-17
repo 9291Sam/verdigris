@@ -5,6 +5,8 @@
 #include <util/log.hpp>
 #include <util/noise.hpp>
 
+int foo(int bar_) {}
+
 int main()
 {
     util::installGlobalLoggerRacy();
