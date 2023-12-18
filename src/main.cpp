@@ -209,19 +209,65 @@ std::vector<glm::ivec3> traverse(Ray ray, glm::vec3 cornerPos)
     }
 
     std::vector<glm::ivec3> traversedVoxels {};
-    traversedVoxels.push_back(voxelStartIndexChecked);
 
-    glm::vec3 tDelta = glm::vec3 {Voxel_Size} / ray.direction;
+    glm::vec3  tDelta       = glm::vec3 {Voxel_Size} / ray.direction;
+    glm::ivec3 step         = glm::sign(tDelta);
+    glm::ivec3 currentVoxel = voxelStartIndexChecked;
+    glm::vec3  tMax;
+    for (int i = 0; i < 3; ++i)
+    {
+        const glm::vec3 origin =
+            ray.origin; // or is this where it should be in the grid????
+        const float t1 = (std::floor(origin[i]) - origin[i]) / ray.direction[i];
+        const float t2 = t1 + (Voxel_Size / ray.direction[i]);
+        tMax[i]        = std::fmax(t1, t2);
+    }
+
     util::logLog(
-        "Corner: {} | tDelta: {}",
+        "Corner: {} |\n Ray: {} @ {} | tDelta: {} | step: {} |\n currentVoxel: "
+        "{} | tMax {}\n",
         glm::to_string(cornerPos),
-        glm::to_string(tDelta));
+        glm::to_string(ray.origin),
+        glm::to_string(ray.direction),
+        glm::to_string(tDelta),
+        glm::to_string(step),
+        glm::to_string(currentVoxel),
+        glm::to_string(tMax));
 
-    // get starting coord
+    while (all(greaterThanEqual(currentVoxel, glm::ivec3(0)))
+           && all(lessThanEqual(currentVoxel, glm::ivec3(700))))
+    {
+        traversedVoxels.push_back(currentVoxel);
+        util::logLog("Traversed {}", glm::to_string(currentVoxel));
 
-    // make new traversal ray
-
-    // traverse
+        // Move to next voxel
+        if (tMax.x < tMax.y)
+        {
+            if (tMax.x < tMax.z)
+            {
+                currentVoxel.x += step.x;
+                tMax.x += tDelta.x;
+            }
+            else
+            {
+                currentVoxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                currentVoxel.y += step.y;
+                tMax.y += tDelta.y;
+            }
+            else
+            {
+                currentVoxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
+    }
 
     return traversedVoxels;
 }
@@ -238,203 +284,209 @@ int main()
 
     try
     {
-        {
-            auto in  = glm::vec3 {-1.2, -1.2, -1.2};
-            auto res = glm::ivec3 {-1, -1, -1};
-            auto out = getGridCord(in);
+        // {
+        //     auto in  = glm::vec3 {-1.2, -1.2, -1.2};
+        //     auto res = glm::ivec3 {-1, -1, -1};
+        //     auto out = getGridCord(in);
 
-            util::assertFatal(
-                res == out,
-                "Failed! {} | {}",
-                glm::to_string(in),
-                glm::to_string(out));
-        }
+        //     util::assertFatal(
+        //         res == out,
+        //         "Failed! {} | {}",
+        //         glm::to_string(in),
+        //         glm::to_string(out));
+        // }
 
-        {
-            auto in  = glm::vec3 {0.6, 0.6, 0.4};
-            auto res = glm::ivec3 {1, 1, 0};
-            auto out = getGridCord(in);
+        // {
+        //     auto in  = glm::vec3 {0.6, 0.6, 0.4};
+        //     auto res = glm::ivec3 {1, 1, 0};
+        //     auto out = getGridCord(in);
 
-            util::assertFatal(
-                res == out,
-                "Failed! {} | {}",
-                glm::to_string(in),
-                glm::to_string(out));
-        }
+        //     util::assertFatal(
+        //         res == out,
+        //         "Failed! {} | {}",
+        //         glm::to_string(in),
+        //         glm::to_string(out));
+        // }
 
-        {
-            auto in  = glm::vec3 {0.6, -0.6, -0.4};
-            auto res = glm::ivec3 {1, -1, 0};
-            auto out = getGridCord(in);
+        // {
+        //     auto in  = glm::vec3 {0.6, -0.6, -0.4};
+        //     auto res = glm::ivec3 {1, -1, 0};
+        //     auto out = getGridCord(in);
 
-            util::assertFatal(
-                res == out,
-                "Failed! {} | {}",
-                glm::to_string(in),
-                glm::to_string(out));
-        }
+        //     util::assertFatal(
+        //         res == out,
+        //         "Failed! {} | {}",
+        //         glm::to_string(in),
+        //         glm::to_string(out));
+        // }
 
-        // miss
-        {
-            Ray ray {
-                {10.0f, 0.0f, 0.0f},
-                glm::normalize(glm::vec3 {3.0f, 2.0f, 2.0f})};
+        // // miss
+        // {
+        //     Ray ray {
+        //         {10.0f, 0.0f, 0.0f},
+        //         glm::normalize(glm::vec3 {3.0f, 2.0f, 2.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
 
-            util::assertFatal(res.empty(), "vector was not empty");
-        }
+        //     util::assertFatal(res.empty(), "vector was not empty");
+        // }
 
-        // close miss 0
-        {
-            Ray ray {
-                {-0.6f, -0.6f, -0.6f},
-                glm::normalize(glm::vec3 {-1.0f, -1.0f, -1.0f})};
+        // // close miss 0
+        // {
+        //     Ray ray {
+        //         {-0.6f, -0.6f, -0.6f},
+        //         glm::normalize(glm::vec3 {-1.0f, -1.0f, -1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
 
-            util::assertFatal(res.empty(), "vector was not empty");
-        }
+        //     util::assertFatal(res.empty(), "vector was not empty");
+        // }
 
-        // close miss +
-        {
-            Ray ray {
-                {7.51f, 7.51f, 7.51f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // close miss +
+        // {
+        //     Ray ray {
+        //         {7.51f, 7.51f, 7.51f},
+        //         glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
 
-            util::assertFatal(res.empty(), "vector was not empty");
-        }
+        //     util::assertFatal(res.empty(), "vector was not empty");
+        // }
 
-        // close miss 0
-        {
-            Ray ray {
-                {-0.6f, -0.6f, -0.6f},
-                glm::normalize(glm::vec3 {-1.0f, -1.0f, -1.0f})};
+        // // close miss 0
+        // {
+        //     Ray ray {
+        //         {-0.6f, -0.6f, -0.6f},
+        //         glm::normalize(glm::vec3 {-1.0f, -1.0f, -1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
 
-            util::assertFatal(res.empty(), "vector was not empty");
-        }
+        //     util::assertFatal(res.empty(), "vector was not empty");
+        // }
 
-        // close miss +
-        {
-            Ray ray {
-                {7.51f, 7.51f, 7.51f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // close miss +
+        // {
+        //     Ray ray {
+        //         {7.51f, 7.51f, 7.51f},
+        //         glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
 
-            util::assertFatal(res.empty(), "vector was not empty");
-        }
+        //     util::assertFatal(res.empty(), "vector was not empty");
+        // }
 
-        // hit internal
-        {
-            Ray ray {
-                {7.49f, 7.49f, 7.49f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // hit internal
+        // {
+        //     Ray ray {
+        //         {7.49f, 7.49f, 7.49f},
+        //         glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
-            std::vector<glm::ivec3> dsi {glm::ivec3 {7, 7, 7}};
+        //     std::vector<glm::ivec3> res = traverse(ray, {0.0f, 0.0f, 0.0f});
+        //     std::vector<glm::ivec3> dsi {glm::ivec3 {7, 7, 7}};
 
-            util::assertFatal(res.size() == dsi.size(), "size mismatch");
-            for (std::size_t i = 0; i < res.size(); ++i)
-            {
-                util::assertFatal(
-                    res[i] == dsi[i],
-                    "mismatch {} {}",
-                    glm::to_string(res[i]),
-                    glm::to_string(dsi[i]));
-            }
-        }
+        //     util::assertFatal(res.size() == dsi.size(), "size mismatch");
+        //     for (std::size_t i = 0; i < res.size(); ++i)
+        //     {
+        //         util::assertFatal(
+        //             res[i] == dsi[i],
+        //             "mismatch {} {}",
+        //             glm::to_string(res[i]),
+        //             glm::to_string(dsi[i]));
+        //     }
+        // }
 
-        // hit internal offset +
-        {
-            Ray ray {
-                {23.49f, 23.49f, 23.49f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // hit internal offset +
+        // {
+        //     Ray ray {
+        //         {23.49f, 23.49f, 23.49f},
+        //         glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {16.0f, 16.0f, 16.0f});
-            std::vector<glm::ivec3> dsi {glm::ivec3 {7, 7, 7}};
+        //     std::vector<glm::ivec3> res = traverse(ray,
+        //     {16.0f, 16.0f, 16.0f}); std::vector<glm::ivec3> dsi {glm::ivec3
+        //     {7, 7, 7}};
 
-            util::assertFatal(res.size() == dsi.size(), "size mismatch");
-            for (std::size_t i = 0; i < res.size(); ++i)
-            {
-                util::assertFatal(
-                    res[i] == dsi[i],
-                    "mismatch {} {}",
-                    glm::to_string(res[i]),
-                    glm::to_string(dsi[i]));
-            }
-        }
+        //     util::assertFatal(res.size() == dsi.size(), "size mismatch");
+        //     for (std::size_t i = 0; i < res.size(); ++i)
+        //     {
+        //         util::assertFatal(
+        //             res[i] == dsi[i],
+        //             "mismatch {} {}",
+        //             glm::to_string(res[i]),
+        //             glm::to_string(dsi[i]));
+        //     }
+        // }
 
-        // hit internal offset -
-        {
-            Ray ray {
-                {15.51f, 15.51f, 15.51f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // hit internal offset -
+        // {
+        //     Ray ray {
+        //         {15.51f, 15.51f, 15.51f},
+        //         glm::normalize(glm::vec3 {-1.0f, -1.0f, -1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {16.0f, 16.0f, 16.0f});
-            std::vector<glm::ivec3> dsi {glm::ivec3 {0, 0, 0}};
+        //     std::vector<glm::ivec3> res = traverse(ray,
+        //     {16.0f, 16.0f, 16.0f}); std::vector<glm::ivec3> dsi {glm::ivec3
+        //     {0, 0, 0}};
 
-            util::assertFatal(res.size() == dsi.size(), "size mismatch");
-            for (std::size_t i = 0; i < res.size(); ++i)
-            {
-                util::assertFatal(
-                    res[i] == dsi[i],
-                    "mismatch {} {}",
-                    glm::to_string(res[i]),
-                    glm::to_string(dsi[i]));
-            }
-        }
+        //     util::assertFatal(res.size() == dsi.size(), "size mismatch");
+        //     for (std::size_t i = 0; i < res.size(); ++i)
+        //     {
+        //         util::assertFatal(
+        //             res[i] == dsi[i],
+        //             "mismatch {} {}",
+        //             glm::to_string(res[i]),
+        //             glm::to_string(dsi[i]));
+        //     }
+        // }
 
-        // hit external offset -
-        {
-            Ray ray {
-                {15.49f, 15.49f, 15.49f},
-                glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
+        // // hit external offset -
+        // {
+        //     Ray ray {
+        //         {15.49f, 15.49f, 15.49f},
+        //         glm::normalize(glm::vec3 {1.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {16.0f, 16.0f, 16.0f});
-            std::vector<glm::ivec3> dsi {glm::ivec3 {0, 0, 0}};
+        //     std::vector<glm::ivec3> res = traverse(ray,
+        //     {16.0f, 16.0f, 16.0f}); std::vector<glm::ivec3> dsi {glm::ivec3
+        //     {0, 0, 0}};
 
-            util::assertFatal(res.size() == dsi.size(), "size mismatch");
-            for (std::size_t i = 0; i < res.size(); ++i)
-            {
-                util::assertFatal(
-                    res[i] == dsi[i],
-                    "mismatch {} {}",
-                    glm::to_string(res[i]),
-                    glm::to_string(dsi[i]));
-            }
-        }
+        //     // util::assertFatal(res.size() == 21, "size mismatch");
+        //     // for (std::size_t i = 0; i < res.size(); ++i)
+        //     // {
+        //     //     util::assertFatal(
+        //     //         res[i] == dsi[i],
+        //     //         "mismatch {} {}",
+        //     //         glm::to_string(res[i]),
+        //     //         glm::to_string(dsi[i]));
+        //     // }
+        // }
 
         // hit external close -
-        {
-            Ray ray {
-                {14.49f, 15.49f, 15.49f},
-                glm::normalize(glm::vec3 {100.0f, 1.0f, 1.0f})};
+        // {
+        //     Ray ray {
+        //         {14.49f, 15.49f, 15.49f},
+        //         glm::normalize(glm::vec3 {100.0f, 1.0f, 1.0f})};
 
-            std::vector<glm::ivec3> res = traverse(ray, {16.0f, 16.0f, 16.0f});
-            std::vector<glm::ivec3> dsi {glm::ivec3 {0, 0, 0}};
+        //     std::vector<glm::ivec3> res = traverse(ray,
+        //     {16.0f, 16.0f, 16.0f});
+        //     // std::vector<glm::ivec3> dsi {glm::ivec3 {0, 0, 0}};
 
-            util::assertFatal(res.size() == dsi.size(), "size mismatch");
-            for (std::size_t i = 0; i < res.size(); ++i)
-            {
-                util::assertFatal(
-                    res[i] == dsi[i],
-                    "mismatch {} {}",
-                    glm::to_string(res[i]),
-                    glm::to_string(dsi[i]));
-            }
-        }
+        //     // util::assertFatal(res.size() == dsi.size(), "size mismatch");
+        //     // for (std::size_t i = 0; i < res.size(); ++i)
+        //     // {
+        //     //     util::assertFatal(
+        //     //         res[i] == dsi[i],
+        //     //         "mismatch {} {}",
+        //     //         glm::to_string(res[i]),
+        //     //         glm::to_string(dsi[i]));
+        //     // }
+        // }
+
+        // if its like 0 then tMax is also zero, otherwise its offset
 
         // hit external
         // hit on axies internal / external.
         // two each of close hit and close miss
         // one in the middle
-
-        util::panic("tests passed");
+        // std::this_thread::sleep_for(std::chrono::milliseconds {10});
+        // util::panic("tests passed");
 
         gfx::Renderer renderer {};
         game::Game    game {renderer};

@@ -236,6 +236,145 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
     return IntersectionResult_getMiss();
 }
 
+IntersectionResult
+VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
+{
+    // do we hit the box?
+    Cube boundingCube;
+    boundingCube.center =
+        cornerPos + vec3(VoxelBrick_EdgeLength / 2) - 0.5f * Voxel_Size;
+    boundingCube.edge_length = VoxelBrick_EdgeLength;
+
+    ivec3 voxelStartIndexChecked;
+    vec3  traversalStartPoint;
+    {
+        // the ray starts inside the cube, it's really easy to get the
+        // coordinates of the ray
+        if (Cube_contains(boundingCube, ray.origin))
+        {
+            voxelStartIndexChecked =
+                ivec3(floor(ray.origin - cornerPos + 0.5f * Voxel_Size));
+            // return IntersectionResult_getError();
+            traversalStartPoint = ray.origin;
+        }
+        else // we have to trace to the cube
+        {
+            IntersectionResult result = Cube_tryIntersect(boundingCube, ray);
+
+            // this ray daesnt even hit this cube, exit
+            if (!result.intersection_occurred)
+            {
+                return IntersectionResult_getMiss();
+            }
+
+            voxelStartIndexChecked = ivec3(
+                result.maybe_hit_point - cornerPos + 0.5f * Voxel_Size
+                - vec3(VERDIGRIS_EPSILON_MULTIPLIER * 10));
+
+            traversalStartPoint = result.maybe_hit_point;
+            // need an extra nudge down for the flooring to work right
+        }
+    }
+
+    vec3  tDelta       = vec3(Voxel_Size) / ray.direction;
+    ivec3 step         = ivec3(sign(tDelta));
+    ivec3 currentVoxel = voxelStartIndexChecked;
+    vec3  tMax;
+    for (int i = 0; i < 3; ++i)
+    {
+        const vec3  origin = traversalStartPoint;
+        const float t1     = (floor(origin[i]) - origin[i]) / ray.direction[i];
+        const float t2     = t1 + (Voxel_Size / ray.direction[i]);
+        tMax[i]            = max(t1, t2);
+    }
+
+    // util::logLog(
+    //     "Corner: {} |\n Ray: {} @ {} | tDelta: {} | step: {} |\n "
+    //     "currentVoxel: "
+    //     "{} | tMax {}\n",
+    //     glm::to_string(cornerPos),
+    //     glm::to_string(ray.origin),
+    //     glm::to_string(ray.direction),
+    //     glm::to_string(tDelta),
+    //     glm::to_string(step),
+    //     glm::to_string(currentVoxel),
+    //     glm::to_string(tMax));
+
+    int iters = 0;
+
+    do {
+        if (Voxel_isVisible(
+                VOXEL_BRICK_IMPL_ARRAY[offset]
+                    .voxels[currentVoxel.x][currentVoxel.y][currentVoxel.z]))
+        {
+            // IntersectionResult result;
+            // result.intersection_occurred = true;
+            // result.maybe_distance        = 0.0;
+            // result.maybe_normal          = vec3(1);
+            // result.maybe_hit_point       = vec3(1);
+            // result.maybe_color           = vec4(1);
+            // // // result
+            Cube cube;
+            cube.center      = currentVoxel * 1.0 + cornerPos;
+            cube.edge_length = 1.0;
+
+            IntersectionResult result = Cube_tryIntersect(cube, ray);
+
+            result.maybe_color = Voxel_getLinearColor(
+                VOXEL_BRICK_IMPL_ARRAY[offset]
+                    .voxels[currentVoxel.x][currentVoxel.y][currentVoxel.z]);
+
+            if (result.intersection_occurred)
+            {
+                return result;
+            }
+            // else
+            // {
+            //     return IntersectionResult_getError();
+            // }
+        }
+
+        // Move to next voxel
+        if (tMax.x < tMax.y)
+        {
+            if (tMax.x < tMax.z)
+            {
+                currentVoxel.x += step.x;
+                tMax.x += tDelta.x;
+            }
+            else
+            {
+                currentVoxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
+        else
+        {
+            if (tMax.y < tMax.z)
+            {
+                currentVoxel.y += step.y;
+                tMax.y += tDelta.y;
+            }
+            else
+            {
+                currentVoxel.z += step.z;
+                tMax.z += tDelta.z;
+            }
+        }
+    }
+    while (all(greaterThanEqual(currentVoxel, ivec3(0)))
+           && all(lessThanEqual(currentVoxel, ivec3(7))) && iters++ < 50);
+
+    if (iters < 45)
+    {
+        return IntersectionResult_getMiss();
+    }
+    else
+    {
+        return IntersectionResult_getError();
+    }
+}
+
 // if (Voxel_isVisible(
 //         VOXEL_BRICK_IMPL_ARRAY[offset]
 //             .voxels[voxelStartIndexChecked.x][voxelStartIndexChecked.y]

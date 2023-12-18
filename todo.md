@@ -13,3 +13,4 @@ Add toggles for validation layers
 Show logged messages to stderr, and log them to a file
 
 event system (set player position)
+command line arguments test and loggigng
