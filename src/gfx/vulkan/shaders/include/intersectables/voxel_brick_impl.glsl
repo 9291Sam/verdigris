@@ -236,6 +236,7 @@ VoxelBrick_tryIntersect2(const uint offset, const vec3 cornerPos, const Ray ray)
     return IntersectionResult_getMiss();
 }
 
+// its an offset by 0.5 in the verg beginning of the function somewhere
 IntersectionResult
 VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
 {
@@ -252,10 +253,9 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
         // coordinates of the ray
         if (Cube_contains(boundingCube, ray.origin))
         {
-            voxelStartIndexChecked =
-                ivec3(floor(ray.origin - cornerPos + 0.5f * Voxel_Size));
+            voxelStartIndexChecked = ivec3(floor(ray.origin - cornerPos));
             // return IntersectionResult_getError();
-            traversalStartPoint = ray.origin;
+            traversalStartPoint    = ray.origin;
         }
         else // we have to trace to the cube
         {
@@ -268,7 +268,7 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
             }
 
             voxelStartIndexChecked = ivec3(
-                result.maybe_hit_point - cornerPos + 0.5f * Voxel_Size
+                result.maybe_hit_point - cornerPos
                 - vec3(VERDIGRIS_EPSILON_MULTIPLIER * 10));
 
             traversalStartPoint = result.maybe_hit_point;
