@@ -287,20 +287,7 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
         const float t2     = t1 + (Voxel_Size / ray.direction[i]);
         tMax[i]            = max(t1, t2);
     }
-
-    // util::logLog(
-    //     "Corner: {} |\n Ray: {} @ {} | tDelta: {} | step: {} |\n "
-    //     "currentVoxel: "
-    //     "{} | tMax {}\n",
-    //     glm::to_string(cornerPos),
-    //     glm::to_string(ray.origin),
-    //     glm::to_string(ray.direction),
-    //     glm::to_string(tDelta),
-    //     glm::to_string(step),
-    //     glm::to_string(currentVoxel),
-    //     glm::to_string(tMax));
-
-    int iters = 0;
+    int safetyBound = 0;
 
     do {
         if (Voxel_isVisible(
@@ -363,9 +350,9 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
         }
     }
     while (all(greaterThanEqual(currentVoxel, ivec3(0)))
-           && all(lessThanEqual(currentVoxel, ivec3(7))) && iters++ < 50);
+           && all(lessThanEqual(currentVoxel, ivec3(7))) && safetyBound++ < 50);
 
-    if (iters < 45)
+    if (safetyBound < 45)
     {
         return IntersectionResult_getMiss();
     }

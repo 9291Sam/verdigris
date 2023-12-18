@@ -300,6 +300,7 @@ namespace gfx::vulkan::voxel
         };
 
         this->foo = 0;
+        glm::ivec3 index {};
 
         for (auto& x1 : b.voxels)
         {
@@ -311,11 +312,9 @@ namespace gfx::vulkan::voxel
                     if (this->foo % 2 == 0 || this->foo % 3 == 0)
                     {
                         voxel = Voxel {
-                            .srgb_r {static_cast<std::uint8_t>(this->foo / 7)},
-                            .srgb_g {
-                                static_cast<std::uint8_t>(this->foo * 3 / 4)},
-                            .srgb_b {static_cast<std::uint8_t>(
-                                this->foo * 2345 / 14)},
+                            .srgb_r {static_cast<std::uint8_t>(index.x * 32)},
+                            .srgb_g {static_cast<std::uint8_t>(index.y * 32)},
+                            .srgb_b {static_cast<std::uint8_t>(index.z * 32)},
                             .alpha_or_emissive {128},
                             .specular {0},
                             .roughness {255},
@@ -327,8 +326,11 @@ namespace gfx::vulkan::voxel
                     {
                         voxel = Voxel {};
                     }
+                    ++index.x %= 8;
                 }
+                ++index.y %= 8;
             }
+            ++index.z %= 8;
         }
 
         UniformUploadInfo uniformUploadInfo {
