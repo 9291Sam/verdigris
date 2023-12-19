@@ -253,9 +253,10 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
         // coordinates of the ray
         if (Cube_contains(boundingCube, ray.origin))
         {
-            voxelStartIndexChecked = ivec3(floor(ray.origin - cornerPos));
+            voxelStartIndexChecked =
+                ivec3(floor(ray.origin - cornerPos + 0.5f * Voxel_Size));
             // return IntersectionResult_getError();
-            traversalStartPoint    = ray.origin;
+            traversalStartPoint = ray.origin;
         }
         else // we have to trace to the cube
         {
@@ -268,7 +269,7 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
             }
 
             voxelStartIndexChecked = ivec3(
-                result.maybe_hit_point - cornerPos
+                result.maybe_hit_point - cornerPos + 0.5f * Voxel_Size
                 - vec3(VERDIGRIS_EPSILON_MULTIPLIER * 10));
 
             traversalStartPoint = result.maybe_hit_point;
@@ -283,9 +284,12 @@ VoxelBrick_tryIntersect3(const uint offset, const vec3 cornerPos, const Ray ray)
     for (int i = 0; i < 3; ++i)
     {
         const vec3  origin = traversalStartPoint;
-        const float t1     = (floor(origin[i]) - origin[i]) / ray.direction[i];
-        const float t2     = t1 + (Voxel_Size / ray.direction[i]);
-        tMax[i]            = max(t1, t2);
+        const float t1     = (floor(origin[i] + 0.5f * Voxel_Size) - origin[i]
+                          + 0.5f * Voxel_Size)
+                       / ray.direction[i];
+        const float t2 = t1 - (Voxel_Size / ray.direction[i]);
+        tMax[i]        = ray.direction[i] > 0 ? t1 : t2;
+        // tMax[i]        = t1;
     }
     int safetyBound = 0;
 
