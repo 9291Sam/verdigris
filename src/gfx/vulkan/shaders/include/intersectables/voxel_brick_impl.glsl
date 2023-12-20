@@ -36,13 +36,25 @@ bool getVoxel(uint offset, ivec3 c)
 IntersectionResult VoxelBrick_tryIntersect21(
     const uint offset, const vec3 cornerPos, const Ray ray)
 {
+    // routine to jump to the start of the cube
+    Cube boundingCube;
+    boundingCube.center      = cornerPos + VoxelBrick_EdgeLength / 2;
+    boundingCube.edge_length = VoxelBrick_EdgeLength;
+
+    IntersectionResult boundingCubeIntersection =
+        Cube_tryIntersect(boundingCube, ray);
+
+    if (!boundingCubeIntersection.intersection_occurred)
+    {
+        return IntersectionResult_getMiss();
+    }
     // TODO: optimize to jump to start of traversal!
 
     const bool USE_BRANCHLESS_DDA = true;
-    const int  MAX_RAY_STEPS      = 64;
+    const int  MAX_RAY_STEPS      = 32;
 
     vec3 rayDir = ray.direction;
-    vec3 rayPos = ray.origin - cornerPos;
+    vec3 rayPos = boundingCubeIntersection.maybe_hit_point - cornerPos;
 
     ivec3 mapPos = ivec3(floor(rayPos + 0.));
 
