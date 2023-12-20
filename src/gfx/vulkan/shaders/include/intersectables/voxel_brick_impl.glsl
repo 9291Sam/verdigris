@@ -173,7 +173,7 @@ IntersectionResult VoxelBrick_tryIntersect21(
     const uint offset, const vec3 cornerPos, const Ray ray)
 {
     const bool USE_BRANCHLESS_DDA = true;
-    const int  MAX_RAY_STEPS      = 128;
+    const int  MAX_RAY_STEPS      = 512;
 
     vec3 rayDir = ray.direction;
     vec3 rayPos = ray.origin;
