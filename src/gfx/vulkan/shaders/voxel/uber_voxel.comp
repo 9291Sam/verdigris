@@ -54,7 +54,7 @@ vec4 calculatePixelColor(const Ray ray)
     bestIntersection.intersection_occurred = false;
 
     propagateIntersection(
-        bestIntersection, VoxelBrick_tryIntersect3(0, vec3(0.0), ray));
+        bestIntersection, VoxelBrick_tryIntersect21(0, vec3(0.0), ray));
     propagateIntersection(
         bestIntersection, VoxelBrick_tryIntersect(0, vec3(0.0, 9.0, 0.0), ray));
     propagateIntersection(
