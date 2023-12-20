@@ -208,7 +208,7 @@ namespace gfx::vulkan
         const vk::CommandPoolCreateInfo commandPoolCreateInfo {
             .sType {vk::StructureType::eCommandPoolCreateInfo},
             .pNext {nullptr},
-            .flags {vk::CommandPoolCreateFlagBits::eResetCommandBuffer},
+            .flags {},
             .queueFamilyIndex {
                 this->device->getMainGraphicsQueue().getFamilyIndex()}};
 

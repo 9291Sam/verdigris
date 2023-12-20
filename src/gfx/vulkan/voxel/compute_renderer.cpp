@@ -26,7 +26,7 @@ namespace gfx::vulkan::voxel
 
         struct VoxelUploadInfo
         {
-            Brick voxels;
+            std::array<Brick, 64> voxels;
         };
     } // namespace
 
@@ -288,7 +288,7 @@ namespace gfx::vulkan::voxel
         glm::mat4 modelViewProj =
             c.getPerspectiveMatrix(this->renderer, Transform {});
 
-        Brick b {};
+        std::array<Brick, 64> b {};
 
         // ok, for some blessed reason, you can't have a uniform int
         // distribution over some types, including char
@@ -302,57 +302,64 @@ namespace gfx::vulkan::voxel
         this->foo = 0;
         glm::ivec3 index {};
 
-        for (auto& x1 : b.voxels)
+        for (auto& x0 : b)
         {
-            for (auto& x2 : x1)
+            for (auto& x1 : x0.voxels)
             {
-                for (Voxel& voxel : x2)
+                for (auto& x2 : x1)
                 {
-                    ++this->foo;
-                    if (this->foo % 2 == 0 || this->foo % 3 == 0)
+                    for (Voxel& voxel : x2)
                     {
-                        voxel = Voxel {
-                            .srgb_r {static_cast<std::uint8_t>(index.x * 32)},
-                            .srgb_g {static_cast<std::uint8_t>(index.y * 32)},
-                            .srgb_b {static_cast<std::uint8_t>(index.z * 32)},
-                            .alpha_or_emissive {128},
-                            .specular {0},
-                            .roughness {255},
-                            .metallic {0},
-                            .special {0},
-                        };
+                        ++this->foo;
+                        if (this->foo % distFunc() == 0
+                            || this->foo % distFunc() == 0)
+                        {
+                            voxel = Voxel {
+                                .srgb_r {static_cast<std::uint8_t>(
+                                    index.x * 32 * distFunc())},
+                                .srgb_g {static_cast<std::uint8_t>(
+                                    index.y * 32 * distFunc())},
+                                .srgb_b {static_cast<std::uint8_t>(
+                                    index.z * 32 * distFunc())},
+                                .alpha_or_emissive {128},
+                                .specular {0},
+                                .roughness {255},
+                                .metallic {0},
+                                .special {0},
+                            };
+                        }
+                        else
+                        {
+                            voxel = Voxel {};
+                        }
+                        ++index.x %= 8;
                     }
-                    else
-                    {
-                        voxel = Voxel {};
-                    }
-                    ++index.x %= 8;
+                    ++index.y %= 8;
                 }
-                ++index.y %= 8;
+                ++index.z %= 8;
             }
-            ++index.z %= 8;
+
+            UniformUploadInfo uniformUploadInfo {
+                .inv_model_view_proj {glm::inverse(modelViewProj)},
+                .model_view_proj {modelViewProj},
+                .camera_position {glm::vec4 {c.getPosition(), 0.0f}},
+                .sphere_center {glm::vec4 {18.0f, 2.5f, 3.0f, 0.0f}},
+                .sphere_radius {2.0f},
+            };
+
+            VoxelUploadInfo voxelUploadInfo {.voxels {b}};
+
+            this->obj->transform.lock(
+                [&](Transform& t)
+                {
+                    t.translation = uniformUploadInfo.sphere_center;
+                    t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
+                            * uniformUploadInfo.sphere_radius;
+                });
+
+            this->input_uniform_buffer.write(util::asBytes(&uniformUploadInfo));
+            this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
         }
-
-        UniformUploadInfo uniformUploadInfo {
-            .inv_model_view_proj {glm::inverse(modelViewProj)},
-            .model_view_proj {modelViewProj},
-            .camera_position {glm::vec4 {c.getPosition(), 0.0f}},
-            .sphere_center {glm::vec4 {18.0f, 2.5f, 3.0f, 0.0f}},
-            .sphere_radius {2.0f},
-        };
-
-        VoxelUploadInfo voxelUploadInfo {.voxels {b}};
-
-        this->obj->transform.lock(
-            [&](Transform& t)
-            {
-                t.translation = uniformUploadInfo.sphere_center;
-                t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
-                        * uniformUploadInfo.sphere_radius;
-            });
-
-        this->input_uniform_buffer.write(util::asBytes(&uniformUploadInfo));
-        this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
     }
 
     void

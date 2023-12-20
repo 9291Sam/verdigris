@@ -11,7 +11,7 @@ namespace
         [[maybe_unused]] void*                      pUserData)
     {
         util::logWarn(
-            "Validation Layer Message: Severity: {} | Type: {} | \n{}",
+            "Validation Layer Message: Severity: {} | Type: {} |     {}",
             std::to_underlying(messageSeverity),
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),
             pCallbackData->pMessage);
@@ -40,9 +40,34 @@ namespace gfx::vulkan
                     "vkGetInstanceProcAddr"));
         }
 
+        const std::array enabledFeatures {
+            vk::ValidationFeatureEnableEXT::eSynchronizationValidation,
+            vk::ValidationFeatureEnableEXT::eGpuAssisted,
+            vk::ValidationFeatureEnableEXT::eBestPractices,
+        };
+
+        // const std::array<vk::ValidationFeatureDisableEXT, 0>
+        //     disabledFeatures {};
+
+        const vk::ValidationFeaturesEXT validationFeaturesCreateInfo {
+            .sType {vk::StructureType::eValidationFeaturesEXT},
+            .pNext {nullptr},
+            .enabledValidationFeatureCount {enabledFeatures.size()},
+            .pEnabledValidationFeatures {enabledFeatures.data()},
+            .disabledValidationFeatureCount {0},
+            .pDisabledValidationFeatures {nullptr},
+        };
+
+        //         VkStructureType
+        // const void*
+        // uint32_t
+        // const VkValidationFeatureEnableEXT*
+        // uint32_t
+        // const VkValidationFeatureDisableEXT*
+
         const vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
             .sType {vk::StructureType::eDebugUtilsMessengerCreateInfoEXT},
-            .pNext {nullptr},
+            .pNext {static_cast<const void*>(&validationFeaturesCreateInfo)},
             .flags {},
             .messageSeverity {
                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
@@ -107,6 +132,7 @@ namespace gfx::vulkan
             {
                 temp.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
                 temp.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                temp.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
             }
 
 #pragma clang diagnostic push
@@ -167,6 +193,8 @@ namespace gfx::vulkan
             this->debug_messenger =
                 this->instance->createDebugUtilsMessengerEXTUnique(
                     debugUtilsCreateInfo);
+
+            util::logLog("Enabled validation layers");
         }
     }
 

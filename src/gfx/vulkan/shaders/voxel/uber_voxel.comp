@@ -64,7 +64,9 @@ vec4 calculatePixelColor(const Ray ray)
                 propagateIntersection(
                     bestIntersection,
                     VoxelBrick_tryIntersect21(
-                        0, vec3(i * 9, j * 9, k * 9) - vec3(9), ray));
+                        ((i * 483) + j * 8 + k) % 64,
+                        vec3(i * 8, j * 8, k * 8) - vec3(9),
+                        ray));
             }
         }
     }

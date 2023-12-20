@@ -62,6 +62,7 @@ namespace gfx::vulkan
         Queue& operator= (const Queue&) = delete;
         Queue& operator= (Queue&&)      = delete;
 
+        // TODO: this abstraction is shit, passing false to this is just yuck
         [[nodiscard]] bool tryAccess(
             const std::function<void(vk::Queue, vk::CommandBuffer)>&,
             bool resetCommandBuffer = true) const;
@@ -74,6 +75,7 @@ namespace gfx::vulkan
         std::strong_ordering operator<=> (const Queue&) const;
 
     private:
+        vk::Device            device;
         std::uint32_t         family_index;
         vk::QueueFlags        flags;
         bool                  supports_surface;

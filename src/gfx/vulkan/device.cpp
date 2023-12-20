@@ -105,10 +105,10 @@ namespace gfx::vulkan
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef __APPLE__
                 VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
-#endif          // __APPLE__
-                // #ifndef NDEBUG
-                //                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-                // #endif
+#endif // __APPLE__
+       // #ifndef NDEBUG
+       //                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+       // #endif
             };
 
             vk::PhysicalDeviceFeatures deviceFeatures = {};
@@ -303,12 +303,13 @@ namespace gfx::vulkan
     }
 
     Queue::Queue(
-        vk::Device     device,
+        vk::Device     device_,
         vk::Queue      queue,
         vk::QueueFlags flags_,
         bool           supportsSurface,
         std::uint32_t  queueFamilyIndex)
-        : family_index {queueFamilyIndex}
+        : device {device_}
+        , family_index {queueFamilyIndex}
         , flags {flags_}
         , supports_surface {supportsSurface}
         , command_pool {nullptr}
@@ -317,7 +318,7 @@ namespace gfx::vulkan
         const vk::CommandPoolCreateInfo commandPoolCreateInfo {
             .sType {vk::StructureType::eCommandPoolCreateInfo},
             .pNext {nullptr},
-            .flags {vk::CommandPoolCreateFlagBits::eResetCommandBuffer},
+            .flags {},
             .queueFamilyIndex {queueFamilyIndex}};
 
         this->command_pool =
@@ -348,7 +349,7 @@ namespace gfx::vulkan
             {
                 if (resetCommandBuffer)
                 {
-                    commandBuffer->reset();
+                    this->device.resetCommandPool(*this->command_pool);
                 }
 
                 func(queue, *commandBuffer);
