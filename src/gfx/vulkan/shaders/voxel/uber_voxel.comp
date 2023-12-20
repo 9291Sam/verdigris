@@ -53,12 +53,36 @@ vec4 calculatePixelColor(const Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    propagateIntersection(
-        bestIntersection, VoxelBrick_tryIntersect21(0, vec3(0.0), ray));
-    propagateIntersection(
-        bestIntersection, VoxelBrick_tryIntersect(0, vec3(0.0, 9.0, 0.0), ray));
-    propagateIntersection(
-        bestIntersection, VoxelBrick_tryIntersect3(0, vec3(16.0), ray));
+    const uint bound = 2;
+
+    for (int i = 0; i < bound; ++i)
+    {
+        for (int j = 0; j < bound; ++j)
+        {
+            for (int k = 0; k < bound; ++k)
+            {
+                propagateIntersection(
+                    bestIntersection,
+                    VoxelBrick_tryIntersect21(
+                        0, vec3(i * 9, j * 9, k * 9), ray));
+            }
+        }
+    }
+
+    // propagateIntersection(
+    //     bestIntersection, VoxelBrick_tryIntersect21(0, vec3(0.0), ray));
+    // propagateIntersection(
+    //     bestIntersection,
+    //     VoxelBrick_tryIntersect21(0, vec3(0.0, 9.0, 0.0), ray));
+    // propagateIntersection(
+    //     bestIntersection,
+    //     VoxelBrick_tryIntersect21(0, vec3(0.0, 9.0, 9.0), ray));
+
+    // propagateIntersection(
+    //     bestIntersection,
+    //     VoxelBrick_tryIntersect21(0, vec3(9.0, 9.0, 9.0), ray));
+    // // propagateIntersection(
+    //     bestIntersection, VoxelBrick_tryIntersect(0, vec3(16.0), ray));
 
     {
         Cube cube;

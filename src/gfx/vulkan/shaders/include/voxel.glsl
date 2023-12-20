@@ -29,7 +29,7 @@ struct Voxel
 };
 
 #define Voxel_AlphaEmissiveState uint
-#define Voxel_Size               1
+#define Voxel_Size               1.0
 
 bool                     Voxel_isVisible(const in Voxel);
 vec4                     Voxel_getLinearColor(const in Voxel);

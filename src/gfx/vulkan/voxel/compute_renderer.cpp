@@ -309,23 +309,23 @@ namespace gfx::vulkan::voxel
                 for (Voxel& voxel : x2)
                 {
                     ++this->foo;
-                    // if (this->foo % 2 == 0 || this->foo % 3 == 0)
-                    // {
-                    voxel = Voxel {
-                        .srgb_r {static_cast<std::uint8_t>(index.x * 32)},
-                        .srgb_g {static_cast<std::uint8_t>(index.y * 32)},
-                        .srgb_b {static_cast<std::uint8_t>(index.z * 32)},
-                        .alpha_or_emissive {128},
-                        .specular {0},
-                        .roughness {255},
-                        .metallic {0},
-                        .special {0},
-                    };
-                    // }
-                    // else
-                    // {
-                    //     voxel = Voxel {};
-                    // }
+                    if (this->foo % 2 == 0 || this->foo % 3 == 0)
+                    {
+                        voxel = Voxel {
+                            .srgb_r {static_cast<std::uint8_t>(index.x * 32)},
+                            .srgb_g {static_cast<std::uint8_t>(index.y * 32)},
+                            .srgb_b {static_cast<std::uint8_t>(index.z * 32)},
+                            .alpha_or_emissive {128},
+                            .specular {0},
+                            .roughness {255},
+                            .metallic {0},
+                            .special {0},
+                        };
+                    }
+                    else
+                    {
+                        voxel = Voxel {};
+                    }
                     ++index.x %= 8;
                 }
                 ++index.y %= 8;
