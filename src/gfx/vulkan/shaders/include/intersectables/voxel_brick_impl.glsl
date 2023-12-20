@@ -98,8 +98,6 @@ IntersectionResult VoxelBrick_tryIntersect21(
     }
 
     return IntersectionResult_getMiss();
-    // fragColor.rgb = vec3(mapPos) / 9.0;
-    // fragColor.rgb = vec3(0.1 * noiseDeriv);
 }
 
 IntersectionResult

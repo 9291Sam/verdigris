@@ -48,26 +48,33 @@ void main()
     imageStore(out_image, pixelXY, calculatePixelColor(generateRay(pixelXY)));
 }
 
+uint lowbias32(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+
 vec4 calculatePixelColor(const Ray ray)
 {
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    const uint bound = 8;
+    const uint bound = 24;
 
     for (int i = 0; i < bound; ++i)
     {
         for (int j = 0; j < bound; ++j)
         {
-            for (int k = 0; k < bound; ++k)
-            {
-                propagateIntersection(
-                    bestIntersection,
-                    VoxelBrick_tryIntersect21(
-                        ((i * 483) + j * 8 + k) % 64,
-                        vec3(i * 8, j * 8, k * 8) - vec3(9),
-                        ray));
-            }
+            propagateIntersection(
+                bestIntersection,
+                VoxelBrick_tryIntersect21(
+                    lowbias32(j + lowbias32(i)) % 64,
+                    vec3(i * 8, 0, j * 8) - vec3(bound / 2, 0, bound / 2) * 8,
+                    ray));
         }
     }
 

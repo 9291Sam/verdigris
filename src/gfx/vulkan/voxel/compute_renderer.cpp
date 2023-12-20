@@ -387,6 +387,7 @@ namespace gfx::vulkan::voxel
             vk::PipelineStageFlagBits::eComputeShader,
             vk::PipelineStageFlagBits::eComputeShader,
             vk::AccessFlagBits::eShaderRead,
+            // | vk::AccessFlagBits::eInputAttachmentRead,
             vk::AccessFlagBits::eShaderWrite);
 
         auto [x, y] = this->output_image.getExtent();
@@ -400,9 +401,19 @@ namespace gfx::vulkan::voxel
             vk::ImageLayout::eGeneral,
             vk::ImageLayout::eShaderReadOnlyOptimal,
             vk::PipelineStageFlagBits::eComputeShader,
-            vk::PipelineStageFlagBits::eComputeShader,
+            vk::PipelineStageFlagBits::eFragmentShader,
             vk::AccessFlagBits::eShaderWrite,
             vk::AccessFlagBits::eShaderRead);
+
+        this->output_image.transitionLayout(
+            commandBuffer,
+            vk::ImageLayout::eShaderReadOnlyOptimal,
+            vk::ImageLayout::eShaderReadOnlyOptimal,
+            vk::PipelineStageFlagBits::eFragmentShader,
+            vk::PipelineStageFlagBits::eFragmentShader,
+            vk::AccessFlagBits::eShaderRead,
+            vk::AccessFlagBits::eShaderRead
+                | vk::AccessFlagBits::eInputAttachmentRead);
     }
 
     const vulkan::Image2D& ComputeRenderer::getImage() const

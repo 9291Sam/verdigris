@@ -284,7 +284,7 @@ function(compile_shader target)
                 $<$<BOOL:${arg_SPV}>:--target-spv=${arg_SPV}>
                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
                 $<$<BOOL:${arg_INCLUDE_DIRS}>:-I${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include>
-                # -O # enable opts
+                -O # enable opts
                 -MD -MF ${source}.d
                 -o ${source}.${arg_FORMAT}
                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}

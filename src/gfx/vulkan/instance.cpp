@@ -10,15 +10,31 @@ namespace
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         [[maybe_unused]] void*                      pUserData)
     {
+        vk::DebugUtilsMessageTypeFlagsEXT type {messageType};
+        std::string                       message = pCallbackData->pMessage;
+
+        // discard warnings
+        if (message.find(
+                "Validation Performance Warning: [ "
+                "UNASSIGNED-BestPractices-vkAllocateMemory-small-allocation")
+                == 0
+            || message.find("Validation Performance Warning: [ "
+                            "UNASSIGNED-BestPractices-vkBindMemory-small-"
+                            "dedicated-allocation")
+                   == 0)
+        {
+            return vk::False;
+        }
+
         util::logWarn(
             "Validation Layer Message: Severity: {} | Type: {} |     {}",
             std::to_underlying(messageSeverity),
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),
-            pCallbackData->pMessage);
+            message);
 
         // util::panic("kill");
 
-        return static_cast<VkBool32>(false);
+        return vk::False;
     }
 } // namespace
 

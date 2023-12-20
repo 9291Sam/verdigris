@@ -25,7 +25,8 @@ Checks: >
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers,
   -cppcoreguidelines-pro-type-union-access,
-  -llvm-header-guard
+  -llvm-header-guard,
+  -abseil-string-find-startswith
 
 CheckOptions:
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true       }
