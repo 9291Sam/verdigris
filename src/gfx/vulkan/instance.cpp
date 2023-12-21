@@ -67,7 +67,7 @@ namespace gfx::vulkan
             vk::ValidationFeatureEnableEXT::eSynchronizationValidation,
             vk::ValidationFeatureEnableEXT::eGpuAssisted,
             vk::ValidationFeatureEnableEXT::eBestPractices,
-        };
+            vk::ValidationFeatureEnableEXT::eGpuAssistedReserveBindingSlot};
 
         // const std::array<vk::ValidationFeatureDisableEXT, 0>
         //     disabledFeatures {};

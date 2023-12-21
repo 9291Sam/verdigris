@@ -16,3 +16,5 @@ event system (set player position)
 command line arguments test and loggigng
 
 seperate raster and rt gpu threads?
+
+seperate toggles for verdigris validation and vulkan validation

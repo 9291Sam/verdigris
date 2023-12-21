@@ -197,6 +197,13 @@ namespace gfx
                     }
                 });
 
+            std::future<void> voxelRender = std::async(
+                std::launch::async,
+                [&]
+                {
+                    this->voxel_renderer->tick();
+                });
+
             std::vector<std::shared_ptr<const Object>> strongObjects;
             std::vector<const Object*>                 rawObjects;
 
@@ -215,6 +222,7 @@ namespace gfx
             }
 
             menuRender.get();
+            voxelRender.get();
 
             if (!currentFrame.render(
                     this->draw_camera,
@@ -246,8 +254,6 @@ namespace gfx
                     this->window->attachCursor();
                 }
             }
-
-            this->voxel_renderer->tick();
 
             this->menu_state.lock(
                 [&](ImGuiMenu::State& state)

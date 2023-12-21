@@ -63,7 +63,8 @@ vec4 calculatePixelColor(const Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    const uint bound = 4;
+    const uint bound          = 8;
+    const uint SpreadDistance = 32;
 
     for (int i = 0; i < bound; ++i)
     {
@@ -75,7 +76,11 @@ vec4 calculatePixelColor(const Ray ray)
                     bestIntersection,
                     VoxelBrick_tryIntersect21(
                         lowbias32(i + lowbias32(j + lowbias32(k))) % 64,
-                        vec3(i * 8, j * 8, k * 8) - vec3(bound / 2) * 8,
+                        vec3(
+                            i * SpreadDistance,
+                            j * SpreadDistance,
+                            k * SpreadDistance)
+                            - vec3(bound / 2) * SpreadDistance,
                         ray));
             }
         }
