@@ -7,8 +7,22 @@
 #include <util/log.hpp>
 #include <util/noise.hpp>
 
-int main()
+bool verdigris_forceValidation = false;
+
+int main(int argc, char** argv)
 {
+    for (int i = 0; i < argc; ++i)
+    {
+        std::puts(argv[i]);
+
+        if (std::strcmp("--force-validation", argv[i]) == 0)
+        {
+            verdigris_forceValidation = true;
+
+            std::puts("Validation Forced");
+        }
+    }
+
     util::installGlobalLoggerRacy();
 
 #ifdef NDEBUG

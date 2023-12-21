@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <util/log.hpp>
 
+extern bool verdigris_forceValidation;
+
 namespace
 {
     VkBool32 debugMessengerCallback(
@@ -22,7 +24,7 @@ namespace
                             "UNASSIGNED-BestPractices-vkBindMemory-small-"
                             "dedicated-allocation")
                    == 0
-            || (VERDIGRIS_ENABLE_VALIDATION
+            || ((VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
                 && message.find("Validation Warning: [ "
                                 "UNASSIGNED-BestPractices-vkCreateInstance-"
                                 "specialuse-extension-debugging ]")
@@ -121,7 +123,7 @@ namespace gfx::vulkan
 
         const std::vector<const char*> instanceLayers = []
         {
-            if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+            if (VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
             {
                 for (vk::LayerProperties layer :
                      vk::enumerateInstanceLayerProperties())
@@ -149,7 +151,7 @@ namespace gfx::vulkan
                 VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #endif // __APPLE__
 
-            if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+            if (VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
             {
                 temp.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 temp.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
@@ -178,18 +180,20 @@ namespace gfx::vulkan
 
         const vk::InstanceCreateInfo instanceCreateInfo {
             .sType {vk::StructureType::eInstanceCreateInfo},
-            .pNext {[&]
+            .pNext {
+                [&] -> const void*
+                {
+                    if (VERDIGRIS_ENABLE_VALIDATION
+                        || verdigris_forceValidation)
                     {
-                        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
-                        {
-                            return reinterpret_cast<const void*>( // NOLINT
-                                &validationFeaturesCreateInfo);
-                        }
-                        else
-                        {
-                            return nullptr;
-                        }
-                    }()},
+                        return reinterpret_cast<const void*>( // NOLINT
+                            &validationFeaturesCreateInfo);
+                    }
+                    else
+                    {
+                        return nullptr;
+                    }
+                }()},
             .flags {
 #ifdef __APPLE__
                 vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR,
@@ -208,7 +212,8 @@ namespace gfx::vulkan
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*this->instance);
 
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION) // or force validation
+        if (VERDIGRIS_ENABLE_VALIDATION
+            || verdigris_forceValidation) // or force validation
         {
             this->debug_messenger =
                 this->instance->createDebugUtilsMessengerEXTUnique(

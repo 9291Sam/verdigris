@@ -63,7 +63,7 @@ vec4 calculatePixelColor(const Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    const uint bound = 8;
+    const uint bound = 4;
 
     for (int i = 0; i < bound; ++i)
     {

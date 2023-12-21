@@ -168,7 +168,7 @@ target_compile_definitions(verdigris PUBLIC VERDIGRIS_VERSION_TWEAK=${PROJECT_VE
 
 target_compile_definitions(verdigris PUBLIC VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 target_compile_definitions(verdigris PUBLIC VULKAN_HPP_NO_CONSTRUCTORS=1)
-target_compile_definitions(verdigris PUBLIC VK_NO_PROTOTYPES=1)
+# target_compile_definitions(verdigris PUBLIC VK_NO_PROTOTYPES=1)
 target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 
 
@@ -177,7 +177,7 @@ target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_definitions(verdigris PUBLIC VERDIGRIS_ENABLE_VALIDATION=1)
 else()
-    target_compile_definitions(verdigris PUBLIC VERDIGRIS_ENABLE_VALIDATION=1)
+    target_compile_definitions(verdigris PUBLIC VERDIGRIS_ENABLE_VALIDATION=0)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
