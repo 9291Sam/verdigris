@@ -63,20 +63,36 @@ vec4 calculatePixelColor(const Ray ray)
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    const uint bound = 24;
+    const uint bound = 8;
 
     for (int i = 0; i < bound; ++i)
     {
         for (int j = 0; j < bound; ++j)
         {
-            propagateIntersection(
-                bestIntersection,
-                VoxelBrick_tryIntersect21(
-                    lowbias32(j + lowbias32(i)) % 64,
-                    vec3(i * 8, 0, j * 8) - vec3(bound / 2, 0, bound / 2) * 8,
-                    ray));
+            for (int k = 0; k < bound; ++k)
+            {
+                propagateIntersection(
+                    bestIntersection,
+                    VoxelBrick_tryIntersect21(
+                        lowbias32(i + lowbias32(j + lowbias32(k))) % 64,
+                        vec3(i * 8, j * 8, k * 8) - vec3(bound / 2) * 8,
+                        ray));
+            }
         }
     }
+
+    // for (int i = 0; i < bound; ++i)
+    // {
+    //     for (int j = 0; j < bound; ++j)
+    //     {
+    //         propagateIntersection(
+    //             bestIntersection,
+    //             VoxelBrick_tryIntersect21(
+    //                 lowbias32(j + lowbias32(i)) % 64,
+    //                 vec3(i * 8, 0, j * 8) - vec3(bound / 2, 0, bound / 2) *
+    //                 8, ray));
+    //     }
+    // }
 
     // propagateIntersection(
     //     bestIntersection, VoxelBrick_tryIntersect21(0, vec3(0.0), ray));

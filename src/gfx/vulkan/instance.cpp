@@ -151,7 +151,6 @@ namespace gfx::vulkan
 
             if constexpr (VERDIGRIS_ENABLE_VALIDATION)
             {
-                temp.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
                 temp.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 temp.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
             }
@@ -209,14 +208,15 @@ namespace gfx::vulkan
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*this->instance);
 
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
-        {
-            this->debug_messenger =
-                this->instance->createDebugUtilsMessengerEXTUnique(
-                    debugUtilsCreateInfo);
+        // if constexpr (VERDIGRIS_ENABLE_VALIDATION) // or force validation
+        // layers argument
+        // {
+        this->debug_messenger =
+            this->instance->createDebugUtilsMessengerEXTUnique(
+                debugUtilsCreateInfo);
 
-            util::logLog("Enabled validation layers");
-        }
+        util::logLog("Enabled validation layers");
+        // }
     }
 
     Instance::~Instance() = default;
