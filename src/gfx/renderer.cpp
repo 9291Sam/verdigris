@@ -289,6 +289,7 @@ namespace gfx
             this->device->asLogicalDevice(),
             this->swapchain->getExtent(),
             vk::Format::eD32Sfloat,
+            vk::ImageLayout::eUndefined,
             vk::ImageUsageFlagBits::eDepthStencilAttachment,
             vk::ImageAspectFlagBits::eDepth,
             vk::ImageTiling::eOptimal,

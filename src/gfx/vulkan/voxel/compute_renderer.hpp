@@ -70,6 +70,7 @@ namespace gfx::vulkan::voxel
         std::mt19937 generator;
         std::size_t  foo;
 
+        bool is_first_pass;
         // fixed world
         // dynamic size
         // dynamic world

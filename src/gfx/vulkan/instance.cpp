@@ -21,7 +21,12 @@ namespace
             || message.find("Validation Performance Warning: [ "
                             "UNASSIGNED-BestPractices-vkBindMemory-small-"
                             "dedicated-allocation")
-                   == 0)
+                   == 0
+            || (VERDIGRIS_ENABLE_VALIDATION
+                && message.find("Validation Warning: [ "
+                                "UNASSIGNED-BestPractices-vkCreateInstance-"
+                                "specialuse-extension-debugging ]")
+                       == 0))
         {
             return vk::False;
         }
@@ -65,15 +70,6 @@ namespace gfx::vulkan
         // const std::array<vk::ValidationFeatureDisableEXT, 0>
         //     disabledFeatures {};
 
-        const vk::ValidationFeaturesEXT validationFeaturesCreateInfo {
-            .sType {vk::StructureType::eValidationFeaturesEXT},
-            .pNext {nullptr},
-            .enabledValidationFeatureCount {enabledFeatures.size()},
-            .pEnabledValidationFeatures {enabledFeatures.data()},
-            .disabledValidationFeatureCount {0},
-            .pDisabledValidationFeatures {nullptr},
-        };
-
         //         VkStructureType
         // const void*
         // uint32_t
@@ -83,7 +79,7 @@ namespace gfx::vulkan
 
         const vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
             .sType {vk::StructureType::eDebugUtilsMessengerCreateInfoEXT},
-            .pNext {static_cast<const void*>(&validationFeaturesCreateInfo)},
+            .pNext {},
             .flags {},
             .messageSeverity {
                 vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
@@ -94,6 +90,15 @@ namespace gfx::vulkan
                 | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance},
             .pfnUserCallback {debugMessengerCallback},
             .pUserData {nullptr},
+        };
+
+        const vk::ValidationFeaturesEXT validationFeaturesCreateInfo {
+            .sType {vk::StructureType::eValidationFeaturesEXT},
+            .pNext {static_cast<const void*>(&debugUtilsCreateInfo)},
+            .enabledValidationFeatureCount {enabledFeatures.size()},
+            .pEnabledValidationFeatures {enabledFeatures.data()},
+            .disabledValidationFeatureCount {0},
+            .pDisabledValidationFeatures {nullptr},
         };
 
         const vk::ApplicationInfo applicationInfo {
@@ -179,7 +184,7 @@ namespace gfx::vulkan
                         if constexpr (VERDIGRIS_ENABLE_VALIDATION)
                         {
                             return reinterpret_cast<const void*>( // NOLINT
-                                &debugUtilsCreateInfo);
+                                &validationFeaturesCreateInfo);
                         }
                         else
                         {

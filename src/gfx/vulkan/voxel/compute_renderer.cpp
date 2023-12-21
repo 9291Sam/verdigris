@@ -45,6 +45,7 @@ namespace gfx::vulkan::voxel
               this->device->asLogicalDevice(),
               extent,
               vk::Format::eR8G8B8A8Snorm,
+              vk::ImageLayout::eUndefined,
               vk::ImageUsageFlagBits::eSampled
                   | vk::ImageUsageFlagBits::eStorage, //  It's similar to trying to save a screenshot, look at Sascha's example on that.
               vk::ImageAspectFlagBits::eColor,
@@ -54,6 +55,7 @@ namespace gfx::vulkan::voxel
         , camera {Camera {glm::vec3 {}}}
         , generator {std::random_device {}()}
         , foo {0}
+        , is_first_pass {true}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -159,61 +161,62 @@ namespace gfx::vulkan::voxel
         this->device->asLogicalDevice().updateDescriptorSets(
             setUpdateInfo, nullptr);
 
-        const vk::FenceCreateInfo fenceCreateInfo {
-            .sType {vk::StructureType::eFenceCreateInfo},
-            .pNext {nullptr},
-            .flags {},
-        };
+        // const vk::FenceCreateInfo fenceCreateInfo {
+        //     .sType {vk::StructureType::eFenceCreateInfo},
+        //     .pNext {nullptr},
+        //     .flags {},
+        // };
 
-        vk::UniqueFence endTransferFence =
-            this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
+        // vk::UniqueFence endTransferFence =
+        //     this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
 
-        this->device->accessQueue(
-            vk::QueueFlagBits::eCompute,
-            [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
-            {
-                const vk::CommandBufferBeginInfo beginInfo {
-                    .sType {vk::StructureType::eCommandBufferBeginInfo},
-                    .pNext {nullptr},
-                    .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-                    .pInheritanceInfo {nullptr},
-                };
+        // this->device->accessQueue(
+        //     vk::QueueFlagBits::eCompute,
+        //     [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+        //     {
+        //         const vk::CommandBufferBeginInfo beginInfo {
+        //             .sType {vk::StructureType::eCommandBufferBeginInfo},
+        //             .pNext {nullptr},
+        //             .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
+        //             .pInheritanceInfo {nullptr},
+        //         };
 
-                commandBuffer.begin(beginInfo);
+        //         commandBuffer.begin(beginInfo);
 
-                // we need to change the layout on the first time
-                this->output_image.transitionLayout(
-                    commandBuffer,
-                    vk::ImageLayout::eUndefined,
-                    vk::ImageLayout::eShaderReadOnlyOptimal,
-                    vk::PipelineStageFlagBits::eComputeShader,
-                    vk::PipelineStageFlagBits::eComputeShader,
-                    vk::AccessFlagBits::eNone,
-                    vk::AccessFlagBits::eShaderRead);
+        //         // we need to change the layout on the first time
+        //         this->output_image.transitionLayout(
+        //             commandBuffer,
+        //             vk::ImageLayout::eUndefined,
+        //             vk::ImageLayout::eShaderReadOnlyOptimal,
+        //             vk::PipelineStageFlagBits::eComputeShader,
+        //             vk::PipelineStageFlagBits::eComputeShader,
+        //             vk::AccessFlagBits::eNone,
+        //             vk::AccessFlagBits::eShaderRead);
 
-                commandBuffer.end();
+        //         commandBuffer.end();
 
-                const vk::SubmitInfo submitInfo {
-                    .sType {vk::StructureType::eSubmitInfo},
-                    .pNext {nullptr},
-                    .waitSemaphoreCount {0},
-                    .pWaitSemaphores {nullptr},
-                    .pWaitDstStageMask {nullptr},
-                    .commandBufferCount {1},
-                    .pCommandBuffers {&commandBuffer},
-                    .signalSemaphoreCount {0},
-                    .pSignalSemaphores {nullptr},
-                };
+        //         const vk::SubmitInfo submitInfo {
+        //             .sType {vk::StructureType::eSubmitInfo},
+        //             .pNext {nullptr},
+        //             .waitSemaphoreCount {0},
+        //             .pWaitSemaphores {nullptr},
+        //             .pWaitDstStageMask {nullptr},
+        //             .commandBufferCount {1},
+        //             .pCommandBuffers {&commandBuffer},
+        //             .signalSemaphoreCount {0},
+        //             .pSignalSemaphores {nullptr},
+        //         };
 
-                queue.submit(submitInfo, *endTransferFence);
-            });
+        //         queue.submit(submitInfo, *endTransferFence);
+        //     });
 
-        const vk::Result result = this->device->asLogicalDevice().waitForFences(
-            *endTransferFence, static_cast<vk::Bool32>(true), -1);
+        // const vk::Result result =
+        // this->device->asLogicalDevice().waitForFences(
+        //     *endTransferFence, static_cast<vk::Bool32>(true), -1);
 
-        util::assertFatal(
-            result == vk::Result::eSuccess,
-            "Failed to wait for image trnasfer");
+        // util::assertFatal(
+        //     result == vk::Result::eSuccess,
+        //     "Failed to wait for image trnasfer");
 
         static constexpr std::array<gfx::vulkan::Vertex, 8> Vertices {
             gfx::vulkan::Vertex {
@@ -380,15 +383,30 @@ namespace gfx::vulkan::voxel
             *this->set,
             {});
 
-        this->output_image.transitionLayout(
-            commandBuffer,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            vk::ImageLayout::eGeneral,
-            vk::PipelineStageFlagBits::eComputeShader,
-            vk::PipelineStageFlagBits::eComputeShader,
-            vk::AccessFlagBits::eShaderRead,
-            // | vk::AccessFlagBits::eInputAttachmentRead,
-            vk::AccessFlagBits::eShaderWrite);
+        if (this->is_first_pass)
+        {
+            this->output_image.transitionLayout(
+                commandBuffer,
+                vk::ImageLayout::eUndefined,
+                vk::ImageLayout::eGeneral,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::AccessFlagBits::eShaderRead,
+                vk::AccessFlagBits::eShaderWrite);
+
+            this->is_first_pass = false;
+        }
+        else
+        {
+            this->output_image.transitionLayout(
+                commandBuffer,
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::ImageLayout::eGeneral,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::AccessFlagBits::eShaderRead,
+                vk::AccessFlagBits::eShaderWrite);
+        }
 
         auto [x, y] = this->output_image.getExtent();
         commandBuffer.dispatch(
@@ -404,16 +422,6 @@ namespace gfx::vulkan::voxel
             vk::PipelineStageFlagBits::eFragmentShader,
             vk::AccessFlagBits::eShaderWrite,
             vk::AccessFlagBits::eShaderRead);
-
-        this->output_image.transitionLayout(
-            commandBuffer,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            vk::PipelineStageFlagBits::eFragmentShader,
-            vk::PipelineStageFlagBits::eFragmentShader,
-            vk::AccessFlagBits::eShaderRead,
-            vk::AccessFlagBits::eShaderRead
-                | vk::AccessFlagBits::eInputAttachmentRead);
     }
 
     const vulkan::Image2D& ComputeRenderer::getImage() const

@@ -111,6 +111,10 @@ namespace gfx::vulkan
        // #endif
             };
 
+            // useless function call, silences a warning and its not in the
+            // critical path
+            std::ignore = this->physical_device.getFeatures();
+
             vk::PhysicalDeviceFeatures deviceFeatures = {};
             deviceFeatures.samplerAnisotropy          = vk::True;
             deviceFeatures.fillModeNonSolid           = vk::True;

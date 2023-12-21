@@ -11,6 +11,7 @@ namespace gfx::vulkan
         vk::Device              device,
         vk::Extent2D            extent_,
         vk::Format              format_,
+        vk::ImageLayout         layout_,
         vk::ImageUsageFlags     usage,
         vk::ImageAspectFlags    aspect_,
         vk::ImageTiling         tiling,
@@ -19,7 +20,7 @@ namespace gfx::vulkan
         , extent {extent_}
         , format {format_}
         , aspect {aspect_}
-        , layout {vk::ImageLayout::eUndefined}
+        , layout {layout_}
         , image {nullptr}
         , memory {nullptr}
         , view {nullptr}

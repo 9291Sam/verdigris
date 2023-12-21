@@ -22,6 +22,7 @@ namespace gfx::vulkan
             vk::Device,
             vk::Extent2D,
             vk::Format,
+            vk::ImageLayout,
             vk::ImageUsageFlags,
             vk::ImageAspectFlags,
             vk::ImageTiling,
