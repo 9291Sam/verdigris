@@ -208,15 +208,14 @@ namespace gfx::vulkan
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*this->instance);
 
-        // if constexpr (VERDIGRIS_ENABLE_VALIDATION) // or force validation
-        // layers argument
-        // {
-        this->debug_messenger =
-            this->instance->createDebugUtilsMessengerEXTUnique(
-                debugUtilsCreateInfo);
+        if constexpr (VERDIGRIS_ENABLE_VALIDATION) // or force validation
+        {
+            this->debug_messenger =
+                this->instance->createDebugUtilsMessengerEXTUnique(
+                    debugUtilsCreateInfo);
 
-        util::logLog("Enabled validation layers");
-        // }
+            util::logLog("Enabled validation layers");
+        }
     }
 
     Instance::~Instance() = default;
