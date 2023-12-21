@@ -4,7 +4,6 @@
 #include "glm/geometric.hpp"
 #include "misc.hpp"
 #include <cmath>
-#include <concepts>
 #include <gcem.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -27,9 +26,7 @@ namespace util
     public:
         // implementation of UniformRandomBitGenerator
         // https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
-
-        // This allows for interfacing with standard RandomNumberDistribution
-        // such as std::uniform_real_distribution
+        // NOLINTBEGIN
 
         using result_type = I;
 
@@ -47,6 +44,7 @@ namespace util
         {
             return this->next();
         }
+        // NOLINTEND
 
     public:
 
@@ -66,8 +64,8 @@ namespace util
 
         constexpr I next()
         {
-            constexpr I width {8 * sizeof(I)};
-            constexpr I offset {width / 2};
+            constexpr I Width {8 * sizeof(I)};
+            constexpr I Offset {Width / 2};
 
             const I prev = this->seed;
 
@@ -75,7 +73,7 @@ namespace util
 
             I output = this->seed;
 
-            output ^= prev << offset | prev >> (width - offset);
+            output ^= prev << Offset | prev >> (Width - Offset);
 
             return output;
         }
@@ -155,30 +153,30 @@ namespace util
             static_cast<std::int64_t>(std::floor(vector.y)),
         };
 
-        const glm::vec<2, std::int64_t> TopRightGrid {
+        const glm::vec<2, std::int64_t> topRightGrid {
             bottomLeftGrid + glm::vec<2, std::int64_t> {1LL, 1LL}};
 
-        const glm::vec<2, std::int64_t> BottomRightGrid {
-            bottomLeftGrid.x, TopRightGrid.y};
+        const glm::vec<2, std::int64_t> bottomRightGrid {
+            bottomLeftGrid.x, topRightGrid.y};
 
-        const glm::vec<2, std::int64_t> TopLeftGrid {
-            TopRightGrid.x, bottomLeftGrid.y};
+        const glm::vec<2, std::int64_t> topLeftGrid {
+            topRightGrid.x, bottomLeftGrid.y};
 
-        const glm::vec2 OffsetIntoGrid {
+        const glm::vec2 offsetIntoGrid {
             vector - static_cast<glm::vec2>(bottomLeftGrid)};
 
-        const float LeftGradient = quarticInterpolate(
+        const float leftGradient = quarticInterpolate(
             dotGridGradient(bottomLeftGrid, vector, seed),
-            dotGridGradient(TopLeftGrid, vector, seed),
-            OffsetIntoGrid.x);
+            dotGridGradient(topLeftGrid, vector, seed),
+            offsetIntoGrid.x);
 
-        const float RightGradient = quarticInterpolate(
-            dotGridGradient(BottomRightGrid, vector, seed),
-            dotGridGradient(TopRightGrid, vector, seed),
-            OffsetIntoGrid.x);
+        const float rightGradient = quarticInterpolate(
+            dotGridGradient(bottomRightGrid, vector, seed),
+            dotGridGradient(topRightGrid, vector, seed),
+            offsetIntoGrid.x);
 
         return quarticInterpolate(
-            LeftGradient, RightGradient, OffsetIntoGrid.y);
+            leftGradient, rightGradient, offsetIntoGrid.y);
     }
 
 } // namespace util

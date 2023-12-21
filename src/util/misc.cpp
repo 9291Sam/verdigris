@@ -1,9 +1,8 @@
 #include "misc.hpp"
 #include <cstdio>
 #include <tuple>
-#include <utility>
 
-[[noreturn]] void util::debugBreak()
+void util::debugBreak()
 {
     std::ignore = std::fputs("util::debugBreak()\n", stderr);
 #ifdef _MSC_VER
@@ -13,6 +12,4 @@
 #else
 #error Unsupported compiler
 #endif
-
-    std::unreachable();
 }

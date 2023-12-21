@@ -38,7 +38,7 @@ namespace gfx
             this->name,
             static_cast<std::string>(this->id),
             this->shouldDraw(),
-            static_cast<std::string>(this->transform.copy_inner()));
+            static_cast<std::string>(this->transform.copyInner()));
     }
 
     util::UUID Object::getUUID() const
@@ -244,7 +244,7 @@ void gfx::SimpleTriangulatedObject::bindAndDraw(
 
     vulkan::PushConstants pushConstants {
         .model_view_proj {camera.getPerspectiveMatrix(
-            this->renderer, this->transform.copy_inner())}};
+            this->renderer, this->transform.copyInner())}};
 
     commandBuffer.pushConstants<vulkan::PushConstants>(
         this->getCurrentPipelineLayout(),

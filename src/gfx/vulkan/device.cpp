@@ -52,8 +52,8 @@ namespace gfx::vulkan
                 });
         }
 
-        constexpr std::size_t                maxNumberOfQueues {128};
-        std::array<float, maxNumberOfQueues> queuePriorites {};
+        constexpr std::size_t                MaxNumberOfQueues {128};
+        std::array<float, MaxNumberOfQueues> queuePriorites {};
         std::fill(queuePriorites.begin(), queuePriorites.end(), 1.0f);
 
         // Collect queue information
@@ -153,7 +153,7 @@ namespace gfx::vulkan
         {
             for (std::size_t i = 0; i < q.queue_create_info.queueCount; ++i)
             {
-                constexpr std::array<vk::QueueFlags, 3> testableFlags {
+                constexpr std::array<vk::QueueFlags, 3> TestableFlags {
                     vk::QueueFlagBits::eGraphics,
                     vk::QueueFlagBits::eCompute,
                     vk::QueueFlagBits::eTransfer};
@@ -170,7 +170,7 @@ namespace gfx::vulkan
 
                 if (i == 0 && isFirstIteration)
                 {
-                    for (vk::QueueFlags f : testableFlags)
+                    for (vk::QueueFlags f : TestableFlags)
                     {
                         util::assertFatal(
                             static_cast<bool>(queuePtr->getFlags() & f),
@@ -183,7 +183,7 @@ namespace gfx::vulkan
                 }
                 else
                 {
-                    for (vk::QueueFlags f : testableFlags)
+                    for (vk::QueueFlags f : TestableFlags)
                     {
                         if (queuePtr->getFlags() & f)
                         {
@@ -214,7 +214,7 @@ namespace gfx::vulkan
             std::vector<vk::MemoryType> memoryTypes;
             std::vector<vk::MemoryHeap> memoryHeaps;
 
-            std::optional<std::size_t> idx_of_gpu_main_memory = std::nullopt;
+            std::optional<std::size_t> idxOfGpuMainMemory = std::nullopt;
 
             for (std::size_t i = 0; i < memoryProperties.memoryTypeCount; i++)
             {
@@ -236,18 +236,17 @@ namespace gfx::vulkan
                 if ((t.propertyFlags & desiredFlags) == desiredFlags)
                 {
                     util::assertWarn(
-                        !idx_of_gpu_main_memory.has_value(),
+                        !idxOfGpuMainMemory.has_value(),
                         "There should only be one memory pool with "
                         "`desiredFlags`!");
 
-                    idx_of_gpu_main_memory = t.heapIndex;
+                    idxOfGpuMainMemory = t.heapIndex;
                 }
             }
 
-            if (idx_of_gpu_main_memory.has_value())
+            if (idxOfGpuMainMemory.has_value())
             {
-                if (memoryProperties.memoryHeaps
-                        .at(idx_of_gpu_main_memory.value())
+                if (memoryProperties.memoryHeaps.at(idxOfGpuMainMemory.value())
                         .size
                     > 257 * 1024 * 1024) // NOLINT
                 {
@@ -348,7 +347,7 @@ namespace gfx::vulkan
         const std::function<void(vk::Queue, vk::CommandBuffer)>& func,
         bool resetCommandBuffer) const
     {
-        return this->queue_buffer_mutex->try_lock(
+        return this->queue_buffer_mutex->tryLock(
             [&](vk::Queue& queue, vk::UniqueCommandBuffer& commandBuffer)
             {
                 if (resetCommandBuffer)

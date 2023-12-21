@@ -122,7 +122,7 @@ namespace util
 #undef MAKE_ASSERT
 
     template<class... Ts>
-    struct panic
+    struct panic // NOLINT: we want to lie and pretend this is a function
     {
         panic( // NOLINT
             fmt::format_string<Ts...> fmt,

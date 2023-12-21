@@ -3,7 +3,6 @@
 #include <game/game.hpp>
 #include <gfx/renderer.hpp>
 #include <glm/common.hpp>
-#include <glm/gtx/string_cast.hpp>
 #include <util/log.hpp>
 #include <util/noise.hpp>
 
@@ -11,6 +10,7 @@ bool verdigris_forceValidation = false;
 
 int main(int argc, char** argv)
 {
+    // TODO: this is bad
     for (int i = 0; i < argc; ++i)
     {
         std::puts(argv[i]);

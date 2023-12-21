@@ -6,7 +6,6 @@
 #include <atomic>
 #include <bit>
 #include <cmath>
-#include <concepts>
 #include <span>
 #include <type_traits>
 
@@ -101,7 +100,7 @@ namespace util
         0xE197'51F3'0310'22E7, 0xB966'0FF1'13BF'1DE0, 0xC930'EA45'C754'05F5,
         0xC8D4'CF6B'9F88'40B3};
 
-    [[noreturn]] void debugBreak();
+    void debugBreak();
 
     template<class T>
     concept Integer = requires {
@@ -145,8 +144,9 @@ namespace util
 
         ~AtomicUniquePtr()
         {
-            delete /* NOLINT */ this->owned_t.exchange(
-                nullptr, std::memory_order_acq_rel);
+            delete this->owned_t.exchange( // NOLINT
+                nullptr,
+                std::memory_order_acq_rel);
         }
 
         AtomicUniquePtr(const AtomicUniquePtr&) = delete;
@@ -160,8 +160,9 @@ namespace util
         AtomicUniquePtr& operator= (const AtomicUniquePtr&) = delete;
         AtomicUniquePtr& operator= (AtomicUniquePtr&& other) noexcept
         {
-            delete /* NOLINT */ this->owned_t.exchange(
-                nullptr, std::memory_order_acq_rel);
+            delete this->owned_t.exchange( // NOLINT
+                nullptr,
+                std::memory_order_acq_rel);
 
             this->owned_t =
                 other.owned_t.exchange(nullptr, std::memory_order_acq_rel);
@@ -234,27 +235,26 @@ namespace util
     template<std::floating_point F>
     constexpr inline std::uint8_t convertLinearToSRGB(F value) noexcept
     {
-        const F ClampedValue =
+        const F clampedValue =
             std::clamp<F>(value, static_cast<F>(0.0), static_cast<F>(1.0));
 
         return static_cast<uint8_t>(
-            255.0f * std::pow(ClampedValue, 1.0f / 2.4f));
+            255.0f * std::pow(clampedValue, 1.0f / 2.4f));
     }
 
     constexpr inline float convertSRGBToLinear(std::uint8_t integer) noexcept
     {
-        const float IntegerAsFloatNormalized =
+        const float integerAsFloatNormalized =
             static_cast<float>(integer)
             / static_cast<float>(std::numeric_limits<std::uint8_t>::max());
 
-        return std::pow(IntegerAsFloatNormalized, 2.4f);
+        return std::pow(integerAsFloatNormalized, 2.4f);
     }
 
     template<class T>
-    constexpr inline T
-    map(T x, T in_min, T in_max, T out_min, T out_max) noexcept
+    constexpr inline T map(T x, T inMin, T inMax, T outMin, T outMax) noexcept
     {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+        return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
     }
 
     template<UnsignedInteger I>
@@ -292,7 +292,7 @@ namespace util
     constexpr inline void
     hashCombine(std::size_t& seed_, std::size_t hash_) noexcept
     {
-        hash_ += 0x9e3779b9 + (seed_ << 6) + (seed_ >> 2);
+        hash_ += 0x9e3779b9 + (seed_ << 6UZ) + (seed_ >> 2UZ);
         seed_ ^= hash_;
     }
 

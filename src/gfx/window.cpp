@@ -36,7 +36,7 @@ namespace gfx
     constexpr std::chrono::duration<float> MaximumSingleFireTime {0.01ms};
 
     Window::Window(
-        const std::map<Action, ActionInformation>& key_information_map,
+        const std::map<Action, ActionInformation>& keyInformationMap,
         vk::Extent2D                               size,
         const char*                                name)
         : window {nullptr}
@@ -74,7 +74,7 @@ namespace gfx
             this->window != nullptr, "Failed to create GLFW window!");
 
         // populate key maps
-        for (const auto [action, information] : key_information_map)
+        for (const auto [action, information] : keyInformationMap)
         {
             this->key_to_actions_map[information.key].push_back(action);
             this->action_to_maybe_active_time_map[action].store(
@@ -131,16 +131,16 @@ namespace gfx
         if (this->is_cursor_attached.load(Order::acquire)
             && this->ignore_frames.load(Order::acquire) == 0)
         {
-            const vk::Extent2D FramebufferSizePixels =
+            const vk::Extent2D framebufferSizePixels =
                 this->framebuffer_size.load(Order::acquire);
-            const Delta MouseDeltaPixels =
+            const Delta mouseDeltaPixels =
                 this->mouse_delta_pixels.load(Order::acquire);
 
             return Delta {
-                .x {MouseDeltaPixels.x
-                    / static_cast<float>(FramebufferSizePixels.width)},
-                .y {MouseDeltaPixels.y
-                    / static_cast<float>(FramebufferSizePixels.height)},
+                .x {mouseDeltaPixels.x
+                    / static_cast<float>(framebufferSizePixels.width)},
+                .y {mouseDeltaPixels.y
+                    / static_cast<float>(framebufferSizePixels.height)},
             };
         }
         else
@@ -244,7 +244,7 @@ namespace gfx
     void Window::endFrame()
     {
         const std::chrono::time_point<std::chrono::steady_clock>
-            StartEndFrameTime = std::chrono::steady_clock::now();
+            startEndFrameTime = std::chrono::steady_clock::now();
 
         // cull InteractionMethod::SinglePress that exist for more than the
         // Frame time
@@ -253,7 +253,7 @@ namespace gfx
         for (auto& [action, actionTime] : this->action_to_maybe_active_time_map)
         {
             if (this->action_interaction_map.at(action) == InteractionMethod::SinglePress
-                && actionTime.load(Order::acquire) - StartEndFrameTime < MaximumSingleFireTime)
+                && actionTime.load(Order::acquire) - startEndFrameTime < MaximumSingleFireTime)
             {
                 actionTime.store(NullTime, Order::release);
             }
@@ -278,19 +278,19 @@ namespace gfx
             &currentMousePositionDoubles.first,
             &currentMousePositionDoubles.second);
 
-        const Delta CurrentMousePosition {
+        const Delta currentMousePosition {
             static_cast<float>(currentMousePositionDoubles.first),
             static_cast<float>(currentMousePositionDoubles.second)};
-        const Delta PreviousMousePosition {
+        const Delta previousMousePosition {
             this->previous_mouse_position.load(Order::acquire)};
 
         this->mouse_delta_pixels.store(
-            {CurrentMousePosition.x - PreviousMousePosition.x,
-             CurrentMousePosition.y - PreviousMousePosition.y},
+            {currentMousePosition.x - previousMousePosition.x,
+             currentMousePosition.y - previousMousePosition.y},
             Order::release);
 
         this->previous_mouse_position.store(
-            CurrentMousePosition, Order::release);
+            currentMousePosition, Order::release);
 
         // Delta time processing
         const auto currentTime = std::chrono::steady_clock::now();
@@ -362,8 +362,8 @@ namespace gfx
 
     void Window::mouseButtonCallback(
         GLFWwindow*          glfwWindow,
-        int                  button,
-        int                  action,
+        int                  button,    // NOLINT
+        int                  action,    // NOLINT
         [[maybe_unused]] int modifiers) // NOLINT
     {
         gfx::Window* window =

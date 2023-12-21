@@ -64,7 +64,7 @@ namespace gfx::vulkan
     {
         const GraphicsPipeline* maybePipeline = nullptr;
 
-        this->graphics_pipeline_cache.read_lock(
+        this->graphics_pipeline_cache.readLock(
             [pipelineToGet, &maybePipeline](const std::unordered_map<
                                             GraphicsPipelineType,
                                             GraphicsPipeline>& cache)
@@ -81,7 +81,7 @@ namespace gfx::vulkan
         }
         else // we probablly to create the pipeline
         {
-            this->graphics_pipeline_cache.write_lock(
+            this->graphics_pipeline_cache.writeLock(
                 [pipelineToGet, &maybePipeline, this](
                     std::unordered_map<GraphicsPipelineType, GraphicsPipeline>&
                         cache)
@@ -109,7 +109,7 @@ namespace gfx::vulkan
     {
         const ComputePipeline* maybePipeline = nullptr;
 
-        this->compute_pipeline_cache.read_lock(
+        this->compute_pipeline_cache.readLock(
             [pipelineToGet, &maybePipeline](
                 const std::unordered_map<ComputePipelineType, ComputePipeline>&
                     cache)
@@ -126,7 +126,7 @@ namespace gfx::vulkan
         }
         else // we probablly to create the pipeline
         {
-            this->compute_pipeline_cache.write_lock(
+            this->compute_pipeline_cache.writeLock(
                 [pipelineToGet, &maybePipeline, this](
                     std::unordered_map<ComputePipelineType, ComputePipeline>&
                         cache)

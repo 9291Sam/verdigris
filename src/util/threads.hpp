@@ -33,7 +33,7 @@ namespace util
             std::apply(func, this->tuple);
         }
 
-        bool try_lock(std::invocable<T&...> auto func) const
+        bool tryLock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
@@ -49,7 +49,7 @@ namespace util
             }
         }
 
-        std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
+        std::tuple_element_t<0, std::tuple<T...>> copyInner() const
             requires (sizeof...(T) == 1)
         {
             using V = std::tuple_element_t<0, std::tuple<T...>>;
@@ -85,7 +85,7 @@ namespace util
         RwLock& operator= (const RwLock&)     = delete;
         RwLock& operator= (RwLock&&) noexcept = default;
 
-        void write_lock(std::invocable<T&...> auto func) const
+        void writeLock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->rwlock};
@@ -93,7 +93,7 @@ namespace util
             std::apply(func, this->tuple);
         }
 
-        bool try_write_lock(std::invocable<T&...> auto func) const
+        bool tryWriteLock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->rwlock, std::defer_lock};
@@ -109,7 +109,7 @@ namespace util
             }
         }
 
-        void read_lock(std::invocable<const T&...> auto func) const
+        void readLock(std::invocable<const T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::shared_lock lock {this->rwlock};
@@ -117,7 +117,7 @@ namespace util
             std::apply(func, this->tuple);
         }
 
-        bool try_read_lock(std::invocable<const T&...> auto func) const
+        bool tryReadLock(std::invocable<const T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::shared_lock lock {this->rwlock, std::defer_lock};
@@ -133,14 +133,14 @@ namespace util
             }
         }
 
-        std::tuple_element_t<0, std::tuple<T...>> copy_inner() const
+        std::tuple_element_t<0, std::tuple<T...>> copyInner() const
             requires (sizeof...(T) == 1)
         {
             using V = std::tuple_element_t<0, std::tuple<T...>>;
 
             V output {};
 
-            this->read_lock(
+            this->readLock(
                 [&](const V& data)
                 {
                     output = data;
