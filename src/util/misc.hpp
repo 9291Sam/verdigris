@@ -215,6 +215,9 @@ namespace util
     template<class Func>
     using Fn = Func*;
 
+    template<class T, std::size_t S>
+    using CubicArray = std::array<std::array<std::array<T, S>, S>, S>;
+
     template<Integer I>
     constexpr inline I exp(I base, I exp)
     {
@@ -275,6 +278,14 @@ namespace util
 
     template<class T>
     constexpr std::span<std::byte, sizeof(T)> asBytes(T* t) noexcept
+        requires std::is_trivially_copyable_v<T>
+    {
+        return std::span<std::byte, sizeof(T)> {
+            reinterpret_cast<std::byte*>(t), sizeof(T)}; // NOLINT
+    }
+
+    template<class T>
+    constexpr std::span<const std::byte, sizeof(T)> asBytes(const T* t) noexcept
         requires std::is_trivially_copyable_v<T>
     {
         return std::span<std::byte, sizeof(T)> {

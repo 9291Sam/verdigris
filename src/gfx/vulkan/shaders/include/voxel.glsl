@@ -12,7 +12,8 @@ struct Voxel
     uint8_t srgb_g;
     uint8_t srgb_b;
 
-    /// [0, 127]   - Transluscent
+    /// 0          - Invisible / Invalid
+    /// [1, 127]   - Translucent
     /// 128        - Opaque
     /// [129, 255] - Emissive
     uint8_t alpha_or_emissive;

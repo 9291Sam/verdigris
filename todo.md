@@ -21,4 +21,7 @@ seperate toggles for verdigris validation and vulkan validation
 
 bad apple as a tech demo
 
-proper argument parser (console commands and command line args)
+proper argument parser (console commands and command line args)\
+
+track where the player is moving and if theyre going to need to completely reallocate where the octree is centered do that 
+at the same time this also allows for you to deal with a floating origin just ifne 

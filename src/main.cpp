@@ -1,4 +1,5 @@
 #include "gfx/object.hpp"
+#include <engine/event.hpp>
 #include <engine/settings.hpp>
 #include <future>
 #include <game/game.hpp>
@@ -18,8 +19,6 @@ int main(int argc, char** argv)
         util::installGlobalLoggerRacy();
         // TODO: remove global state
         parseCommandLineArgumentsAndUpdateSettings(argc, argv);
-
-        // engine::CommandDispatcher
 
         gfx::Renderer renderer {};
         game::Game    game {renderer};

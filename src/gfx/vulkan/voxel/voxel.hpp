@@ -1,8 +1,9 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 #define SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 
-#include <array>
 #include <cstdint>
+#include <engine/settings.hpp>
+#include <util/misc.hpp>
 
 namespace gfx::vulkan::voxel
 {
@@ -12,7 +13,8 @@ namespace gfx::vulkan::voxel
         std::uint8_t srgb_g;
         std::uint8_t srgb_b;
 
-        /// [0, 127]   - Translucent
+        /// 0          - Invisible / Invalid
+        /// [1, 127]   - Translucent
         /// 128        - Opaque
         /// [129, 255] - Emissive
         std::uint8_t alpha_or_emissive;
@@ -32,8 +34,36 @@ namespace gfx::vulkan::voxel
 
     struct Brick
     {
-        std::array<std::array<std::array<Voxel, 8>, 8>, 8> voxels;
+        static constexpr std::size_t EdgeLength = 8;
+
+        util::CubicArray<Voxel, EdgeLength> voxels;
     };
+
+    static_assert(sizeof(Brick) == 4096); // one page (on a normal system)
+
+    // TODO: move to file
+    union VoxelOrIndex
+    {
+    public:
+        explicit VoxelOrIndex(Voxel);
+        explicit VoxelOrIndex(std::uint32_t);
+
+        [[nodiscard]] std::uint32_t getIndex() const;
+        [[nodiscard]] Voxel         getVoxel() const;
+        [[nodiscard]] bool          isVoxel() const;
+
+        void setIndex(std::uint32_t);
+        void setVoxel(Voxel);
+
+    private:
+        Voxel voxel;
+        struct
+        {
+            std::uint32_t _padding; // NOLINT
+            std::uint32_t index;
+        };
+    };
+
 } // namespace gfx::vulkan::voxel
 
 #endif // SRC_GFX_VULKAN_VOXEL_HPP
