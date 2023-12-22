@@ -25,3 +25,5 @@ proper argument parser (console commands and command line args)\
 
 track where the player is moving and if theyre going to need to completely reallocate where the octree is centered do that 
 at the same time this also allows for you to deal with a floating origin just ifne 
+
+add etst in the raycasting shader to cehck if that pixel is the ceter of teh screen if so then you can put that in a buffer that the cpu reads tosee were the center of the world is 

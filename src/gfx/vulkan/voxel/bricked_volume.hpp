@@ -4,15 +4,12 @@
 #include "voxel.hpp"
 #include <cstddef>
 #include <gfx/vulkan/buffer.hpp>
-#include <glm/vec4.hpp>
 
 namespace gfx::vulkan::voxel
 {
     class BrickedVolume
     {
     public:
-        using Position = glm::vec<3, std::size_t>;
-
         struct DrawingArrays
         {
             vulkan::Buffer* brick_pointer_buffer;
@@ -21,7 +18,7 @@ namespace gfx::vulkan::voxel
     public:
 
         explicit BrickedVolume(Allocator*, std::size_t edgeLengthVoxels);
-        ~BrickedVolume();
+        ~BrickedVolume() = default;
 
         BrickedVolume(const BrickedVolume&)             = delete;
         BrickedVolume(BrickedVolume&&)                  = delete;
@@ -31,6 +28,7 @@ namespace gfx::vulkan::voxel
         void                writeVoxel(Position, Voxel);
         [[nodiscard]] Voxel readVoxel(Position) const;
 
+        void          updateGPU();
         DrawingArrays draw();
 
     private:
@@ -38,8 +36,9 @@ namespace gfx::vulkan::voxel
         vulkan::Buffer            brick_pointer_buffer;
         std::vector<VoxelOrIndex> brick_pointer_data;
 
-        vulkan::Buffer            brick_buffer;
-        std::vector<VoxelOrIndex> brick_data;
+        vulkan::Buffer     brick_buffer;
+        std::vector<Brick> brick_data;
+        std::size_t        next_free_brick_index;
 
         std::size_t edge_length_bricks;
     };

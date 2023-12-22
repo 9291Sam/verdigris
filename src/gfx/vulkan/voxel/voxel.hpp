@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <engine/settings.hpp>
+#include <glm/common.hpp>
 #include <util/misc.hpp>
 
 namespace gfx::vulkan::voxel
@@ -32,11 +33,23 @@ namespace gfx::vulkan::voxel
 
     static_assert(sizeof(Voxel) == sizeof(std::uint64_t));
 
+    using Position = glm::vec<3, std::size_t>;
+
     struct Brick
     {
         static constexpr std::size_t EdgeLength = 8;
 
         util::CubicArray<Voxel, EdgeLength> voxels;
+
+        Voxel& operator[] (Position p)
+        {
+            return this->voxels[p.x][p.y][p.z]; // NOLINT
+        }
+
+        Voxel operator[] (Position p) const
+        {
+            return this->voxels[p.x][p.y][p.z]; // NOLINT
+        }
     };
 
     static_assert(sizeof(Brick) == 4096); // one page (on a normal system)
@@ -45,12 +58,16 @@ namespace gfx::vulkan::voxel
     union VoxelOrIndex
     {
     public:
+        explicit VoxelOrIndex();
         explicit VoxelOrIndex(Voxel);
         explicit VoxelOrIndex(std::uint32_t);
 
         [[nodiscard]] std::uint32_t getIndex() const;
         [[nodiscard]] Voxel         getVoxel() const;
-        [[nodiscard]] bool          isVoxel() const;
+
+        [[nodiscard]] bool isVoxel() const;
+        [[nodiscard]] bool isIndex() const;
+        [[nodiscard]] bool isValid() const;
 
         void setIndex(std::uint32_t);
         void setVoxel(Voxel);
