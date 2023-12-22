@@ -1,7 +1,6 @@
 #include "descriptors.hpp"
-#include "device.hpp"
 #include "util/log.hpp"
-#include <map>
+#include <engine/settings.hpp>
 
 namespace gfx::vulkan
 {
@@ -104,7 +103,8 @@ namespace gfx::vulkan
 
     DescriptorPool::~DescriptorPool()
     {
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             if (this->available_descriptors != this->inital_descriptors)
             {

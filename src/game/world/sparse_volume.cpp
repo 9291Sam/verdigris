@@ -2,6 +2,7 @@
 #include "game/world/sparse_volume.hpp"
 #include "glm/gtx/string_cast.hpp"
 #include "util/misc.hpp"
+#include <engine/settings.hpp>
 #include <ranges>
 #include <util/log.hpp>
 #include <variant>
@@ -117,7 +118,8 @@ namespace game::world
 
     Voxel& VoxelVolume::accessFromLocalPosition(Position localPosition)
     {
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             util::assertFatal(
                 localPosition.x >= 0 && localPosition.x < VoxelVolume::Extent,
@@ -260,7 +262,8 @@ namespace game::world
 
     Voxel& SparseVoxelVolume::accessFromLocalPosition(Position sparsePosition)
     {
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             util::assertFatal(
                 sparsePosition.x >= SparseVoxelVolume::VoxelMinimum

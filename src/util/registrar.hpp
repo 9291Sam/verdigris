@@ -4,6 +4,7 @@
 #include "concurrentqueue.h"
 #include "util/log.hpp"
 #include <atomic>
+#include <engine/settings.hpp>
 #include <new>
 #include <optional>
 #include <unordered_map>
@@ -46,7 +47,9 @@ namespace util
                 {
                     auto& [key, value] = *dequeueKeyValue;
 
-                    if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+                    if (engine::getSettings()
+                            .lookupSetting<
+                                engine::Setting::EnableAppValidation>())
                     {
                         util::assertFatal(
                             !this->map.contains(key),
@@ -66,7 +69,9 @@ namespace util
                 std::optional<Key> dequeueKey;
                 while (this->keys_to_remove.try_dequeue(dequeueKey))
                 {
-                    if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+                    if (engine::getSettings()
+                            .lookupSetting<
+                                engine::Setting::EnableAppValidation>())
                     {
                         util::assertFatal(
                             this->map.contains(*dequeueKey),

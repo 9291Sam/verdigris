@@ -1,6 +1,7 @@
 #include "image.hpp"
 #include "allocator.hpp"
 #include "buffer.hpp"
+#include <engine/settings.hpp>
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
 
@@ -131,7 +132,8 @@ namespace gfx::vulkan
         vk::AccessFlags        sourceAccess,
         vk::AccessFlags        destinationAccess)
     {
-        if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             util::assertFatal(
                 this->layout == from,

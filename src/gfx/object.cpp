@@ -6,7 +6,7 @@
 #include "vulkan/allocator.hpp"
 #include <atomic>
 #include <compare>
-#include <stdexcept>
+#include <engine/settings.hpp>
 #include <util/log.hpp>
 
 namespace gfx
@@ -100,7 +100,8 @@ namespace gfx
 
             if (workingDescriptor != desiredDescriptor)
             {
-                if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+                if (engine::getSettings()
+                        .lookupSetting<engine::Setting::EnableAppValidation>())
                 {
                     util::assertFatal(
                         setsToBindIfRequired[idx]
@@ -226,7 +227,8 @@ void gfx::SimpleTriangulatedObject::bindAndDraw(
     BindState&        rendererState,
     const Camera&     camera) const
 {
-    if constexpr (VERDIGRIS_ENABLE_VALIDATION)
+    if (engine::getSettings()
+            .lookupSetting<engine::Setting::EnableAppValidation>())
     {
         util::assertFatal(
             this->vertex_buffer.has_value() && this->index_buffer.has_value(),
