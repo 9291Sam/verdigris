@@ -8,29 +8,26 @@
 namespace util
 {
 
-    namespace
+    const char* LoggingLevel_asString(LoggingLevel level) // NOLINT
     {
-        const char* LoggingLevel_asString(LoggingLevel level) // NOLINT
+        switch (level)
         {
-            switch (level)
-            {
-            case LoggingLevel::Trace:
-                return "Trace";
-            case LoggingLevel::Debug:
-                return "Debug";
-            case LoggingLevel::Log:
-                return " Log ";
-            case LoggingLevel::Warn:
-                return "Warn ";
-            case LoggingLevel::Fatal:
-                return "Fatal";
-            case LoggingLevel::Panic:
-                return "Panic";
-            default:
-                return "Unknown level";
-            };
-        }
-    } // namespace
+        case LoggingLevel::Trace:
+            return "Trace";
+        case LoggingLevel::Debug:
+            return "Debug";
+        case LoggingLevel::Log:
+            return " Log ";
+        case LoggingLevel::Warn:
+            return "Warn ";
+        case LoggingLevel::Fatal:
+            return "Fatal";
+        case LoggingLevel::Panic:
+            return "Panic";
+        default:
+            return "Unknown level";
+        };
+    }
 
     class Logger
     {
@@ -168,8 +165,8 @@ namespace util
 
     namespace
     {
-        std::atomic<Logger*>      LOGGER {nullptr};                  // NOLINT
-        std::atomic<LoggingLevel> LOGGING_LEVEL {LoggingLevel::Log}; // NOLINT
+        std::atomic<Logger*>      LOGGER {nullptr};                    // NOLINT
+        std::atomic<LoggingLevel> LOGGING_LEVEL {LoggingLevel::Trace}; // NOLINT
     } // namespace
 
     void installGlobalLoggerRacy()

@@ -1,8 +1,7 @@
 #include "instance.hpp"
 #include <GLFW/glfw3.h>
+#include <engine/settings.hpp>
 #include <util/log.hpp>
-
-extern bool verdigris_forceValidation;
 
 namespace
 {
@@ -24,7 +23,8 @@ namespace
                             "UNASSIGNED-BestPractices-vkBindMemory-small-"
                             "dedicated-allocation")
                    == 0
-            || ((VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
+            || (engine::getSettings()
+                    .lookupSetting<engine::Setting::EnableGFXValidation>()
                 && message.find("Validation Warning: [ "
                                 "UNASSIGNED-BestPractices-vkCreateInstance-"
                                 "specialuse-extension-debugging ]")
@@ -38,8 +38,6 @@ namespace
             std::to_underlying(messageSeverity),
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),
             message);
-
-        // util::panic("kill");
 
         return vk::False;
     }
@@ -123,7 +121,8 @@ namespace gfx::vulkan
 
         const std::vector<const char*> instanceLayers = []
         {
-            if (VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
+            if (engine::getSettings()
+                    .lookupSetting<engine::Setting::EnableGFXValidation>())
             {
                 for (vk::LayerProperties layer :
                      vk::enumerateInstanceLayerProperties())
@@ -151,7 +150,8 @@ namespace gfx::vulkan
                 VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #endif // __APPLE__
 
-            if (VERDIGRIS_ENABLE_VALIDATION || verdigris_forceValidation)
+            if (engine::getSettings()
+                    .lookupSetting<engine::Setting::EnableGFXValidation>())
             {
                 temp.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 temp.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
@@ -183,8 +183,9 @@ namespace gfx::vulkan
             .pNext {
                 [&] -> const void*
                 {
-                    if (VERDIGRIS_ENABLE_VALIDATION
-                        || verdigris_forceValidation)
+                    if (engine::getSettings()
+                            .lookupSetting<
+                                engine::Setting::EnableGFXValidation>())
                     {
                         return reinterpret_cast<const void*>( // NOLINT
                             &validationFeaturesCreateInfo);
@@ -212,8 +213,8 @@ namespace gfx::vulkan
 
         VULKAN_HPP_DEFAULT_DISPATCHER.init(*this->instance);
 
-        if (VERDIGRIS_ENABLE_VALIDATION
-            || verdigris_forceValidation) // or force validation
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableGFXValidation>())
         {
             this->debug_messenger =
                 this->instance->createDebugUtilsMessengerEXTUnique(

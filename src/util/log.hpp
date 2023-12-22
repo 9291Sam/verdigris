@@ -18,6 +18,7 @@ namespace util
         Fatal = 4,
         Panic = 5,
     };
+    const char* LoggingLevel_asString(LoggingLevel);
 
     void installGlobalLoggerRacy();
     void removeGlobalLoggerRacy();

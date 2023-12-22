@@ -111,6 +111,7 @@ find_package(Vulkan REQUIRED)
 set(VERDIGRIS_SOURCES
     src/main.cpp
 
+    src/engine/settings.cpp
 
     src/game/entity/cube.cpp
     src/game/entity/disk_entity.cpp

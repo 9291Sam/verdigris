@@ -18,3 +18,7 @@ command line arguments test and loggigng
 seperate raster and rt gpu threads?
 
 seperate toggles for verdigris validation and vulkan validation
+
+bad apple as a tech demo
+
+proper argument parser (console commands and command line args)
