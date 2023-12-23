@@ -4,6 +4,7 @@
 #include "voxel.hpp"
 #include <cstddef>
 #include <gfx/vulkan/buffer.hpp>
+#include <util/threads.hpp>
 
 namespace gfx::vulkan::voxel
 {
@@ -25,7 +26,7 @@ namespace gfx::vulkan::voxel
         BrickedVolume& operator= (const BrickedVolume&) = delete;
         BrickedVolume& operator= (BrickedVolume&&)      = delete;
 
-        void                writeVoxel(Position, Voxel);
+        void                writeVoxel(Position, Voxel) const;
         [[nodiscard]] Voxel readVoxel(Position) const;
 
         void          updateGPU();
@@ -33,12 +34,19 @@ namespace gfx::vulkan::voxel
 
     private:
 
-        vulkan::Buffer            brick_pointer_buffer;
-        std::vector<VoxelOrIndex> brick_pointer_data;
+        VoxelOrIndex allocateNewBrick() const;
 
-        vulkan::Buffer     brick_buffer;
-        std::vector<Brick> brick_data;
-        std::size_t        next_free_brick_index;
+        struct LockedData
+        {
+            vulkan::Buffer            brick_pointer_buffer;
+            std::vector<VoxelOrIndex> brick_pointer_data;
+
+            vulkan::Buffer     brick_buffer;
+            std::vector<Brick> brick_data;
+            std::size_t        next_free_brick_index;
+        };
+
+        util::Mutex<LockedData> locked_data;
 
         std::size_t edge_length_bricks;
     };

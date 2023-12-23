@@ -125,7 +125,9 @@ set(VERDIGRIS_SOURCES
     src/game/player.cpp
 
 
+    src/gfx/vulkan/voxel/bricked_volume.cpp
     src/gfx/vulkan/voxel/compute_renderer.cpp
+    src/gfx/vulkan/voxel/voxel.cpp
 
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp
