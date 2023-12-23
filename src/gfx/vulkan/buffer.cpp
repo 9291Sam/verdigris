@@ -123,6 +123,8 @@ namespace gfx::vulkan
 
     void* Buffer::getMappedPtr() const
     {
+        /// This suspicious usage of atomics isn't actually a data race because
+        /// of how vmaMapMemory is implemented
         if (this->mapped_memory == nullptr)
         {
             void* outputMappedMemory = nullptr;

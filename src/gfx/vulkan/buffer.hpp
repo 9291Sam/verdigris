@@ -32,8 +32,10 @@ namespace gfx::vulkan
         [[nodiscard]] std::size_t sizeBytes() const;
         [[nodiscard]] void*       getMappedPtr() const;
 
+        // TODO: make these not const...
         void write(std::span<const std::byte>) const;
         void copyFrom(const Buffer&, vk::CommandBuffer) const;
+        void fill(vk::CommandBuffer, std::uint32_t);
 
     private:
         void free();

@@ -4,6 +4,7 @@
 #include "voxel.hpp"
 #include <cstddef>
 #include <gfx/vulkan/buffer.hpp>
+#include <gfx/vulkan/device.hpp>
 #include <util/threads.hpp>
 
 namespace gfx::vulkan::voxel
@@ -11,14 +12,18 @@ namespace gfx::vulkan::voxel
     class BrickedVolume
     {
     public:
-        struct DrawingArrays
+        struct DrawingBuffers
         {
             vulkan::Buffer* brick_pointer_buffer;
             vulkan::Buffer* brick_buffer;
         };
+
+        struct BrickFlushInformation
+        {};
     public:
 
-        explicit BrickedVolume(Allocator*, std::size_t edgeLengthVoxels);
+        explicit BrickedVolume(
+            Device*, Allocator*, std::size_t edgeLengthVoxels);
         ~BrickedVolume() = default;
 
         BrickedVolume(const BrickedVolume&)             = delete;
@@ -26,24 +31,29 @@ namespace gfx::vulkan::voxel
         BrickedVolume& operator= (const BrickedVolume&) = delete;
         BrickedVolume& operator= (BrickedVolume&&)      = delete;
 
-        void                writeVoxel(Position, Voxel) const;
-        [[nodiscard]] Voxel readVoxel(Position) const;
+        // TODO: deal with overlapping positions!
+        void writeVoxel(Position, Voxel) const;
+        void writeVoxel(Position, const Brick&) const;
 
-        void          updateGPU();
-        DrawingArrays draw();
+        void           flushToGPU(vk::CommandBuffer);
+        DrawingBuffers getBuffers();
 
     private:
 
-        VoxelOrIndex allocateNewBrick() const;
+        [[nodiscard]] VoxelOrIndex allocateNewBrick() const;
 
         struct LockedData
         {
-            vulkan::Buffer            brick_pointer_buffer;
-            std::vector<VoxelOrIndex> brick_pointer_data;
+            vulkan::Buffer brick_pointer_buffer;
+            vulkan::Buffer brick_buffer;
 
-            vulkan::Buffer     brick_buffer;
-            std::vector<Brick> brick_data;
-            std::size_t        next_free_brick_index;
+            // TODO: move out of the critical section with some lock free map
+            std::unordered_map<VoxelOrIndex, Brick> brick_changes;
+            std::unordered_map<Position, Voxel>     voxel_changes;
+
+            // TODO: make a heap or some other data structure that can deal with
+            // alloc and free
+            std::size_t next_free_brick_index;
         };
 
         util::Mutex<LockedData> locked_data;

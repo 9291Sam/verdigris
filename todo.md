@@ -30,3 +30,10 @@ add etst in the raycasting shader to cehck if that pixel is the ceter of teh scr
 
 
 add returning of values from util::Mutex lambdas
+
+
+cam you suet eh dedicated transfer hardware on the gpu i.e a queue with only Transfer
+
+to upload the brick informatio nso that you dotn have to store it on the cpu side at all? 
+
+i.e you can return some type of astynchronous future request for it that gets populated at the end of each command buffer submission (follow the barrier) 

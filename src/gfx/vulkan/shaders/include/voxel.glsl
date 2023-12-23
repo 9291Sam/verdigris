@@ -6,7 +6,7 @@
 
 #include "util.glsl"
 
-struct Voxel
+struct OLDVoxel
 {
     uint8_t srgb_r;
     uint8_t srgb_g;

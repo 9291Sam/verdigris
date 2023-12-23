@@ -26,8 +26,8 @@ namespace gfx::vulkan::voxel
                 .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             util::assertFatal(
-                !this->isVoxel(),
-                "Tried to access VoxelOrIndex in invalid state!");
+                this->isIndex(),
+                "Tried to access VoxelOrIndex in an invalid state!");
         }
 
         return this->index;
@@ -35,9 +35,8 @@ namespace gfx::vulkan::voxel
 
     Voxel VoxelOrIndex::getVoxel() const
     {
-        if (!std::is_constant_evaluated()
-            && engine::getSettings()
-                   .lookupSetting<engine::Setting::EnableAppValidation>())
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableAppValidation>())
         {
             util::assertFatal(
                 this->isVoxel(),
@@ -49,16 +48,38 @@ namespace gfx::vulkan::voxel
 
     bool VoxelOrIndex::isVoxel() const
     {
-        // alpha_or_emissive or emissive is 0, this is an index
+        return this->getState() == State::Voxel;
+    }
+
+    bool VoxelOrIndex::isIndex() const
+    {
+        return this->getState() == State::Index;
+    }
+
+    bool VoxelOrIndex::isValid() const
+    {
+        return this->getState() != State::Invalid;
+    }
+
+    VoxelOrIndex::State VoxelOrIndex::getState() const
+    {
         if (std::bit_cast<std::array<std::byte, sizeof(*this)>>(
                 *this)[offsetof(Voxel, alpha_or_emissive)]
-            == std::byte {0})
+            != std::byte {0})
         {
-            return false; // NOLINT
+            return State::Voxel;
         }
-        else // alpha_or_emissive is non zero, this is a voxel
+        else
         {
-            return true;
+            if (this->index == 0)
+            {
+                return State::Invalid;
+            }
+            else
+            {
+                return State::Index;
+            }
         }
     }
+
 } // namespace gfx::vulkan::voxel

@@ -1,5 +1,6 @@
 #include "bricked_volume.hpp"
 #include <gfx/vulkan/allocator.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 namespace gfx::vulkan::voxel
 {
@@ -30,6 +31,21 @@ namespace gfx::vulkan::voxel
         PositionIndicies convertVoxelPositionToIndicies(
             Position position, std::size_t edgeLengthBricks)
         {
+            const std::size_t invalidVoxelIndexBound =
+                edgeLengthBricks * Brick::EdgeLength;
+
+            util::assertFatal(
+                glm::all(glm::greaterThanEqual(position, Position {0, 0, 0}))
+                    && glm::all(glm::lessThan(
+                        position,
+                        Position {
+                            invalidVoxelIndexBound,
+                            invalidVoxelIndexBound,
+                            invalidVoxelIndexBound})),
+                "Tried to access invalid position {} in structure of bound {}",
+                glm::to_string(position),
+                invalidVoxelIndexBound);
+
             Position internalVoxelPosition = position % Brick::EdgeLength;
 
             Position brickPosition = position / Brick::EdgeLength;
@@ -43,7 +59,7 @@ namespace gfx::vulkan::voxel
     } // namespace
 
     BrickedVolume::BrickedVolume(
-        Allocator* allocator, std::size_t edgeLengthVoxels)
+        Device* device, Allocator* allocator, std::size_t edgeLengthVoxels)
         : edge_length_bricks {edgeLengthVoxels / Brick::EdgeLength}
         , locked_data {LockedData {}}
     {
@@ -60,37 +76,75 @@ namespace gfx::vulkan::voxel
         this->locked_data.lock(
             [&](LockedData& data)
             {
-                {
-                    data.brick_pointer_buffer = vulkan::Buffer {
-                        allocator,
-                        sizeof(VoxelOrIndex) * numberOfBricks,
-                        vk::BufferUsageFlagBits::eStorageBuffer,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal
-                            | vk::MemoryPropertyFlagBits::eHostVisible};
+                data.brick_pointer_buffer = vulkan::Buffer {
+                    allocator,
+                    sizeof(VoxelOrIndex) * numberOfBricks,
+                    vk::BufferUsageFlagBits::eStorageBuffer,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal};
 
-                    data.brick_pointer_data.resize(
-                        numberOfBricks, VoxelOrIndex {~std::uint32_t {0}});
+                data.brick_buffer = vulkan::Buffer {
+                    allocator,
+                    sizeof(Brick) * numberOfBricks,
+                    vk::BufferUsageFlagBits::eStorageBuffer,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal};
 
-                    data.brick_pointer_buffer.write(
-                        std::as_bytes(std::span {data.brick_pointer_data}));
-                }
+                const vk::FenceCreateInfo fenceCreateInfo {
+                    .sType {vk::StructureType::eFenceCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                };
 
-                {
-                    data.brick_buffer = vulkan::Buffer {
-                        allocator,
-                        sizeof(Brick) * numberOfBricks,
-                        vk::BufferUsageFlagBits::eStorageBuffer,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal
-                            | vk::MemoryPropertyFlagBits::eHostVisible};
+                vk::UniqueFence endTransferFence =
+                    device->asLogicalDevice().createFenceUnique(
+                        fenceCreateInfo);
 
-                    data.brick_data.resize(numberOfBricks, Brick {Voxel {}});
+                device->accessQueue(
+                    vk::QueueFlagBits::eTransfer,
+                    [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+                    {
+                        const vk::CommandBufferBeginInfo beginInfo {
+                            .sType {vk::StructureType::eCommandBufferBeginInfo},
+                            .pNext {nullptr},
+                            .flags {
+                                vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
+                            .pInheritanceInfo {nullptr},
+                        };
 
-                    data.brick_buffer.write(
-                        std::as_bytes(std::span {data.brick_data}));
-                }
+                        commandBuffer.begin(beginInfo);
+
+                        // fill with invalid brick pointers
+                        data.brick_pointer_buffer.fill(
+                            commandBuffer, std::uint32_t {0});
+
+                        // fill volumes with invalid Voxel (clear)
+                        data.brick_buffer.fill(
+                            commandBuffer, std::uint32_t {0});
+
+                        commandBuffer.end();
+
+                        const vk::SubmitInfo submitInfo {
+                            .sType {vk::StructureType::eSubmitInfo},
+                            .pNext {nullptr},
+                            .waitSemaphoreCount {0},
+                            .pWaitSemaphores {nullptr},
+                            .pWaitDstStageMask {nullptr},
+                            .commandBufferCount {1},
+                            .pCommandBuffers {&commandBuffer},
+                            .signalSemaphoreCount {0},
+                            .pSignalSemaphores {nullptr},
+                        };
+
+                        queue.submit(submitInfo, *endTransferFence);
+                    });
+
+                const vk::Result result =
+                    device->asLogicalDevice().waitForFences(
+                        *endTransferFence, static_cast<vk::Bool32>(true), -1);
+
+                util::assertFatal(
+                    result == vk::Result::eSuccess,
+                    "Failed to wait for BrickedVolume initialization");
             });
-
-        util::panic("add asserts and esure throws for VoxelOrIndex");
     }
 
     void BrickedVolume::writeVoxel(Position position, Voxel voxelToWrite) const
@@ -98,9 +152,9 @@ namespace gfx::vulkan::voxel
         this->locked_data.lock(
             [&](LockedData& data)
             {
-                PositionIndicies accessPosition =
-                    convertVoxelPositionToIndicies(
-                        position, this->edge_length_bricks);
+                // this does bounds checking and throws otherwise
+                std::ignore = convertVoxelPositionToIndicies(
+                    position, this->edge_length_bricks);
 
                 // TODO: use a compute pass to find empty and/or all identical
                 // blocks.
@@ -109,8 +163,8 @@ namespace gfx::vulkan::voxel
                 // Voxel (the brick is all the same voxel)
                 // Valid Index
                 // Invalid Index
-                VoxelOrIndex& maybeBrickPointer = data.brick_pointer_data.at(
-                    accessPosition.brick_pointer_index);
+                VoxelOrIndex& maybeBrickPointer =
+                    data.brick_pointer_span[accessPosition.brick_pointer_index];
 
                 if (!maybeBrickPointer.isValid())
                 {
@@ -130,7 +184,7 @@ namespace gfx::vulkan::voxel
                     maybeBrickPointer = this->allocateNewBrick();
 
                     fill3DArray(
-                        data.brick_data[maybeBrickPointer.getIndex()].voxels,
+                        data.brick_span[maybeBrickPointer.getIndex()].voxels,
                         voxelToFillVolume);
                 }
 
@@ -142,8 +196,8 @@ namespace gfx::vulkan::voxel
                 // brickPointer was invalid) all filled with one voxel (if the
                 // pointer was a voxel) what was already there    (otherwise)
                 std::uint32_t brickPointer = maybeBrickPointer.getIndex();
-                data.brick_data[brickPointer]
-                               [accessPosition.voxel_internal_position] =
+                data.brick_pointer_span
+                    [brickPointer][accessPosition.voxel_internal_position] =
                     voxelToWrite;
             });
 
@@ -178,6 +232,13 @@ namespace gfx::vulkan::voxel
 
     void BrickedVolume::updateGPU()
     {
+        util::logTrace("Flushing {} bricks to gpu");
+
+        for (const auto& [updateIndex, brick] : this->changes)
+        {
+            commandBuffer.
+        }
+
         this->locked_data.lock(
             [&](LockedData& data)
             {
