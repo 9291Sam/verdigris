@@ -18,12 +18,12 @@ namespace gfx
         BindState       requiredBindState,
         Transform       transform_,
         bool            shouldDraw)
-        : renderer {renderer_}
+        : transform {{std::move(transform_)}} // NOLINT: rvalue is required
+        , should_draw {shouldDraw}
+        , renderer {renderer_}
         , name {std::move(name_)}
         , id {}
         , bind_state {requiredBindState}
-        , should_draw {shouldDraw}
-        , transform {std::move(transform_)} // NOLINT
     {}
 
     std::strong_ordering Object::operator<=> (const Object& other) const
@@ -86,7 +86,10 @@ namespace gfx
 
             // Binding a new pipeline also resets descriptor sets
             workingBindState.descriptors = {
-                std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+                ObjectBoundDescriptor {std::nullopt},
+                ObjectBoundDescriptor {std::nullopt},
+                ObjectBoundDescriptor {std::nullopt},
+                ObjectBoundDescriptor {std::nullopt}};
         }
 
         // NOLINTBEGIN
@@ -126,13 +129,13 @@ namespace gfx
 
 std::shared_ptr<gfx::SimpleTriangulatedObject>
 gfx::SimpleTriangulatedObject::create(
-    const gfx::Renderer&        renderer,
+    const gfx::Renderer&        renderer_,
     std::vector<vulkan::Vertex> vertices,
     std::vector<vulkan::Index>  indices)
 {
     std::shared_ptr<gfx::SimpleTriangulatedObject> object {
         new gfx::SimpleTriangulatedObject {
-            renderer, std::move(vertices), std::move(indices)}};
+            renderer_, std::move(vertices), std::move(indices)}};
 
     object->registerSelf();
 

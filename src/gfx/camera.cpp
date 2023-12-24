@@ -17,7 +17,7 @@ namespace gfx
     {}
 
     glm::mat4 Camera::getPerspectiveMatrix(
-        const Renderer& renderer, const Transform& transform) const
+        const Renderer& renderer, const Transform& transform_) const
     {
         // TODO: replace
         // https://gist.github.com/pezcode/1609b61a1eedd207ec8c5acf6f94f53a
@@ -32,7 +32,7 @@ namespace gfx
         // comparason
         projection[1][1] *= -1;
 
-        return projection * this->getViewMatrix() * transform.asModelMatrix();
+        return projection * this->getViewMatrix() * transform_.asModelMatrix();
     }
 
     glm::mat4 Camera::getViewMatrix() const

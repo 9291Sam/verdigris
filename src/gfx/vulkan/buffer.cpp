@@ -152,7 +152,7 @@ namespace gfx::vulkan
 
     void Buffer::write(std::span<const std::byte> byteSpan) const
     {
-        auto start = std::chrono::high_resolution_clock::now();
+        // auto start = std::chrono::high_resolution_clock::now();
 
         util::assertFatal(
             byteSpan.size_bytes() == this->size_bytes,
@@ -179,7 +179,7 @@ namespace gfx::vulkan
             "Failed to flush buffer {}",
             vk::to_string(result));
 
-        auto end = std::chrono::high_resolution_clock::now();
+        // auto end = std::chrono::high_resolution_clock::now();
 
         // TODO: add names to stuff
         // util::logTrace(

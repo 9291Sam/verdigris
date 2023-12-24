@@ -6,7 +6,7 @@
 #include <gfx/renderer.hpp>
 #include <glm/common.hpp>
 #include <magic_enum_all.hpp>
-#include <util/bitmap_allocator.hpp>
+#include <util/block_allocator.hpp>
 #include <util/log.hpp>
 #include <util/noise.hpp>
 
@@ -66,22 +66,22 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
 
     for (int i = 0; i < argc; ++i)
     {
-        if (std::strcmp("--force-gfx-validation", argv[i]) == 0)
+        if (std::strcmp("--force-gfx-validation", argv[i]) == 0) // NOLINT
         {
             engine::getSettings().setSetting(
                 engine::Setting::EnableGFXValidation, true);
             setGFXValidation = true;
         }
-        else if (std::strcmp("--force-app-validation", argv[i]) == 0)
+        else if (std::strcmp("--force-app-validation", argv[i]) == 0) // NOLINT
         {
             engine::getSettings().setSetting(
                 engine::Setting::EnableAppValidation, true);
             setAppValidation = true;
         }
-        else if (std::strcmp("--force-logging-level", argv[i]) == 0)
+        else if (std::strcmp("--force-logging-level", argv[i]) == 0) // NOLINT
         {
             util::assertFatal(i + 1 < argc, "Not enough arguments");
-            const char* maybeLoggingLevel = argv[i + 1];
+            const char* maybeLoggingLevel = argv[i + 1]; // NOLINT
 
             bool setLoggingLevel = false;
 
@@ -100,7 +100,7 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
             util::assertFatal(
                 setLoggingLevel,
                 "Invalid logging level string {}",
-                argv[i + 1]);
+                argv[i + 1]); // NOLINT
 
             ++i;
             customLoggingLevelSet = true;
@@ -113,6 +113,7 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
             }
             else
             {
+                // NOLINTNEXTLINE
                 util::logWarn("Unrecognized command line argument {}", argv[i]);
             }
         }

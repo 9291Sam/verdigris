@@ -3,8 +3,8 @@
 #include "gfx/camera.hpp"
 #include <fmt/format.h>
 
-game::entity::Entity::Entity(const Game& game)
-    : game {game}
+game::entity::Entity::Entity(const Game& game_)
+    : game {game_}
     , uuid {}
 {}
 

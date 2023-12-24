@@ -1,5 +1,5 @@
-#ifndef SRC_GAME_ENTITY_DISK__ENTITY_HPP
-#define SRC_GAME_ENTITY_DISK__ENTITY_HPP
+#ifndef SRC_GAME_ENTITY_DISK_ENTITY_HPP
+#define SRC_GAME_ENTITY_DISK_ENTITY_HPP
 
 #include "entity.hpp"
 #include <memory>
@@ -31,4 +31,4 @@ namespace game::entity
 
 } // namespace game::entity
 
-#endif // SRC_GAME_ENTITY_DISK__ENTITY_HPP
+#endif // SRC_GAME_ENTITY_DISK_ENTITY_HPP

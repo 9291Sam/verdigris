@@ -73,11 +73,11 @@ namespace engine
 
                 std::atomic_thread_fence(std::memory_order_seq_cst);
                 return;
-            default:
-                util::panic(
-                    "Tried to set invalid setting {} | {}",
-                    std::to_underlying(s),
-                    newValue);
+                // default:
+                //     util::panic(
+                //         "Tried to set invalid setting {} | {}",
+                //         std::to_underlying(s),
+                //         newValue);
             }
         }
 

@@ -100,4 +100,4 @@ namespace gfx
     };
 } // namespace gfx
 
-#endif
+#endif // SRC_GFX_RENDERER_HPP

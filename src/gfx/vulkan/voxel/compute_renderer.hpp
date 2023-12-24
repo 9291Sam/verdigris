@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 #define SRC_GFX_VULKAN_VOXEL_COMPUTE_RENDERER_HPP
 
+#include "bricked_volume.hpp"
 #include <gfx/camera.hpp>
 #include <gfx/object.hpp>
 #include <gfx/vulkan/buffer.hpp>
@@ -13,7 +14,7 @@
 namespace gfx
 {
     class Renderer;
-}
+} // namespace gfx
 
 namespace gfx::vulkan
 {
@@ -71,6 +72,8 @@ namespace gfx::vulkan::voxel
         std::size_t  foo;
 
         bool is_first_pass;
+
+        BrickedVolume volume;
         // fixed world
         // dynamic size
         // dynamic world

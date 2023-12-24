@@ -185,11 +185,13 @@ namespace gfx::vulkan
         vk::RenderPass                      renderPass)
         : device {device_}
         , swapchain {swapchain_}
-        , framebuffers {framebuffers_}
         , render_pass {renderPass}
+        , framebuffers {framebuffers_}
         , image_available {nullptr}
         , render_finished {nullptr}
         , frame_in_flight {nullptr}
+        , command_pool {nullptr}
+        , command_buffer {nullptr}
     {
         util::assertFatal(this->render_pass != nullptr, "null renderpass");
 
@@ -283,7 +285,7 @@ namespace gfx::vulkan
 
         this->device->asLogicalDevice().resetCommandPool(*this->command_pool);
 
-        std::uint32_t nextImageIndex = -1;
+        std::uint32_t nextImageIndex = ~std::uint32_t {0};
         {
             const auto [result, maybeNextFrameBufferIndex] =
                 this->device->asLogicalDevice().acquireNextImageKHR(
@@ -309,6 +311,7 @@ namespace gfx::vulkan
             default:
                 util::panic(
                     "Invalid acquireNextImage {}", vk::to_string(result));
+                std::unreachable();
             }
         }
 

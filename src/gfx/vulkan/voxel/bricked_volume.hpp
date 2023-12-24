@@ -6,8 +6,9 @@
 #include <cstddef>
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/device.hpp>
-#include <util/bitmap_allocator.hpp>
+#include <util/block_allocator.hpp>
 #include <util/threads.hpp>
+
 
 namespace gfx::vulkan::voxel
 {
@@ -50,7 +51,7 @@ namespace gfx::vulkan::voxel
 
         // allocates a new brick
         [[nodiscard]] static VoxelOrIndex
-        allocateNewBrick(util::BitmapBlockAllocator&);
+        allocateNewBrick(util::BlockAllocator&);
 
         struct LockedData
         {
@@ -59,7 +60,7 @@ namespace gfx::vulkan::voxel
 
             vulkan::Buffer brick_buffer;
 
-            util::BitmapBlockAllocator allocator;
+            util::BlockAllocator allocator;
         };
 
         std::size_t edge_length_bricks;

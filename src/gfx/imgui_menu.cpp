@@ -196,7 +196,9 @@ namespace gfx
             });
 
         const vk::Result result = device.asLogicalDevice().waitForFences(
-            *imguiFontUploadFence, static_cast<vk::Bool32>(true), -1);
+            *imguiFontUploadFence,
+            static_cast<vk::Bool32>(true),
+            ~std::uint64_t {0});
 
         util::assertFatal(
             result == vk::Result::eSuccess,

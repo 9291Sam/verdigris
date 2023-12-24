@@ -24,9 +24,8 @@ namespace util
             return "Fatal";
         case LoggingLevel::Panic:
             return "Panic";
-        default:
-            return "Unknown level";
-        };
+        }
+        return "Unknown level";
     }
 
     class Logger

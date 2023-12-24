@@ -56,6 +56,7 @@ namespace gfx::vulkan::voxel
         , generator {std::random_device {}()}
         , foo {0}
         , is_first_pass {true}
+        , volume {this->device, this->allocator, 128}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -160,63 +161,6 @@ namespace gfx::vulkan::voxel
 
         this->device->asLogicalDevice().updateDescriptorSets(
             setUpdateInfo, nullptr);
-
-        // const vk::FenceCreateInfo fenceCreateInfo {
-        //     .sType {vk::StructureType::eFenceCreateInfo},
-        //     .pNext {nullptr},
-        //     .flags {},
-        // };
-
-        // vk::UniqueFence endTransferFence =
-        //     this->device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
-
-        // this->device->accessQueue(
-        //     vk::QueueFlagBits::eCompute,
-        //     [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
-        //     {
-        //         const vk::CommandBufferBeginInfo beginInfo {
-        //             .sType {vk::StructureType::eCommandBufferBeginInfo},
-        //             .pNext {nullptr},
-        //             .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-        //             .pInheritanceInfo {nullptr},
-        //         };
-
-        //         commandBuffer.begin(beginInfo);
-
-        //         // we need to change the layout on the first time
-        //         this->output_image.transitionLayout(
-        //             commandBuffer,
-        //             vk::ImageLayout::eUndefined,
-        //             vk::ImageLayout::eShaderReadOnlyOptimal,
-        //             vk::PipelineStageFlagBits::eComputeShader,
-        //             vk::PipelineStageFlagBits::eComputeShader,
-        //             vk::AccessFlagBits::eNone,
-        //             vk::AccessFlagBits::eShaderRead);
-
-        //         commandBuffer.end();
-
-        //         const vk::SubmitInfo submitInfo {
-        //             .sType {vk::StructureType::eSubmitInfo},
-        //             .pNext {nullptr},
-        //             .waitSemaphoreCount {0},
-        //             .pWaitSemaphores {nullptr},
-        //             .pWaitDstStageMask {nullptr},
-        //             .commandBufferCount {1},
-        //             .pCommandBuffers {&commandBuffer},
-        //             .signalSemaphoreCount {0},
-        //             .pSignalSemaphores {nullptr},
-        //         };
-
-        //         queue.submit(submitInfo, *endTransferFence);
-        //     });
-
-        // const vk::Result result =
-        // this->device->asLogicalDevice().waitForFences(
-        //     *endTransferFence, static_cast<vk::Bool32>(true), -1);
-
-        // util::assertFatal(
-        //     result == vk::Result::eSuccess,
-        //     "Failed to wait for image trnasfer");
 
         static constexpr std::array<gfx::vulkan::Vertex, 8> Vertices {
             gfx::vulkan::Vertex {

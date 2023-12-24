@@ -17,17 +17,17 @@
 namespace game::entity
 {
     std::shared_ptr<DiskEntity>
-    game::entity::DiskEntity::create(const Game& game, const char* filepath)
+    game::entity::DiskEntity::create(const Game& game_, const char* filepath)
     {
-        std::shared_ptr<DiskEntity> entity {new DiskEntity {game, filepath}};
+        std::shared_ptr<DiskEntity> entity {new DiskEntity {game_, filepath}};
 
         entity->registerSelf();
 
         return entity;
     }
 
-    DiskEntity::DiskEntity(const Game& game, const char* filepath)
-        : Entity {game}
+    DiskEntity::DiskEntity(const Game& game_, const char* filepath)
+        : Entity {game_}
         , object {nullptr}
     {
         tinyobj::attrib_t                attribute {};

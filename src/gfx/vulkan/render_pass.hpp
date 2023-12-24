@@ -1,8 +1,7 @@
-#ifndef SRC_GFX_VULKAN_RENDER__PASS_HPP
-#define SRC_GFX_VULKAN_RENDER__PASS_HPP
+#ifndef SRC_GFX_VULKAN_RENDER_PASS_HPP
+#define SRC_GFX_VULKAN_RENDER_PASS_HPP
 
 #include <expected>
-#include <functional>
 #include <gfx/camera.hpp>
 #include <gfx/object.hpp>
 #include <span>
@@ -13,7 +12,7 @@
 namespace gfx
 {
     class ImGuiMenu;
-}
+} // namespace gfx
 
 namespace gfx::vulkan
 {
@@ -103,4 +102,4 @@ namespace gfx::vulkan
 
 } // namespace gfx::vulkan
 
-#endif // SRC_GFX_VULKAN_RENDER__PASS_HPP
+#endif // SRC_GFX_VULKAN_RENDER_PASS_HPP

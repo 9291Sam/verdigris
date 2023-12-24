@@ -14,13 +14,14 @@ namespace game::world
 
     struct LodLevel
     {
-        constexpr LodLevel(std::size_t distanceFromView)
+        explicit constexpr LodLevel(std::size_t distanceFromView)
         {
             static_assert(SparseVoxelVolume::VoxelExtent == 512);
 
             if (distanceFromView <= 512)
             {
-                this->level = util::log2<std::size_t>(512) + 1;
+                this->level =
+                    static_cast<std::uint8_t>(util::log2<std::size_t>(512) + 1);
             }
 
             std::size_t result = 256;
@@ -31,14 +32,14 @@ namespace game::world
                 result /= 2;
             }
 
-            this->level = util::log2(result) + 1;
+            this->level = static_cast<std::uint8_t>(util::log2(result) + 1);
         }
 
         std::strong_ordering operator<=> (const LodLevel&) const = default;
 
-        constexpr std::size_t getNumberOfVoxelsPerChunks() const
+        [[nodiscard]] constexpr std::size_t getNumberOfVoxelsPerChunks() const
         {
-            return util::exp(2, this->level - 1);
+            return static_cast<std::size_t>(util::exp(2, this->level - 1));
         }
 
     private:

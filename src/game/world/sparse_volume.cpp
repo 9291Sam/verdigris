@@ -135,7 +135,10 @@ namespace game::world
                 localPosition.z);
         }
 
-        return this->storage[localPosition.x][localPosition.y][localPosition.z];
+        // NOLINTNEXTLINE
+        return this->storage[static_cast<std::size_t>(localPosition.x)]
+                            [static_cast<std::size_t>(localPosition.y)]
+                            [static_cast<std::size_t>(localPosition.z)];
     }
 
     void VoxelVolume::drawToVectors(
@@ -305,8 +308,10 @@ namespace game::world
             cyclicMod(sparsePosition.z, VoxelVolume::Extent)};
 
         std::variant<std::unique_ptr<VoxelVolume>, Voxel>& maybeLocalVolume {
-            this->data[LocalVolumePosition.x][LocalVolumePosition.y]
-                      [LocalVolumePosition.z]};
+            this->data // NOLINT
+                [static_cast<std::size_t>(LocalVolumePosition.x)]
+                [static_cast<std::size_t>(LocalVolumePosition.y)]
+                [static_cast<std::size_t>(LocalVolumePosition.z)]};
 
         // If the volume doesn't exist then create it
         if (Voxel* voxel = std::get_if<Voxel>(&maybeLocalVolume))

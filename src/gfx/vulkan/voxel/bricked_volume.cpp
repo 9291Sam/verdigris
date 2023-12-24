@@ -142,7 +142,9 @@ namespace gfx::vulkan::voxel
 
                 const vk::Result result =
                     device->asLogicalDevice().waitForFences(
-                        *endTransferFence, static_cast<vk::Bool32>(true), -1);
+                        *endTransferFence,
+                        static_cast<vk::Bool32>(true),
+                        ~std::uint64_t {0});
 
                 util::assertFatal(
                     result == vk::Result::eSuccess,
@@ -204,22 +206,23 @@ namespace gfx::vulkan::voxel
 
                         if (!maybeBrickPointer.isValid())
                         {
-                            // The brick pointer we have is invalid, that means
-                            // we need to populate it
+                            // The brick pointer we have is invalid, that
+                            // means we need to populate it
                             maybeBrickPointer =
                                 BrickedVolume::allocateNewBrick(data.allocator);
 
                             // propagate this change to the gpu
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
-                                &maybeBrickPointer
-                                    - data.brick_pointer_data.data(),
+                                static_cast<vk::DeviceSize>(
+                                    &maybeBrickPointer
+                                    - data.brick_pointer_data.data()),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
                         }
 
-                        // We now have a valid mapped pointer, so we can write
-                        // the new data to it
+                        // We now have a valid mapped pointer, so we can
+                        // write the new data to it
                         commandBuffer.updateBuffer(
                             *data.brick_buffer,
                             maybeBrickPointer.getIndex() * sizeof(Brick),
@@ -244,16 +247,17 @@ namespace gfx::vulkan::voxel
 
                         if (!maybeBrickPointer.isValid())
                         {
-                            // The brick pointer we have is invalid, that means
-                            // we need to populate it
+                            // The brick pointer we have is invalid, that
+                            // means we need to populate it
                             maybeBrickPointer =
                                 BrickedVolume::allocateNewBrick(data.allocator);
 
                             // propagate this change to the gpu
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
-                                &maybeBrickPointer
-                                    - data.brick_pointer_data.data(),
+                                static_cast<vk::DeviceSize>(
+                                    &maybeBrickPointer
+                                    - data.brick_pointer_data.data()),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
                         }
@@ -261,8 +265,8 @@ namespace gfx::vulkan::voxel
                         // From now on maybeBrickPointer is either an valid
                         // index or a voxel
 
-                        // We need to allocate a new volume and bow instead of
-                        // it being empty, we need to fill it
+                        // We need to allocate a new volume and bow instead
+                        // of it being empty, we need to fill it
                         if (maybeBrickPointer.isVoxel())
                         {
                             Voxel voxelToFillVolume =
@@ -278,8 +282,9 @@ namespace gfx::vulkan::voxel
                             // 1
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
-                                &maybeBrickPointer
-                                    - data.brick_pointer_data.data(),
+                                static_cast<vk::DeviceSize>(
+                                    &maybeBrickPointer
+                                    - data.brick_pointer_data.data()),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
 
@@ -293,13 +298,15 @@ namespace gfx::vulkan::voxel
                                 &brickToWrite);
                         }
 
-                        // From now on maybeBrickPointer is a valid index to a
-                        // brick It contains Nothing (if the original pointer
-                        // was invalid) A solid brick of the same voxels (was
-                        // voxel) or otherwise, what was already there.
+                        // From now on maybeBrickPointer is a valid index to
+                        // a brick It contains Nothing (if the original
+                        // pointer was invalid) A solid brick of the same
+                        // voxels (was voxel) or otherwise, what was already
+                        // there.
                         //
-                        // In any case, it's now a valid place to write to, so
-                        // we can do so and place our _single_ voxel in memory
+                        // In any case, it's now a valid place to write to,
+                        // so we can do so and place our _single_ voxel in
+                        // memory
 
                         const std::size_t brickOffset =
                             maybeBrickPointer.getIndex() * sizeof(Brick);
@@ -314,9 +321,9 @@ namespace gfx::vulkan::voxel
                         const std::size_t voxelOffsetInBrickBuffer =
                             brickOffset + voxelOffset;
 
-                        // We now have a valid mapped pointer, so we can write
-                        // the voxel to it and ignore whatever else was already
-                        // there
+                        // We now have a valid mapped pointer, so we can
+                        // write the voxel to it and ignore whatever else
+                        // was already there
                         commandBuffer.updateBuffer(
                             *data.brick_buffer,
                             voxelOffsetInBrickBuffer,
@@ -345,10 +352,9 @@ namespace gfx::vulkan::voxel
     }
 
     VoxelOrIndex
-    BrickedVolume::allocateNewBrick(util::BitmapBlockAllocator& allocator)
+    BrickedVolume::allocateNewBrick(util::BlockAllocator& allocator)
     {
-        return VoxelOrIndex {
-            static_cast<std::uint32_t>(allocator.allocateBlock())};
+        return VoxelOrIndex {static_cast<std::uint32_t>(allocator.allocate())};
     }
 
 } // namespace gfx::vulkan::voxel

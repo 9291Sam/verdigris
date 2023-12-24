@@ -72,7 +72,7 @@ namespace game::world
 
                 auto start = std::chrono::high_resolution_clock::now();
 
-                std::shared_ptr<SparseVoxelVolume> volume =
+                std::shared_ptr<SparseVoxelVolume> workingVolume =
                     std::make_shared<SparseVoxelVolume>();
 
                 for (std::int32_t pollingX :
@@ -134,7 +134,7 @@ namespace game::world
                         //     static_cast<std::string>(polled),
                         //     static_cast<std::string>(position));
 
-                        volume->accessFromLocalPosition(accessPosition) =
+                        workingVolume->accessFromLocalPosition(accessPosition) =
                             world::Voxel {
                                 .r {util::convertLinearToSRGB(color.r)},
                                 .g {util::convertLinearToSRGB(color.g)},
@@ -151,7 +151,7 @@ namespace game::world
                         end - start)
                         .count());
 
-                return volume;
+                return workingVolume;
             });
     }
 
@@ -161,23 +161,26 @@ namespace game::world
         {
         case ChunkStates::WaitingForVolume:
 
+            // NOLINTNEXTLINE: Checked by state machine
             if (this->future_volume->valid())
             {
-                this->volume = std::move(this->future_volume->get());
+                // NOLINTNEXTLINE: Checked by state machine
+                this->volume = this->future_volume->get();
 
                 this->future_object = std::async(
                     std::launch::async,
-                    [location  = this->location,
-                     volume    = this->volume,
-                     &renderer = renderer]
+                    [lambdaLocation  = this->location,
+                     lambdaVolume    = this->volume,
+                     &lambdaRenderer = renderer]
                     -> std::shared_ptr<gfx::SimpleTriangulatedObject>
                     {
                         auto start = std::chrono::high_resolution_clock::now();
 
                         util::assertFatal(
-                            volume != nullptr, "Volume was nullptr!");
+                            lambdaVolume != nullptr, "Volume was nullptr!");
 
-                        auto [vertices, indices] = volume->draw(location);
+                        auto [vertices, indices] =
+                            lambdaVolume->draw(lambdaLocation);
 
                         auto end = std::chrono::high_resolution_clock::now();
 
@@ -188,7 +191,9 @@ namespace game::world
                                 .count());
 
                         return gfx::SimpleTriangulatedObject::create(
-                            renderer, std::move(vertices), std::move(indices));
+                            lambdaRenderer,
+                            std::move(vertices),
+                            std::move(indices));
                     });
 
                 this->state = ChunkStates::WaitingForObject;
@@ -200,9 +205,11 @@ namespace game::world
 
         case ChunkStates::WaitingForObject:
 
+            // NOLINTNEXTLINE: Checked by state machine
             if (this->future_object->valid())
             {
-                this->object = std::move(this->future_object->get());
+                // NOLINTNEXTLINE: Checked by state machine
+                this->object = this->future_object->get();
 
                 this->state = ChunkStates::Initalized;
 
@@ -229,12 +236,12 @@ namespace game::world
 
             return;
 
-        default:
-            util::panic(
-                "Chunk::draw() called with invalid state {}",
-                std::to_underlying(this->state));
+            // default:
+            //     util::panic(
+            //         "Chunk::draw() called with invalid state {}",
+            //         std::to_underlying(this->state));
 
-            return;
+            //     return;
         }
 
         util::panic("Left control flow in Chunk::draw()");

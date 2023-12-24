@@ -14,6 +14,7 @@ FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG master
     GIT_SHALLOW TRUE
+    SYSTEM
 )
 FetchContent_MakeAvailable(fmt)
 
@@ -21,6 +22,7 @@ FetchContent_Declare(concurrentqueue
     GIT_REPOSITORY https://github.com/cameron314/concurrentqueue
     GIT_TAG master
     GIT_SHALLOW TRUE
+    SYSTEM
 )
 FetchContent_MakeAvailable(concurrentqueue)
 
@@ -28,6 +30,7 @@ FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw
     GIT_TAG master
     GIT_SHALLOW TRUE
+    SYSTEM
 )
 FetchContent_MakeAvailable(glfw)
 
@@ -35,22 +38,25 @@ FetchContent_Declare(gcem
     GIT_REPOSITORY https://github.com/kthohr/gcem
     GIT_TAG master
     GIT_SHALLOW TRUE
+    SYSTEM
 )
 FetchContent_MakeAvailable(gcem)
 
 
 FetchContent_Declare(tinyobjloader
-        GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader
-        GIT_TAG release
-        GIT_SHALLOW TRUE
-        )
+    GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader
+    GIT_TAG release
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
 FetchContent_MakeAvailable(tinyobjloader)
 
 FetchContent_Declare(glm
-        GIT_REPOSITORY https://github.com/g-truc/glm
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-        )
+    GIT_REPOSITORY https://github.com/g-truc/glm
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
 FetchContent_MakeAvailable(glm)
 target_compile_definitions(glm INTERFACE GLM_FORCE_DEPTH_ZERO_TO_ONE=1)
 target_compile_definitions(glm INTERFACE GLM_FORCE_RADIANS=1)
@@ -61,8 +67,12 @@ FetchContent_Declare(magic_enum
     GIT_REPOSITORY https://github.com/Neargye/magic_enum
     GIT_TAG master
     GIT_SHALLOW TRUE
+    SYSTEM
 )
 FetchContent_MakeAvailable(magic_enum)
+
+
+find_package(Vulkan REQUIRED)
 
 
 
@@ -73,8 +83,7 @@ execute_process(
     COMMAND_ERROR_IS_FATAL ANY
 )
 add_library(VulkanMemoryAllocator INTERFACE)
-set_target_properties(VulkanMemoryAllocator PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES
+target_include_directories(VulkanMemoryAllocator SYSTEM INTERFACE 
     ${CMAKE_SOURCE_DIR}/inc/VulkanMemoryAllocator/include
 )
 
@@ -84,8 +93,8 @@ execute_process(
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMAND_ERROR_IS_FATAL ANY
 )
-add_library(imgui INTERFACE)
-target_sources(imgui PUBLIC
+add_library(imgui STATIC)
+target_sources(imgui PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/imgui_demo.cpp
@@ -96,15 +105,18 @@ target_sources(imgui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends/imgui_impl_vulkan.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends/imgui_impl_glfw.cpp
 )
-target_include_directories(imgui INTERFACE
+target_include_directories(imgui PUBLIC SYSTEM
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/
     ${CMAKE_CURRENT_SOURCE_DIR}/inc/imgui/backends
     ${CMAKE_SOURCE_DIR}/inc/imgui/include
 )
+target_include_directories(imgui PRIVATE SYSTEM
+    ${Vulkan_INCLUDE_DIRS}
+)
+target_link_libraries(imgui PRIVATE glfw)
 target_compile_definitions(imgui INTERFACE IMGUI_IMPL_VULKAN_NO_PROTOTYPES=0)
 
 
-find_package(Vulkan REQUIRED)
 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
@@ -118,6 +130,7 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/boostorg/boost.git
   GIT_TAG boost-1.84.0
   GIT_SHALLOW TRUE
+  SYSTEM
 )
 FetchContent_MakeAvailable(Boost)
 
@@ -162,7 +175,7 @@ set(VERDIGRIS_SOURCES
     src/gfx/transform.cpp
     src/gfx/window.cpp
     
-    src/util/bitmap_allocator.cpp
+    src/util/block_allocator.cpp
     src/util/log.cpp
     src/util/misc.cpp
     src/util/uuid.cpp
@@ -235,21 +248,40 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             # target_link_options(verdigris PUBLIC -fsanitize=thread)
         endif ()
 
-        target_compile_options(verdigris PUBLIC -Wno-c++98-compat
+        
+        # not happy that these leak, but there nothing we can really do...
+        target_compile_options(VulkanMemoryAllocator INTERFACE -Wno-nullability-extension)
+        target_compile_options(VulkanMemoryAllocator INTERFACE -Wno-documentation-deprecated-sync)
+        target_compile_options(imgui INTERFACE -Wno-old-style-cast)
+
+        target_compile_options(imgui PUBLIC
+            -Wno-everything
+            -Wno-reserved-identifier
+            -Wno-sign-conversion
+            -Wno-cast-function-type-strict
+        )
+
+        get_target_property(boost_container_org Boost::container ALIASED_TARGET)
+        target_compile_options(${boost_container_org} PRIVATE -Wno-incompatible-pointer-types)
+
+        # get_target_property(boost_unordered_org Boost::unordered ALIASED_TARGET)
+        # target_compile_options(${boost_unordered_org} INTERFACE -Wno-incompatible-pointer-types)
+
+
+        target_compile_options(verdigris PUBLIC 
+            -Weverything
+            -Wno-c++98-compat
             -Wno-c++98-compat-pedantic
             -Wno-missing-prototypes
             -Wno-pre-c++20-compat
             -Wno-braced-scalar-init
             -Wno-c++20-compat
-            -Wno-padded)
-        target_compile_options(glm INTERFACE -Wno-deprecated-declarations)
-
-        get_target_property(boost_container_org Boost::container ALIASED_TARGET)
-        target_compile_options(${boost_container_org} PUBLIC -Wno-incompatible-pointer-types)
-
-        get_target_property(boost_unordered_org Boost::unordered ALIASED_TARGET)
-        target_compile_options(${boost_unordered_org} INTERFACE -Wno-incompatible-pointer-types)
-
+            -Wno-padded
+            -Wno-unsafe-buffer-usage
+            -Wno-ctad-maybe-unsupported
+            -Wno-gnu-anonymous-struct
+        )
+            
         # Windows edge case with the address sanitizer
         # https://github.com/llvm/llvm-project/issues/56300
         if (WIN32)

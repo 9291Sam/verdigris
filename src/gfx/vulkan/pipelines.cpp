@@ -13,7 +13,9 @@ namespace
     createShaderFromFile(vk::Device device, const char* filePath)
     {
         std::ifstream fileStream {
-            filePath, std::ios::in | std::ios::binary | std::ios::ate};
+            filePath,
+            // NOLINTNEXTLINE
+            std::ios::in | std::ios::binary | std::ios::ate};
 
         util::assertFatal(
             fileStream.is_open(), "Failed to open file |{}|", filePath);
@@ -156,6 +158,7 @@ namespace gfx::vulkan
         {
         case gfx::vulkan::GraphicsPipelineType::NoPipeline:
             util::panic("Tried to create a null pipeline!");
+            break;
 
         case gfx::vulkan::GraphicsPipelineType::Flat: {
             // TODO: replace with #embed
@@ -277,6 +280,8 @@ namespace gfx::vulkan
         util::panic(
             "Unimplemented pipeline creation! {}",
             std::to_underlying(typeToCreate));
+        util::debugBreak();
+        std::unreachable();
     }
 
     ComputePipeline PipelineManager::createComputePipeline(

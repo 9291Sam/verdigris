@@ -7,7 +7,7 @@
 
 namespace
 {
-    static constexpr std::array<gfx::vulkan::Vertex, 8> Vertices {
+    constexpr std::array<gfx::vulkan::Vertex, 8> Vertices {
         gfx::vulkan::Vertex {
             .position {-1.0f, -1.0f, -1.0f},
             .color {0.0f, 0.0f, 0.0f, 1.0f},
@@ -58,7 +58,7 @@ namespace
         },
     };
 
-    static constexpr std::array<gfx::vulkan::Index, 36> Indices {
+    constexpr std::array<gfx::vulkan::Index, 36> Indices {
         6, 2, 7, 2, 3, 7, 0, 4, 5, 1, 0, 5, 0, 2, 6, 4, 0, 6,
         3, 1, 7, 1, 5, 7, 2, 0, 3, 0, 1, 3, 4, 6, 7, 5, 4, 7};
 } // namespace
@@ -66,9 +66,9 @@ namespace
 namespace game::entity
 {
 
-    std::shared_ptr<Cube> Cube::create(const Game& game, glm::vec3 position)
+    std::shared_ptr<Cube> Cube::create(const Game& game_, glm::vec3 position)
     {
-        std::shared_ptr<Cube> cube {new Cube(game, position)};
+        std::shared_ptr<Cube> cube {new Cube(game_, position)};
 
         cube->registerSelf();
 
