@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 #define SRC_GFX_VULKAN_VOXEL_VOXEL_HPP
 
+#include <boost/container_hash/hash.hpp>
 #include <cstdint>
 #include <engine/settings.hpp>
 #include <glm/common.hpp>
@@ -99,5 +100,21 @@ namespace gfx::vulkan::voxel
     };
 
 } // namespace gfx::vulkan::voxel
+
+namespace boost
+{
+    inline std::size_t
+    hash_value(const gfx::vulkan::voxel::Position& pos) // NOLINT
+    {
+        boost::hash<std::size_t> sizeTHasher {};
+
+        std::size_t workingHash = sizeTHasher(pos.x);
+        boost::hash_combine(workingHash, sizeTHasher(pos.y));
+        boost::hash_combine(workingHash, sizeTHasher(pos.z));
+
+        return workingHash;
+    }
+
+} // namespace boost
 
 #endif // SRC_GFX_VULKAN_VOXEL_HPP

@@ -333,17 +333,17 @@ namespace gfx::vulkan::voxel
                                 || this->foo % distFunc() == 0)
                             {
                                 voxel = Voxel {
+                                    .alpha_or_emissive {128},
                                     .srgb_r {static_cast<std::uint8_t>(
                                         index.x * 32 * distFunc())},
                                     .srgb_g {static_cast<std::uint8_t>(
                                         index.y * 32 * distFunc())},
                                     .srgb_b {static_cast<std::uint8_t>(
                                         index.z * 32 * distFunc())},
-                                    .alpha_or_emissive {128},
+                                    .special {0},
                                     .specular {0},
                                     .roughness {255},
                                     .metallic {0},
-                                    .special {0},
                                 };
                             }
                             else

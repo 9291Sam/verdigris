@@ -2,9 +2,11 @@
 #define SRC_GFX_VULKAN_VOXEL_BRICKED_VOLUME_HPP
 
 #include "voxel.hpp"
+#include <boost/unordered/concurrent_flat_map.hpp>
 #include <cstddef>
 #include <gfx/vulkan/buffer.hpp>
 #include <gfx/vulkan/device.hpp>
+#include <util/bitmap_allocator.hpp>
 #include <util/threads.hpp>
 
 namespace gfx::vulkan::voxel
@@ -32,6 +34,7 @@ namespace gfx::vulkan::voxel
         BrickedVolume& operator= (BrickedVolume&&)      = delete;
 
         // TODO: deal with overlapping positions!
+        // TODO: make these non blocking
         void writeVoxel(Position, Voxel) const;
         void writeVoxel(Position, const Brick&) const;
 
@@ -40,26 +43,30 @@ namespace gfx::vulkan::voxel
 
     private:
 
-        [[nodiscard]] VoxelOrIndex allocateNewBrick() const;
+        mutable boost::unordered::concurrent_flat_map<std::uint32_t, Brick>
+            brick_changes;
+        mutable boost::unordered::concurrent_flat_map<Position, Voxel>
+            voxel_changes;
+
+        // allocates a new brick
+        [[nodiscard]] static VoxelOrIndex
+        allocateNewBrick(util::BitmapBlockAllocator&);
 
         struct LockedData
         {
-            vulkan::Buffer brick_pointer_buffer;
+            vulkan::Buffer            brick_pointer_buffer;
+            std::vector<VoxelOrIndex> brick_pointer_data;
+
             vulkan::Buffer brick_buffer;
 
-            // TODO: move out of the critical section with some lock free map
-            std::unordered_map<VoxelOrIndex, Brick> brick_changes;
-            std::unordered_map<Position, Voxel>     voxel_changes;
-
-            // TODO: make a heap or some other data structure that can deal with
-            // alloc and free
-            std::size_t next_free_brick_index;
+            util::BitmapBlockAllocator allocator;
         };
 
-        util::Mutex<LockedData> locked_data;
-
         std::size_t edge_length_bricks;
+
+        util::Mutex<LockedData> locked_data;
     };
+
 } // namespace gfx::vulkan::voxel
 
 #endif // SRC_GFX_VULKAN_VOXEL_BRICKED_VOLUME_HPP

@@ -48,7 +48,6 @@ IntersectionResult VoxelBrick_tryIntersect21(
     {
         return IntersectionResult_getMiss();
     }
-    // TODO: optimize to jump to start of traversal!
 
     const bool USE_BRANCHLESS_DDA = true;
     const int  MAX_RAY_STEPS      = 32;

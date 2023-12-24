@@ -207,12 +207,18 @@ namespace gfx::vulkan
         const vk::BufferCopy bufferCopyParameters {
             .srcOffset {0},
             .dstOffset {0},
-            .size {this->size_bytes},
+            .size {vk::WholeSize},
         };
 
         // SRC -> DST
         commandBuffer.copyBuffer(
             other.buffer, this->buffer, bufferCopyParameters);
+    }
+
+    void
+    Buffer::fill(vk::CommandBuffer commandBuffer, std::uint32_t fillPattern)
+    {
+        commandBuffer.fillBuffer(this->buffer, 0, vk::WholeSize, fillPattern);
     }
 
     void Buffer::free()

@@ -1,11 +1,12 @@
-#include "gfx/object.hpp"
 #include <engine/event.hpp>
 #include <engine/settings.hpp>
 #include <future>
 #include <game/game.hpp>
+#include <gfx/object.hpp>
 #include <gfx/renderer.hpp>
 #include <glm/common.hpp>
 #include <magic_enum_all.hpp>
+#include <util/bitmap_allocator.hpp>
 #include <util/log.hpp>
 #include <util/noise.hpp>
 

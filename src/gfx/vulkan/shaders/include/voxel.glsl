@@ -6,27 +6,25 @@
 
 #include "util.glsl"
 
-struct OLDVoxel
+struct Voxel
 {
-    uint8_t srgb_r;
-    uint8_t srgb_g;
-    uint8_t srgb_b;
-
     /// 0          - Invisible / Invalid
     /// [1, 127]   - Translucent
     /// 128        - Opaque
     /// [129, 255] - Emissive
     uint8_t alpha_or_emissive;
 
-    // TODO: there's too much information here
-    uint8_t specular;
-    uint8_t roughness;
-    uint8_t metallic;
+    uint8_t srgb_r;
+    uint8_t srgb_g;
+    uint8_t srgb_b;
 
     /// 0 - nothing special
     /// 1 - anisotropic?
     /// [2, 255] UB
     uint8_t special;
+    uint8_t specular;
+    uint8_t roughness;
+    uint8_t metallic;
 };
 
 #define Voxel_AlphaEmissiveState uint
