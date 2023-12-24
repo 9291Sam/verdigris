@@ -82,13 +82,17 @@ namespace gfx::vulkan::voxel
                 data.brick_pointer_buffer = vulkan::Buffer {
                     allocator,
                     sizeof(VoxelOrIndex) * numberOfBricks,
-                    vk::BufferUsageFlagBits::eStorageBuffer,
+                    vk::BufferUsageFlagBits::eStorageBuffer
+                        | vk::BufferUsageFlagBits::eTransferDst,
                     vk::MemoryPropertyFlagBits::eDeviceLocal};
+
+                data.brick_pointer_data.resize(numberOfBricks, VoxelOrIndex {});
 
                 data.brick_buffer = vulkan::Buffer {
                     allocator,
                     sizeof(Brick) * numberOfBricks,
-                    vk::BufferUsageFlagBits::eStorageBuffer,
+                    vk::BufferUsageFlagBits::eStorageBuffer
+                        | vk::BufferUsageFlagBits::eTransferDst,
                     vk::MemoryPropertyFlagBits::eDeviceLocal};
 
                 const vk::FenceCreateInfo fenceCreateInfo {
@@ -192,14 +196,37 @@ namespace gfx::vulkan::voxel
 
     void BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
+        if (this->brick_changes.empty() && this->voxel_changes.empty())
+        {
+            return;
+        }
+
+        util::logTrace(
+            "{} Brick changes and {} voxel changes are queued ",
+            this->brick_changes.size(),
+            this->voxel_changes.size());
+
+        const std::size_t maxPerFrameUpdates = 4096;
+
         this->locked_data.lock(
             [&](LockedData& data)
             {
                 // TODO: need to 100% verify that writes dont overlap!
+                std::size_t commandsQueued = 0;
+
+                auto shouldEarlyReturn = [&]
+                {
+                    return commandsQueued > maxPerFrameUpdates;
+                };
 
                 this->brick_changes.erase_if(
                     [&](const std::pair<std::uint32_t, Brick>& kv) -> bool
                     {
+                        if (shouldEarlyReturn())
+                        {
+                            return false;
+                        }
+
                         const auto& [index, brickToWrite] = kv;
                         VoxelOrIndex& maybeBrickPointer =
                             data.brick_pointer_data[index];
@@ -211,18 +238,24 @@ namespace gfx::vulkan::voxel
                             maybeBrickPointer =
                                 BrickedVolume::allocateNewBrick(data.allocator);
 
+                            commandsQueued++;
+
                             // propagate this change to the gpu
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
                                 static_cast<vk::DeviceSize>(
                                     &maybeBrickPointer
-                                    - data.brick_pointer_data.data()),
+                                    - data.brick_pointer_data.data())
+                                    * sizeof(VoxelOrIndex),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
                         }
 
                         // We now have a valid mapped pointer, so we can
                         // write the new data to it
+
+                        commandsQueued++;
+
                         commandBuffer.updateBuffer(
                             *data.brick_buffer,
                             maybeBrickPointer.getIndex() * sizeof(Brick),
@@ -235,6 +268,11 @@ namespace gfx::vulkan::voxel
                 this->voxel_changes.erase_if(
                     [&](const std::pair<Position, Voxel>& kv) -> bool
                     {
+                        if (shouldEarlyReturn())
+                        {
+                            return false;
+                        }
+
                         const auto& [position, voxelToWrite] = kv;
 
                         PositionIndicies indicies =
@@ -252,12 +290,15 @@ namespace gfx::vulkan::voxel
                             maybeBrickPointer =
                                 BrickedVolume::allocateNewBrick(data.allocator);
 
+                            ++commandsQueued;
+
                             // propagate this change to the gpu
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
                                 static_cast<vk::DeviceSize>(
                                     &maybeBrickPointer
-                                    - data.brick_pointer_data.data()),
+                                    - data.brick_pointer_data.data())
+                                    * sizeof(VoxelOrIndex),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
                         }
@@ -279,18 +320,23 @@ namespace gfx::vulkan::voxel
                             // 1. update the pointer buffer
                             // 2. update the brick buffer with a solid brick
 
+                            commandsQueued++;
+
                             // 1
                             commandBuffer.updateBuffer(
                                 *data.brick_pointer_buffer,
                                 static_cast<vk::DeviceSize>(
                                     &maybeBrickPointer
-                                    - data.brick_pointer_data.data()),
+                                    - data.brick_pointer_data.data())
+                                    * sizeof(VoxelOrIndex),
                                 sizeof(VoxelOrIndex),
                                 &maybeBrickPointer);
 
                             // 2
                             Brick brickToWrite {};
                             fill3DArray(brickToWrite.voxels, voxelToFillVolume);
+
+                            commandsQueued++;
                             commandBuffer.updateBuffer(
                                 *data.brick_buffer,
                                 maybeBrickPointer.getIndex() * sizeof(Brick),
@@ -312,11 +358,12 @@ namespace gfx::vulkan::voxel
                             maybeBrickPointer.getIndex() * sizeof(Brick);
 
                         const std::size_t voxelOffset =
-                            indicies.voxel_internal_position.x
-                                * Brick::EdgeLength * Brick::EdgeLength
-                            + indicies.voxel_internal_position.y
-                                  * Brick::EdgeLength
-                            + indicies.voxel_internal_position.z;
+                            (indicies.voxel_internal_position.x
+                                 * Brick::EdgeLength * Brick::EdgeLength
+                             + indicies.voxel_internal_position.y
+                                   * Brick::EdgeLength
+                             + indicies.voxel_internal_position.z)
+                            * sizeof(Voxel);
 
                         const std::size_t voxelOffsetInBrickBuffer =
                             brickOffset + voxelOffset;
@@ -324,6 +371,8 @@ namespace gfx::vulkan::voxel
                         // We now have a valid mapped pointer, so we can
                         // write the voxel to it and ignore whatever else
                         // was already there
+                        ++commandsQueued;
+
                         commandBuffer.updateBuffer(
                             *data.brick_buffer,
                             voxelOffsetInBrickBuffer,
@@ -354,7 +403,17 @@ namespace gfx::vulkan::voxel
     VoxelOrIndex
     BrickedVolume::allocateNewBrick(util::BlockAllocator& allocator)
     {
-        return VoxelOrIndex {static_cast<std::uint32_t>(allocator.allocate())};
+        std::uint32_t maybeValidNewIndex =
+            static_cast<std::uint32_t>(allocator.allocate());
+
+        // the index must be non zero
+        if (maybeValidNewIndex == 0)
+        {
+            // leak 0 and try again
+            maybeValidNewIndex = allocator.allocate();
+        }
+
+        return VoxelOrIndex {maybeValidNewIndex};
     }
 
 } // namespace gfx::vulkan::voxel

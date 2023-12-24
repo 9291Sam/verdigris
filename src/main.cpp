@@ -21,8 +21,6 @@ int main(int argc, char** argv)
         // TODO: remove global state
         parseCommandLineArgumentsAndUpdateSettings(argc, argv);
 
-        throw std::runtime_error {"foo"};
-
         gfx::Renderer renderer {};
         game::Game    game {renderer};
 
@@ -68,7 +66,20 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
 
     for (int i = 0; i < argc; ++i)
     {
-        if (std::strcmp("--force-gfx-validation", argv[i]) == 0) // NOLINT
+        if (std::strcmp("-v", argv[i]) == 0) // NOLINT
+        {
+            engine::getSettings().setSetting(
+                engine::Setting::EnableGFXValidation, true);
+            setGFXValidation = true;
+
+            engine::getSettings().setSetting(
+                engine::Setting::EnableAppValidation, true);
+            setAppValidation = true;
+
+            util::setLoggingLevel(util::LoggingLevel::Trace);
+            customLoggingLevelSet = true;
+        }
+        else if (std::strcmp("--force-gfx-validation", argv[i]) == 0) // NOLINT
         {
             engine::getSettings().setSetting(
                 engine::Setting::EnableGFXValidation, true);
@@ -85,8 +96,6 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
             util::assertFatal(i + 1 < argc, "Not enough arguments");
             const char* maybeLoggingLevel = argv[i + 1]; // NOLINT
 
-            bool setLoggingLevel = false;
-
             magic_enum::enum_for_each<util::LoggingLevel>(
                 [&](util::LoggingLevel l)
                 {
@@ -95,17 +104,17 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
                     if (std::strcmp(levelAsString, maybeLoggingLevel) == 0)
                     {
                         util::setLoggingLevel(l);
-                        setLoggingLevel = true;
+                        customLoggingLevelSet = true;
                     }
                 });
 
             util::assertFatal(
-                setLoggingLevel,
+                customLoggingLevelSet,
                 "Invalid logging level string {}",
                 argv[i + 1]); // NOLINT
 
             ++i;
-            customLoggingLevelSet = true;
+            // customLoggingLevelSet = true;
         }
         else
         {
@@ -141,17 +150,32 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
             case Setting::EnableGFXValidation:
                 if (!setGFXValidation)
                 {
+#ifndef NDEBUG
+                    engine::getSettings().setSetting(
+                        Setting::EnableGFXValidation, true);
+#else
                     engine::getSettings().setSetting(
                         Setting::EnableGFXValidation, false);
+#endif
                 }
                 break;
             case Setting::EnableAppValidation:
                 if (!setAppValidation)
                 {
+#ifndef NDEBUG
+                    engine::getSettings().setSetting(
+                        Setting::EnableAppValidation, true);
+#else
                     engine::getSettings().setSetting(
                         Setting::EnableAppValidation, false);
+#endif
                 }
                 break;
             }
         });
+
+    util::logLog(
+        "Validations? | Gfx: {} | App: {}",
+        engine::getSettings().lookupSetting<Setting::EnableGFXValidation>(),
+        engine::getSettings().lookupSetting<Setting::EnableAppValidation>());
 }

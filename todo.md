@@ -39,3 +39,4 @@ to upload the brick informatio nso that you dotn have to store it on the cpu sid
 i.e you can return some type of astynchronous future request for it that gets populated at the end of each command buffer submission (follow the barrier) 
 
 fix the cmake script lmfao
+

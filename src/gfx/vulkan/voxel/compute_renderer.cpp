@@ -56,7 +56,7 @@ namespace gfx::vulkan::voxel
         , generator {std::random_device {}()}
         , foo {0}
         , is_first_pass {true}
-        , volume {this->device, this->allocator, 128}
+        , volume {this->device, this->allocator, 64}
     {
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -221,6 +221,25 @@ namespace gfx::vulkan::voxel
             this->renderer,
             std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
             std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
+
+        for (std::size_t i = 0; i < 64; ++i)
+        {
+            for (std::size_t j = 0; j < 64; ++j)
+            {
+                this->volume.writeVoxel(
+                    Position {i, (i + j) / 2, j},
+                    Voxel {
+                        .alpha_or_emissive {128},
+                        .srgb_r {static_cast<std::uint8_t>(0)},
+                        .srgb_g {static_cast<std::uint8_t>(i)},
+                        .srgb_b {static_cast<std::uint8_t>(j)},
+                        .special {0},
+                        .specular {0},
+                        .roughness {255},
+                        .metallic {0},
+                    });
+            }
+        }
     }
 
     ComputeRenderer::~ComputeRenderer() = default;
@@ -320,6 +339,8 @@ namespace gfx::vulkan::voxel
     ComputeRenderer::render(vk::CommandBuffer commandBuffer, const Camera& c)
     {
         this->camera = c;
+
+        this->volume.flushToGPU(commandBuffer);
 
         const vulkan::ComputePipeline& pipeline =
             this->pipeline_manager->getComputePipeline(

@@ -70,6 +70,9 @@ namespace gfx
             nullptr,
             nullptr);
 
+        // move the window to the corner so I can see my debug logs
+        glfwSetWindowPos(this->window, 100, 100);
+
         util::assertFatal(
             this->window != nullptr, "Failed to create GLFW window!");
 

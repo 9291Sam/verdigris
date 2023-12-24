@@ -185,7 +185,13 @@ add_executable(verdigris ${VERDIGRIS_SOURCES})
 target_link_libraries(verdigris PUBLIC
     fmt$<$<CONFIG:Debug>:d> concurrentqueue glfw
     gcem VulkanMemoryAllocator imgui magic_enum
-    glm tinyobjloader Boost::container Boost::unordered)
+    glm tinyobjloader Boost::container Boost::unordered 
+    # ${Boost_STACKTRACE_BASIC_LIBRARY}
+    # ${Boost_STACKTRACE_BACKTRACE_LIBRARY}
+    # ${Boost_STACKTRACE_ADDR2LINE_LIBRARY}
+    # ${Boost_STACKTRACE_NOOP_LIBRARY}
+    # dl
+)
 
 # set_target_properties(verdigris PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE BATCH UNITY_BUILD_BATCH_SIZE -1)
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src)
