@@ -9,7 +9,6 @@
 #include <util/block_allocator.hpp>
 #include <util/threads.hpp>
 
-
 namespace gfx::vulkan::voxel
 {
     class BrickedVolume
@@ -17,8 +16,8 @@ namespace gfx::vulkan::voxel
     public:
         struct DrawingBuffers
         {
-            vulkan::Buffer* brick_pointer_buffer;
-            vulkan::Buffer* brick_buffer;
+            vk::Buffer brick_pointer_buffer;
+            vk::Buffer brick_buffer;
         };
 
         struct BrickFlushInformation

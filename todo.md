@@ -29,7 +29,6 @@ at the same time this also allows for you to deal with a floating origin just if
 add etst in the raycasting shader to cehck if that pixel is the ceter of teh screen if so then you can put that in a buffer that the cpu reads tosee were the center of the world is 
 
 
-add returning of values from util::Mutex lambdas
 
 
 cam you suet eh dedicated transfer hardware on the gpu i.e a queue with only Transfer
@@ -40,3 +39,6 @@ i.e you can return some type of astynchronous future request for it that gets po
 
 fix the cmake script lmfao
 
+
+
+add returning of values from util::Mutex lambdas!!! next thing!

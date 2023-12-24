@@ -118,10 +118,15 @@ namespace gfx::vulkan::voxel
         };
 
         const vk::DescriptorBufferInfo storageBufferBindInfo {
-            .buffer {*this->input_voxel_buffer},
+            // .buffer {*this->input_voxel_buffer},
+            .buffer {this->volume.getBuffers().brick_buffer},
             .offset {0},
             .range {sizeof(VoxelUploadInfo)},
         };
+
+        util::assertFatal(
+            this->volume.getBuffers().brick_buffer != nullptr,
+            "Brick Buffer was null!");
 
         const std::array<vk::WriteDescriptorSet, 3> setUpdateInfo {
             vk::WriteDescriptorSet {

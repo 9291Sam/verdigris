@@ -274,7 +274,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
         target_compile_options(imgui INTERFACE -Wno-old-style-cast)
 
         target_compile_options(imgui PUBLIC
-            -Wno-everything
+            # -Wno-everything
             -Wno-reserved-identifier
             -Wno-sign-conversion
             -Wno-cast-function-type-strict

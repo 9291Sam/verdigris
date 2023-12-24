@@ -154,6 +154,27 @@ namespace gfx::vulkan::voxel
                     result == vk::Result::eSuccess,
                     "Failed to wait for BrickedVolume initialization");
             });
+
+        util::logLog(
+            "Initalized BrickedVolume of size {}^3",
+            this->edge_length_bricks * Brick::EdgeLength);
+
+        this->locked_data.lock(
+            [&](LockedData& data)
+            {
+                util::assertFatal(
+                    *data.brick_buffer != nullptr,
+                    "Brick buffer was not initalized");
+
+                util::assertFatal(
+                    *data.brick_pointer_buffer != nullptr,
+                    "Brick buffer was not initalized");
+
+                util::logTrace(
+                    "BrickedVolume buffers {} {}",
+                    (void*)*data.brick_buffer,
+                    (void*)*data.brick_pointer_buffer);
+            });
     }
 
     void BrickedVolume::writeVoxel(Position position, Voxel voxelToWrite) const
@@ -194,6 +215,7 @@ namespace gfx::vulkan::voxel
         this->brick_changes.insert({indicies.brick_pointer_index, brick});
     }
 
+    // TODO: do stuff with a dedicated transfer queue
     void BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
         if (this->brick_changes.empty() && this->voxel_changes.empty())
@@ -394,9 +416,9 @@ namespace gfx::vulkan::voxel
         this->locked_data.lock(
             [&](LockedData& data)
             {
-                return DrawingBuffers {
-                    .brick_pointer_buffer {&data.brick_pointer_buffer},
-                    .brick_buffer {&data.brick_buffer},
+                retval = DrawingBuffers {
+                    .brick_pointer_buffer {*data.brick_pointer_buffer},
+                    .brick_buffer {*data.brick_buffer},
                 };
             });
 
