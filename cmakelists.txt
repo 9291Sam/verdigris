@@ -6,7 +6,6 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # https://bugs.llvm.org/show_bug.cgi?id=47950
-set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
 # Libraries
 
@@ -184,13 +183,22 @@ set(VERDIGRIS_SOURCES
 add_executable(verdigris ${VERDIGRIS_SOURCES})
 
 target_link_libraries(verdigris PUBLIC
-    fmt::fmt concurrentqueue glfw
+    fmt$<$<CONFIG:Debug>:d> concurrentqueue glfw
     gcem VulkanMemoryAllocator imgui magic_enum
     glm tinyobjloader Boost::container Boost::unordered)
 
 # set_target_properties(verdigris PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE BATCH UNITY_BUILD_BATCH_SIZE -1)
 target_include_directories(verdigris PUBLIC ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(verdigris SYSTEM PUBLIC ${Vulkan_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+target_include_directories(verdigris SYSTEM PUBLIC
+    ${Vulkan_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS} ${fmt_SOURCE_DIR}/include)
+target_link_directories(verdigris PRIVATE ${FMT_BINARY_DIR})
+
+#     get_cmake_property(_variableNames VARIABLES)
+# list (SORT _variableNames)
+# foreach (_variableName ${_variableNames})
+#     message(STATUS "${_variableName}=${${_variableName}}")
+# endforeach()
 
 # Compile definitions
 
@@ -209,6 +217,9 @@ target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 
 if (NOT (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 endif()
 
 
@@ -231,9 +242,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             # target_compile_options(verdigris PUBLIC -fprofile-instr-generate)
             
             # target_link_options(verdigris PUBLIC -fprofile-instr-generate)
+            
+            # Note, on windows, these can only be enabled in release mode
 
-            target_compile_options(verdigris PUBLIC -fsanitize=address)
-            target_link_options(verdigris PUBLIC -fsanitize=address)
+            # target_compile_options(verdigris PUBLIC -fsanitize=address)
+            # target_link_options(verdigris PUBLIC -fsanitize=address)
 
             # target_compile_options(verdigris PUBLIC -fsanitize=undefined)
             # target_link_options(verdigris PUBLIC -fsanitize=undefined)
@@ -284,11 +297,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             
         # Windows edge case with the address sanitizer
         # https://github.com/llvm/llvm-project/issues/56300
-        if (WIN32)
-            target_compile_definitions(verdigris PUBLIC _ITERATOR_DEBUG_LEVEL=0)
-            target_compile_definitions(verdigris PUBLIC _DISABLE_STRING_ANNOTATION)
-            target_compile_definitions(verdigris PUBLIC _DISABLE_VECTOR_ANNOTATION)
-        endif ()
+        # if (WIN32)
+        #     target_compile_definitions(verdigris PUBLIC _ITERATOR_DEBUG_LEVEL=0)
+        #     target_compile_definitions(verdigris PUBLIC _DISABLE_STRING_ANNOTATION)
+        #     target_compile_definitions(verdigris PUBLIC _DISABLE_VECTOR_ANNOTATION)
+        # endif ()
 
         # https://clang.llvm.org/docs/UsersManual.html#controlling-code-generation
 
