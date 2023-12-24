@@ -206,7 +206,8 @@ namespace gfx::vulkan::voxel
             this->brick_changes.size(),
             this->voxel_changes.size());
 
-        const std::size_t maxPerFrameUpdates = 4096;
+        // TODO: seperate into brick and voxel updates
+        const std::size_t maxPerFrameUpdates = 256;
 
         this->locked_data.lock(
             [&](LockedData& data)
@@ -381,6 +382,8 @@ namespace gfx::vulkan::voxel
 
                         return true;
                     });
+
+                util::logTrace("Processed {} changes", commandsQueued);
             });
     }
 
