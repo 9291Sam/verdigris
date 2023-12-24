@@ -2,6 +2,10 @@
 
 namespace gfx::vulkan::voxel
 {
+    VoxelOrIndex::VoxelOrIndex()
+        : voxel {}
+    {}
+
     VoxelOrIndex::VoxelOrIndex(Voxel newVoxel)
         : voxel {newVoxel}
     {}

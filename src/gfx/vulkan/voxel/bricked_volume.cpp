@@ -85,6 +85,8 @@ namespace gfx::vulkan::voxel
                     vk::BufferUsageFlagBits::eStorageBuffer,
                     vk::MemoryPropertyFlagBits::eDeviceLocal};
 
+                data.brick_pointer_data.resize(numberOfBricks, VoxelOrIndex {});
+
                 data.brick_buffer = vulkan::Buffer {
                     allocator,
                     sizeof(Brick) * numberOfBricks,

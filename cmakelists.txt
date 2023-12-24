@@ -242,23 +242,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             # target_compile_options(verdigris PUBLIC -fprofile-instr-generate)
             
             # target_link_options(verdigris PUBLIC -fprofile-instr-generate)
-            
-            # Note, on windows, these can only be enabled in release mode
-
-            # target_compile_options(verdigris PUBLIC -fsanitize=address)
-            # target_link_options(verdigris PUBLIC -fsanitize=address)
-
-            # target_compile_options(verdigris PUBLIC -fsanitize=undefined)
-            # target_link_options(verdigris PUBLIC -fsanitize=undefined)
-
-            # target_compile_options(verdigris PUBLIC -fsanitize=memory)
-            # target_link_options(verdigris PUBLIC -fsanitize=memory)
-
-            # target_compile_options(verdigris PUBLIC -fsanitize=leak)
-            # target_link_options(verdigris PUBLIC -fsanitize=leak)
-
-            # target_compile_options(verdigris PUBLIC -fsanitize=thread)
-            # target_link_options(verdigris PUBLIC -fsanitize=thread)
+        else()
+            if (WIN32) # release only!
+            endif()
         endif ()
 
         
@@ -294,16 +280,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             -Wno-ctad-maybe-unsupported
             -Wno-gnu-anonymous-struct
         )
-            
-        # Windows edge case with the address sanitizer
-        # https://github.com/llvm/llvm-project/issues/56300
-        # if (WIN32)
-        #     target_compile_definitions(verdigris PUBLIC _ITERATOR_DEBUG_LEVEL=0)
-        #     target_compile_definitions(verdigris PUBLIC _DISABLE_STRING_ANNOTATION)
-        #     target_compile_definitions(verdigris PUBLIC _DISABLE_VECTOR_ANNOTATION)
-        # endif ()
-
-        # https://clang.llvm.org/docs/UsersManual.html#controlling-code-generation
 
     else ()
         # Clang-cl

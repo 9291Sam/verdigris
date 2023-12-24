@@ -21,8 +21,6 @@ int main(int argc, char** argv)
         // TODO: remove global state
         parseCommandLineArgumentsAndUpdateSettings(argc, argv);
 
-        throw std::runtime_error {"foo"};
-
         gfx::Renderer renderer {};
         game::Game    game {renderer};
 
