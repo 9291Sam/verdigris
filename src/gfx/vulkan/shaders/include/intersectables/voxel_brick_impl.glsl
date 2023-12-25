@@ -41,23 +41,31 @@ IntersectionResult VoxelBrick_tryIntersect21(
     boundingCube.center      = cornerPos + VoxelBrick_EdgeLength / 2;
     boundingCube.edge_length = VoxelBrick_EdgeLength;
 
-    bool startsInside = Cube_contains(boundingCube, ray.origin);
+    vec3 rayPos;
 
-    IntersectionResult boundingCubeIntersection =
-        Cube_tryIntersect(boundingCube, ray);
-
-    if (!boundingCubeIntersection.intersection_occurred)
+    if (Cube_contains(boundingCube, ray.origin))
     {
-        return IntersectionResult_getMiss();
+        rayPos = ray.origin - cornerPos;
+    }
+    else
+    {
+        IntersectionResult boundingCubeIntersection =
+            Cube_tryIntersect(boundingCube, ray);
+
+        if (boundingCubeIntersection.intersection_occurred)
+        {
+            rayPos = boundingCubeIntersection.maybe_hit_point - cornerPos;
+        }
+        else
+        {
+            return IntersectionResult_getMiss();
+        }
     }
 
     const bool USE_BRANCHLESS_DDA = true;
     const int  MAX_RAY_STEPS      = 32;
 
     vec3 rayDir = ray.direction;
-    vec3 rayPos = startsInside
-                    ? ray.origin
-                    : boundingCubeIntersection.maybe_hit_point - cornerPos;
 
     ivec3 mapPos = ivec3(floor(rayPos + 0.));
 
@@ -71,8 +79,16 @@ IntersectionResult VoxelBrick_tryIntersect21(
 
     bvec3 mask;
 
+    // TODO: remove excessive iterations
     for (int i = 0; i < MAX_RAY_STEPS; i++)
     {
+        // I am not sure why this is [-1, 8] and not [0, 7] but it works /shrug
+        if (any(lessThan(mapPos, ivec3(-1)))
+            || any(greaterThan(mapPos, ivec3(VoxelBrick_EdgeLength))))
+        {
+            return IntersectionResult_getMiss();
+        }
+
         if (getVoxel(offset, mapPos))
         {
             Cube cube;
@@ -81,9 +97,9 @@ IntersectionResult VoxelBrick_tryIntersect21(
 
             IntersectionResult result = Cube_tryIntersect(cube, ray);
 
-            result.maybe_color = Voxel_getLinearColor(
-                VOXEL_BRICK_IMPL_ARRAY[offset]
-                    .voxels[mapPos.x % 8][mapPos.y % 8][mapPos.z % 8]);
+            result.maybe_color =
+                Voxel_getLinearColor(VOXEL_BRICK_IMPL_ARRAY[offset]
+                                         .voxels[mapPos.x][mapPos.y][mapPos.z]);
 
             if (result.intersection_occurred)
             {
