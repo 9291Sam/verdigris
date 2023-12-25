@@ -93,10 +93,10 @@ VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, const Ray ray)
                 return result;
             }
             // TODO: what to do when we're inside the cube?
-            // else
-            // {
-            //     return IntersectionResult_getError();
-            // }
+            else
+            {
+                return IntersectionResult_getError();
+            }
         }
 
         // I'm not even going to pretend I know what's going on here.
