@@ -62,8 +62,8 @@ IntersectionResult VoxelBrick_tryIntersect21(
         }
     }
 
-    const bool USE_BRANCHLESS_DDA = true;
-    const int  MAX_RAY_STEPS      = 32;
+    // 45deg on all axies + 1 for extra
+    const int MAX_RAY_STEPS = int(VoxelBrick_EdgeLength * 3 + 1);
 
     vec3 rayDir = ray.direction;
 
@@ -82,14 +82,22 @@ IntersectionResult VoxelBrick_tryIntersect21(
     // TODO: remove excessive iterations
     for (int i = 0; i < MAX_RAY_STEPS; i++)
     {
-        // I am not sure why this is [-1, 8] and not [0, 7] but it works /shrug
+        // For accruacy reasons we do this in two stages
+        // If we've traversed COMPLETELY outside of the cube (outside by more
+        // than 2) we know its a miss
         if (any(lessThan(mapPos, ivec3(-1)))
             || any(greaterThan(mapPos, ivec3(VoxelBrick_EdgeLength))))
         {
             return IntersectionResult_getMiss();
         }
 
-        if (getVoxel(offset, mapPos))
+        // Otherwise, we may be on the cusp of the cube and only outside by one,
+        // but because of floating point errors we may come back in
+        // This is the nasty condition we need.
+        if (all(greaterThanEqual(mapPos, ivec3(0)))
+            && all(lessThanEqual(mapPos, ivec3(VoxelBrick_EdgeLength - 1)))
+            && Voxel_isVisible(VOXEL_BRICK_IMPL_ARRAY[offset]
+                                   .voxels[mapPos.x][mapPos.y][mapPos.z]))
         {
             Cube cube;
             cube.center = mapPos * Voxel_Size + cornerPos + Voxel_Size / 2.0;
@@ -105,10 +113,11 @@ IntersectionResult VoxelBrick_tryIntersect21(
             {
                 return result;
             }
-            else
-            {
-                return IntersectionResult_getError();
-            }
+            // TODO: what to do when we're inside the cube?
+            // else
+            // {
+            //     return IntersectionResult_getError();
+            // }
         }
 
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
