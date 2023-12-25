@@ -25,14 +25,23 @@ namespace util
         Mutex& operator= (const Mutex&)     = delete;
         Mutex& operator= (Mutex&&) noexcept = default;
 
-        void lock(std::invocable<T&...> auto func) const
+        // void lock(std::invocable<T&...> auto func) const
+        //     noexcept(noexcept(std::apply(func, this->tuple)))
+        // {
+        //     std::unique_lock lock {this->mutex};
+
+        //     std::apply(func, this->tuple);
+        // }
+
+        decltype(auto) lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->mutex};
 
-            std::apply(func, this->tuple);
+            return std::apply(func, this->tuple);
         }
 
+        // TODO: change to std::expected<R, void>
         bool tryLock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {

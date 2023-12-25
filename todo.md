@@ -42,3 +42,14 @@ fix the cmake script lmfao
 
 
 add returning of values from util::Mutex lambdas!!! next thing!
+
+
+traversal of 512x512 volume
+
+entire world try different types
+each chunk as a drawcalls, octree, etc...
+
+
+take a break from memory stuff and work on graphics effects Real Time Rendering
+
+migrate to sync2 and many of the other 2 functions

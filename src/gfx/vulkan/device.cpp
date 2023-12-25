@@ -1,4 +1,5 @@
 #include "device.hpp"
+#include <engine/settings.hpp>
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <util/threads.hpp>
@@ -120,7 +121,14 @@ namespace gfx::vulkan
             deviceFeatures.fillModeNonSolid           = vk::True;
             deviceFeatures.shaderInt64                = vk::True;
 
+            if (engine::getSettings()
+                    .lookupSetting<engine::Setting::EnableGFXValidation>())
+            {
+                deviceFeatures.robustBufferAccess = vk::True;
+            }
+
             vk::PhysicalDeviceVulkan12Features device12Features {};
+
             device12Features.shaderInt8                        = vk::True;
             device12Features.uniformAndStorageBuffer8BitAccess = vk::True;
             device12Features.storageBuffer8BitAccess           = vk::True;

@@ -117,18 +117,25 @@ namespace gfx::vulkan::voxel
             .range {sizeof(UniformUploadInfo)},
         };
 
-        const vk::DescriptorBufferInfo storageBufferBindInfo {
+        const vk::DescriptorBufferInfo brickBufferBindInfo {
             // .buffer {*this->input_voxel_buffer},
             .buffer {this->volume.getBuffers().brick_buffer},
             .offset {0},
-            .range {sizeof(VoxelUploadInfo)},
+            .range {vk::WholeSize},
+        };
+
+        const vk::DescriptorBufferInfo brickPointerBufferBindInfo {
+            // .buffer {*this->input_voxel_buffer},
+            .buffer {this->volume.getBuffers().brick_pointer_buffer},
+            .offset {0},
+            .range {vk::WholeSize},
         };
 
         util::assertFatal(
             this->volume.getBuffers().brick_buffer != nullptr,
             "Brick Buffer was null!");
 
-        const std::array<vk::WriteDescriptorSet, 3> setUpdateInfo {
+        const std::array<vk::WriteDescriptorSet, 4> setUpdateInfo {
             vk::WriteDescriptorSet {
                 .sType {vk::StructureType::eWriteDescriptorSet},
                 .pNext {nullptr},
@@ -160,7 +167,18 @@ namespace gfx::vulkan::voxel
                 .descriptorCount {1},
                 .descriptorType {vk::DescriptorType::eStorageBuffer},
                 .pImageInfo {nullptr},
-                .pBufferInfo {&storageBufferBindInfo},
+                .pBufferInfo {&brickBufferBindInfo},
+                .pTexelBufferView {nullptr}},
+            vk::WriteDescriptorSet {
+                .sType {vk::StructureType::eWriteDescriptorSet},
+                .pNext {nullptr},
+                .dstSet {*this->set},
+                .dstBinding {3},
+                .dstArrayElement {0},
+                .descriptorCount {1},
+                .descriptorType {vk::DescriptorType::eStorageBuffer},
+                .pImageInfo {nullptr},
+                .pBufferInfo {&brickPointerBufferBindInfo},
                 .pTexelBufferView {nullptr}},
         };
 
@@ -231,13 +249,19 @@ namespace gfx::vulkan::voxel
         {
             for (std::size_t j = 0; j < 64; ++j)
             {
+                float iF = static_cast<float>(i);
+                float jF = static_cast<float>(j);
+
                 this->volume.writeVoxel(
-                    Position {i, (i + j) / 2, j},
+                    Position {
+                        i,
+                        4 * std::sin(iF / 4.0f) + 4 * std::cos(jF / 4.0f) + 32,
+                        j},
                     Voxel {
                         .alpha_or_emissive {128},
-                        .srgb_r {static_cast<std::uint8_t>(0)},
-                        .srgb_g {static_cast<std::uint8_t>(i)},
-                        .srgb_b {static_cast<std::uint8_t>(j)},
+                        .srgb_r {util::convertLinearToSRGB(0.0f)},
+                        .srgb_g {util::convertLinearToSRGB(iF * 4.0f / 255.0f)},
+                        .srgb_b {util::convertLinearToSRGB(jF * 4.0f / 255.0f)},
                         .special {0},
                         .specular {0},
                         .roughness {255},

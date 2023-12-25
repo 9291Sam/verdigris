@@ -41,6 +41,8 @@ IntersectionResult VoxelBrick_tryIntersect21(
     boundingCube.center      = cornerPos + VoxelBrick_EdgeLength / 2;
     boundingCube.edge_length = VoxelBrick_EdgeLength;
 
+    bool startsInside = Cube_contains(boundingCube, ray.origin);
+
     IntersectionResult boundingCubeIntersection =
         Cube_tryIntersect(boundingCube, ray);
 
@@ -53,7 +55,9 @@ IntersectionResult VoxelBrick_tryIntersect21(
     const int  MAX_RAY_STEPS      = 32;
 
     vec3 rayDir = ray.direction;
-    vec3 rayPos = boundingCubeIntersection.maybe_hit_point - cornerPos;
+    vec3 rayPos = startsInside
+                    ? ray.origin
+                    : boundingCubeIntersection.maybe_hit_point - cornerPos;
 
     ivec3 mapPos = ivec3(floor(rayPos + 0.));
 

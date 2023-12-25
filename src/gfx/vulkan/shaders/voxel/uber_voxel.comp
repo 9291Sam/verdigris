@@ -26,11 +26,23 @@ layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
     float sphere_radius;
 }
 in_world_info;
-layout(set = 0, binding = 2, std430) readonly restrict buffer Voxels
+layout(set = 0, binding = 2, std430) readonly restrict buffer Bricks
 {
     VoxelBrick[] bricks;
 }
 in_voxels;
+
+struct VoxelOrIndexIndex
+{
+    uint32_t _padding;
+    uint32_t index;
+};
+layout(set = 0, binding = 3, std430) readonly
+    restrict buffer BrickPointerIndicies
+{
+    VoxelOrIndexIndex[] voxel_or_indicies;
+}
+in_voxel_or_indicies;
 
 #define VOXEL_BRICK_IMPL_ARRAY in_voxels.bricks
 
@@ -75,12 +87,15 @@ vec4 calculatePixelColor(const Ray ray)
                 propagateIntersection(
                     bestIntersection,
                     VoxelBrick_tryIntersect21(
-                        i * bound * bound + j * bound + k,
+                        in_voxel_or_indicies
+                            .voxel_or_indicies
+                                [(i * bound * bound) + (j * bound) + k]
+                            .index,
                         vec3(
                             i * SpreadDistance,
                             j * SpreadDistance,
-                            k * SpreadDistance)
-                            - vec3(bound / 2) * SpreadDistance,
+                            k * SpreadDistance),
+                        // - vec3(bound / 2) * SpreadDistance,
                         ray));
             }
         }

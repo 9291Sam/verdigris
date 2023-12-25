@@ -155,26 +155,26 @@ namespace gfx::vulkan::voxel
                     "Failed to wait for BrickedVolume initialization");
             });
 
-        util::logLog(
-            "Initalized BrickedVolume of size {}^3",
-            this->edge_length_bricks * Brick::EdgeLength);
+        // util::logLog(
+        //     "Initalized BrickedVolume of size {}^3",
+        //     this->edge_length_bricks * Brick::EdgeLength);
 
-        this->locked_data.lock(
-            [&](LockedData& data)
-            {
-                util::assertFatal(
-                    *data.brick_buffer != nullptr,
-                    "Brick buffer was not initalized");
+        // this->locked_data.lock(
+        //     [&](LockedData& data)
+        //     {
+        //         util::assertFatal(
+        //             *data.brick_buffer != nullptr,
+        //             "Brick buffer was not initalized");
 
-                util::assertFatal(
-                    *data.brick_pointer_buffer != nullptr,
-                    "Brick buffer was not initalized");
+        //         util::assertFatal(
+        //             *data.brick_pointer_buffer != nullptr,
+        //             "Brick buffer was not initalized");
 
-                util::logTrace(
-                    "BrickedVolume buffers {} {}",
-                    (void*)*data.brick_buffer,
-                    (void*)*data.brick_pointer_buffer);
-            });
+        //         util::logTrace(
+        //             "BrickedVolume buffers {} {}",
+        //             (void*)*data.brick_buffer,
+        //             (void*)*data.brick_pointer_buffer);
+        //     });
     }
 
     void BrickedVolume::writeVoxel(Position position, Voxel voxelToWrite) const
@@ -406,23 +406,33 @@ namespace gfx::vulkan::voxel
                     });
 
                 util::logTrace("Processed {} changes", commandsQueued);
+
+                data.brick_buffer.emitBarrier(
+                    commandBuffer,
+                    vk::AccessFlagBits::eTransferWrite,
+                    vk::AccessFlagBits::eShaderRead,
+                    vk::PipelineStageFlagBits::eTransfer,
+                    vk::PipelineStageFlagBits::eComputeShader);
+
+                data.brick_pointer_buffer.emitBarrier(
+                    commandBuffer,
+                    vk::AccessFlagBits::eTransferWrite,
+                    vk::AccessFlagBits::eShaderRead,
+                    vk::PipelineStageFlagBits::eTransfer,
+                    vk::PipelineStageFlagBits::eComputeShader);
             });
     }
 
     BrickedVolume::DrawingBuffers BrickedVolume::getBuffers()
     {
-        DrawingBuffers retval {};
-
-        this->locked_data.lock(
+        return this->locked_data.lock(
             [&](LockedData& data)
             {
-                retval = DrawingBuffers {
+                return DrawingBuffers {
                     .brick_pointer_buffer {*data.brick_pointer_buffer},
                     .brick_buffer {*data.brick_buffer},
                 };
             });
-
-        return retval;
     }
 
     VoxelOrIndex
@@ -435,7 +445,8 @@ namespace gfx::vulkan::voxel
         if (maybeValidNewIndex == 0)
         {
             // leak 0 and try again
-            maybeValidNewIndex = allocator.allocate();
+            maybeValidNewIndex =
+                static_cast<std::uint32_t>(allocator.allocate());
         }
 
         return VoxelOrIndex {maybeValidNewIndex};

@@ -221,6 +221,32 @@ namespace gfx::vulkan
         commandBuffer.fillBuffer(this->buffer, 0, vk::WholeSize, fillPattern);
     }
 
+    void Buffer::emitBarrier(
+        vk::CommandBuffer      commandBuffer,
+        vk::AccessFlags        srcAccess,
+        vk::AccessFlags        dstAccess,
+        vk::PipelineStageFlags srcStage,
+        vk::PipelineStageFlags dstStage)
+    {
+        VmaAllocationInfo info;
+
+        vmaGetAllocationInfo(this->allocator, this->allocation, &info);
+
+        vk::BufferMemoryBarrier barrier {
+            .sType {vk::StructureType::eBufferMemoryBarrier},
+            .pNext {nullptr},
+            .srcAccessMask {srcAccess},
+            .dstAccessMask {dstAccess},
+            .srcQueueFamilyIndex {vk::QueueFamilyIgnored},
+            .dstQueueFamilyIndex {vk::QueueFamilyIgnored},
+            .buffer {this->buffer},
+            .offset {info.offset},
+            .size {vk::WholeSize}};
+
+        commandBuffer.pipelineBarrier(
+            srcStage, dstStage, {}, nullptr, barrier, nullptr);
+    }
+
     void Buffer::free()
     {
         if (this->allocator == nullptr)
