@@ -6,6 +6,8 @@
 
 namespace util
 {
+    /// Allocates unique, single integers.
+    /// Useful for allocating fixed sized chunks of memory
     class BlockAllocator
     {
     public:
@@ -14,7 +16,7 @@ namespace util
         {
             [[nodiscard]] const char* what() const noexcept override
             {
-                return "BlockALlocator::OutOfBlocks";
+                return "BlockAllocator::OutOfBlocks";
             }
         };
 
@@ -30,19 +32,22 @@ namespace util
         {
             [[nodiscard]] const char* what() const noexcept override
             {
-                return "BlockALlocator::DoubleFree";
+                return "BlockAllocator::DoubleFree";
             }
         };
 
     public:
 
+        // Creates a new BlockAllocator that can allocate blocks at indicies in
+        // the range [0, blocks)
+        // BlockAllocator(128) -> [0, 127]
         explicit BlockAllocator(std::size_t blocks);
         ~BlockAllocator() = default;
 
-        BlockAllocator(const BlockAllocator&)             = delete;
-        BlockAllocator(BlockAllocator&&)                  = default;
+        BlockAllocator(const BlockAllocator&) = delete;
+        BlockAllocator(BlockAllocator&&) noexcept;
         BlockAllocator& operator= (const BlockAllocator&) = delete;
-        BlockAllocator& operator= (BlockAllocator&&)      = default;
+        BlockAllocator& operator= (BlockAllocator&&) noexcept;
 
         std::size_t allocate();
         void        free(std::size_t);

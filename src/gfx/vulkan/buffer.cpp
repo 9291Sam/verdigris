@@ -94,19 +94,14 @@ namespace gfx::vulkan
 
     Buffer& Buffer::operator= (Buffer&& other) noexcept
     {
-        this->free();
+        if (this == &other)
+        {
+            return *this;
+        }
 
-        this->allocator  = other.allocator;
-        this->buffer     = other.buffer;
-        this->allocation = other.allocation;
-        this->size_bytes = other.size_bytes;
-        this->mapped_memory.store(
-            other.mapped_memory.exchange(nullptr, std::memory_order_seq_cst),
-            std::memory_order_seq_cst);
+        this->~Buffer();
 
-        other.buffer     = nullptr;
-        other.allocation = nullptr;
-        other.size_bytes = 0;
+        new (this) Buffer {std::move(other)};
 
         return *this;
     }

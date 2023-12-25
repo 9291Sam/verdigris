@@ -300,13 +300,9 @@ namespace gfx::vulkan
             return *this;
         }
 
-        this->set    = other.set;
-        this->pool   = other.pool;
-        this->layout = other.layout;
+        this->~DescriptorSet();
 
-        other.set    = nullptr;
-        other.pool   = nullptr;
-        other.layout = nullptr;
+        new (this) DescriptorSet {std::move(other)};
 
         return *this;
     }

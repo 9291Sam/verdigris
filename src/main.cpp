@@ -18,7 +18,6 @@ int main(int argc, char** argv)
     try
     {
         util::installGlobalLoggerRacy();
-        // TODO: remove global state
         parseCommandLineArgumentsAndUpdateSettings(argc, argv);
 
         gfx::Renderer renderer {};

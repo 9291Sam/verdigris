@@ -55,9 +55,12 @@ namespace gfx::vulkan::voxel
 
     /// States  |     Representation    |      Legend      |
     /// Invalid | 0x0000'0000'0000'0000 | _: any data      |
-    /// Voxel   | 0x~~__'____'____'____ | ~: non zero data |
-    /// Index   | 0x00??'????'~~~~'~~~~ | ?: unused        |
-    /// Unused  | 0x00??'????'0000'0000 |                  |
+    /// Voxel   | 0x____'____'____'__~~ | ~: non zero data |
+    /// Index   | 0x~~~~'~~~~'????'??00 | ?: unused        |
+    /// Unused  | 0x0000'0000'????'??00 |                  |
+    ///                              ^^
+    /// As a note, the sentinel value is here
+
     union VoxelOrIndex
     {
     public:

@@ -8,8 +8,7 @@
 
 namespace
 {
-
-    const std::uint64_t timeout =
+    const std::uint64_t Timeout =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::duration<std::uint64_t, std::ratio<1, 1>> {5})
             .count();
@@ -248,14 +247,14 @@ namespace gfx::vulkan
                 this->device->asLogicalDevice().waitForFences(
                     *this->frame_in_flight,
                     static_cast<vk::Bool32>(true),
-                    timeout);
+                    Timeout);
 
             util::assertFatal(
                 result == vk::Result::eSuccess,
                 "Failed to wait for frame to complete drawing {} | "
                 "timeout(ns)",
                 vk::to_string(result),
-                timeout);
+                Timeout);
         }
     }
 
@@ -289,7 +288,7 @@ namespace gfx::vulkan
         {
             const auto [result, maybeNextFrameBufferIndex] =
                 this->device->asLogicalDevice().acquireNextImageKHR(
-                    **this->swapchain, timeout, *this->image_available);
+                    **this->swapchain, Timeout, *this->image_available);
 
             switch (result)
             {
@@ -311,7 +310,7 @@ namespace gfx::vulkan
             default:
                 util::panic(
                     "Invalid acquireNextImage {}", vk::to_string(result));
-                std::unreachable();
+                break;
             }
         }
 
@@ -326,7 +325,7 @@ namespace gfx::vulkan
 
         this->command_buffer->begin(commandBufferBeginInfo);
 
-        constexpr std::array<float, 4> clearColor {0.01f, 0.03f, 0.04f, 1.0f};
+        constexpr std::array<float, 4> ClearColor {0.01f, 0.03f, 0.04f, 1.0f};
 
         // union initialization syntax my beloved :heart:
         // clang-format off
@@ -336,7 +335,7 @@ namespace gfx::vulkan
             {
                 .color
                 {
-                    vk::ClearColorValue {clearColor}
+                    vk::ClearColorValue {ClearColor}
                 }
             },
             vk::ClearValue
@@ -431,14 +430,14 @@ namespace gfx::vulkan
                             this->device->asLogicalDevice().waitForFences(
                                 *previousFrameInFlightFence,
                                 static_cast<vk::Bool32>(true),
-                                timeout);
+                                Timeout);
 
                         util::assertFatal(
                             result == vk::Result::eSuccess,
                             "Failed to wait for frame to complete drawing {}"
                             "| timeout {} ns ",
                             vk::to_string(result),
-                            timeout);
+                            Timeout);
                     }
 
                     {

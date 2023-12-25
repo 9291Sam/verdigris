@@ -41,15 +41,36 @@ namespace util
             return std::apply(func, this->tuple);
         }
 
-        // TODO: change to std::expected<R, void>
-        bool tryLock(std::invocable<T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
+        auto tryLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple))) -> std::optional<
+                std::decay_t<std::invoke_result_t<decltype(func), T&...>>>
+            requires (!std::same_as<
+                      void,
+                      std::invoke_result_t<decltype(func), T&...>>)
         {
             std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
 
             if (lock.try_lock())
             {
-                std::apply(func, this->tuple);
+                return std::optional {std::apply(
+                    std::forward<decltype(func)>(func), this->tuple)};
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+
+        bool tryLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+            requires std::
+                same_as<void, std::invoke_result_t<decltype(func), T&...>>
+        {
+            std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
+
+            if (lock.try_lock())
+            {
+                std::apply(std::forward<decltype(func)>(func), this->tuple);
                 return true;
             }
             else
