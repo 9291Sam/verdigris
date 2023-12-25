@@ -29,6 +29,7 @@ Checks: >
   -abseil-string-find-startswith,
   -modernize-use-default-member-init,
   -cppcoreguidelines-use-default-member-init,
+  -fuchsia-trailing-return,
 
 CheckOptions:
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true       }

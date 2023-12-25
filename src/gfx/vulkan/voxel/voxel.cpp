@@ -11,12 +11,24 @@ namespace gfx::vulkan::voxel
     {}
 
     VoxelOrIndex::VoxelOrIndex(std::uint32_t newIndex)
-        : index {newIndex}
-    {}
+        : _padding {0}
+        , index {newIndex}
+    {
+        if (newIndex == 0)
+        {
+            util::panic("Tried to set a VoxelOrIndex with index 0");
+        }
+    }
 
     void VoxelOrIndex::setIndex(std::uint32_t newIndex)
     {
-        this->index = newIndex;
+        if (newIndex == 0)
+        {
+            util::panic("Tried to set a VoxelOrIndex with index 0");
+        }
+
+        this->_padding = 0;
+        this->index    = newIndex;
     }
 
     void VoxelOrIndex::setVoxel(Voxel newVoxel)

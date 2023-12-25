@@ -281,7 +281,6 @@ namespace gfx::vulkan
             "Unimplemented pipeline creation! {}",
             std::to_underlying(typeToCreate));
         util::debugBreak();
-        std::unreachable();
     }
 
     ComputePipeline PipelineManager::createComputePipeline(

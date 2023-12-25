@@ -29,13 +29,12 @@ namespace engine
         {
             // Collect new callbacks
             {
-                std::move_only_function<EventProcessResult(Ts...)>
-                    maybeFunction {};
+                std::function<EventProcessResult(Ts...)> maybeFunction {};
 
                 while (this->subscriber_queue.try_dequeue(maybeFunction))
                 {
-                    this->registered_callbacks.insert(
-                        std::pair {util::UUID {}, std::move(maybeFunction)});
+                    this->registered_callbacks.insert(std::pair {
+                        util::UUID {}, std::forward<Ts...>(maybeFunction)});
 
                     maybeFunction = {};
                 }
@@ -82,7 +81,7 @@ namespace engine
             std::weak_ptr<C> weakInstance,
             void             (C::*memberFunction)(Ts...)) const
         {
-            std::move_only_function<EventProcessResult(Ts...)> eventCallback {
+            std::function<EventProcessResult(Ts...)> eventCallback {
                 [=](Ts... args) -> EventProcessResult
                 {
                     if (std::shared_ptr<C> instance = weakInstance.lock())
@@ -98,7 +97,8 @@ namespace engine
                     }
                 }};
 
-            if (!this->subscriber_queue.try_enqueue(std::move(eventCallback)))
+            if (!this->subscriber_queue.try_enqueue(
+                    std::forward<Ts...>(eventCallback)))
             {
                 throw std::bad_alloc {};
             }
@@ -106,11 +106,9 @@ namespace engine
 
     private:
         mutable moodycamel::ConcurrentQueue<
-            std::move_only_function<EventProcessResult(Ts...)>>
+            std::function<EventProcessResult(Ts...)>>
             subscriber_queue;
-        std::unordered_map<
-            util::UUID,
-            std::move_only_function<EventProcessResult(Ts...)>>
+        std::unordered_map<util::UUID, std::function<EventProcessResult(Ts...)>>
             registered_callbacks;
     };
 } // namespace engine

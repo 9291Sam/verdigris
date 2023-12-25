@@ -82,7 +82,7 @@ namespace util
             using enum LoggingLevel;                                           \
             if (!condition                                                     \
                 && std::to_underlying(getCurrentLevel())                       \
-                       <= std::to_underlying(LEVEL))                           \
+                       <= std::to_underlying(LEVEL)) [[unlikely]]              \
             {                                                                  \
                 if constexpr (THROW_ON_FAIL)                                   \
                 {                                                              \

@@ -3,6 +3,7 @@
 
 #include <future>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include <span>
 #include <vector>
@@ -25,22 +26,52 @@ namespace util
         Mutex& operator= (const Mutex&)     = delete;
         Mutex& operator= (Mutex&&) noexcept = default;
 
-        void lock(std::invocable<T&...> auto func) const
+        // void lock(std::invocable<T&...> auto func) const
+        //     noexcept(noexcept(std::apply(func, this->tuple)))
+        // {
+        //     std::unique_lock lock {this->mutex};
+
+        //     std::apply(func, this->tuple);
+        // }
+
+        decltype(auto) lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->mutex};
 
-            std::apply(func, this->tuple);
+            return std::apply(func, this->tuple);
         }
 
-        bool tryLock(std::invocable<T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
+        auto tryLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple))) -> std::optional<
+                std::decay_t<std::invoke_result_t<decltype(func), T&...>>>
+            requires (!std::same_as<
+                      void,
+                      std::invoke_result_t<decltype(func), T&...>>)
         {
             std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
 
             if (lock.try_lock())
             {
-                std::apply(func, this->tuple);
+                return std::optional {std::apply(
+                    std::forward<decltype(func)>(func), this->tuple)};
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+
+        bool tryLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple)))
+            requires std::
+                same_as<void, std::invoke_result_t<decltype(func), T&...>>
+        {
+            std::unique_lock<std::mutex> lock {this->mutex, std::defer_lock};
+
+            if (lock.try_lock())
+            {
+                std::apply(std::forward<decltype(func)>(func), this->tuple);
                 return true;
             }
             else

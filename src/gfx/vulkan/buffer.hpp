@@ -36,6 +36,12 @@ namespace gfx::vulkan
         void write(std::span<const std::byte>) const;
         void copyFrom(const Buffer&, vk::CommandBuffer) const;
         void fill(vk::CommandBuffer, std::uint32_t);
+        void emitBarrier(
+            vk::CommandBuffer,
+            vk::AccessFlags        srcAccess,
+            vk::AccessFlags        dstAccess,
+            vk::PipelineStageFlags srcStage,
+            vk::PipelineStageFlags dstStage);
 
     private:
         void free();

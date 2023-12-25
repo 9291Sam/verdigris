@@ -100,7 +100,7 @@ namespace util
         0xE197'51F3'0310'22E7, 0xB966'0FF1'13BF'1DE0, 0xC930'EA45'C754'05F5,
         0xC8D4'CF6B'9F88'40B3};
 
-    void debugBreak();
+    [[noreturn]] void debugBreak();
 
     template<class T>
     concept Integer = requires {

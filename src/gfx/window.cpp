@@ -70,11 +70,14 @@ namespace gfx
             nullptr,
             nullptr);
 
+        // move the window to the corner so I can see my debug logs
+        glfwSetWindowPos(this->window, 100, 100);
+
         util::assertFatal(
             this->window != nullptr, "Failed to create GLFW window!");
 
         // populate key maps
-        for (const auto [action, information] : keyInformationMap)
+        for (const auto& [action, information] : keyInformationMap)
         {
             this->key_to_actions_map[information.key].push_back(action);
             this->action_to_maybe_active_time_map[action].store(

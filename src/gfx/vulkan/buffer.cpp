@@ -94,19 +94,14 @@ namespace gfx::vulkan
 
     Buffer& Buffer::operator= (Buffer&& other) noexcept
     {
-        this->free();
+        if (this == &other)
+        {
+            return *this;
+        }
 
-        this->allocator  = other.allocator;
-        this->buffer     = other.buffer;
-        this->allocation = other.allocation;
-        this->size_bytes = other.size_bytes;
-        this->mapped_memory.store(
-            other.mapped_memory.exchange(nullptr, std::memory_order_seq_cst),
-            std::memory_order_seq_cst);
+        this->~Buffer();
 
-        other.buffer     = nullptr;
-        other.allocation = nullptr;
-        other.size_bytes = 0;
+        new (this) Buffer {std::move(other)};
 
         return *this;
     }
@@ -219,6 +214,32 @@ namespace gfx::vulkan
     Buffer::fill(vk::CommandBuffer commandBuffer, std::uint32_t fillPattern)
     {
         commandBuffer.fillBuffer(this->buffer, 0, vk::WholeSize, fillPattern);
+    }
+
+    void Buffer::emitBarrier(
+        vk::CommandBuffer      commandBuffer,
+        vk::AccessFlags        srcAccess,
+        vk::AccessFlags        dstAccess,
+        vk::PipelineStageFlags srcStage,
+        vk::PipelineStageFlags dstStage)
+    {
+        VmaAllocationInfo info;
+
+        vmaGetAllocationInfo(this->allocator, this->allocation, &info);
+
+        vk::BufferMemoryBarrier barrier {
+            .sType {vk::StructureType::eBufferMemoryBarrier},
+            .pNext {nullptr},
+            .srcAccessMask {srcAccess},
+            .dstAccessMask {dstAccess},
+            .srcQueueFamilyIndex {vk::QueueFamilyIgnored},
+            .dstQueueFamilyIndex {vk::QueueFamilyIgnored},
+            .buffer {this->buffer},
+            .offset {info.offset},
+            .size {vk::WholeSize}};
+
+        commandBuffer.pipelineBarrier(
+            srcStage, dstStage, {}, nullptr, barrier, nullptr);
     }
 
     void Buffer::free()

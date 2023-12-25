@@ -1,6 +1,7 @@
 #version 460
 #extension GL_EXT_scalar_block_layout : require
 
+#include "voxel_brick_pointer.glsl"
 #include <intersectables/cube.glsl>
 #include <intersectables/sphere.glsl>
 #include <intersectables/voxel_brick_def.glsl>
@@ -26,16 +27,26 @@ layout(set = 0, binding = 1, std430) readonly restrict uniform WorldInfo
     float sphere_radius;
 }
 in_world_info;
-layout(set = 0, binding = 2, std430) readonly restrict buffer Voxels
+layout(set = 0, binding = 2, std430) readonly restrict buffer Bricks
 {
     VoxelBrick[] bricks;
 }
 in_voxels;
+layout(set = 0, binding = 3, std430) readonly
+    restrict buffer BrickPointerIndicies
+{
+    BrickPointer[] voxel_or_indicies;
+}
+in_voxel_or_indicies;
 
-#define VOXEL_BRICK_IMPL_ARRAY in_voxels.bricks
+#define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
+#define BRICK_POINTER_IMPL_ARRAY     in_voxel_or_indicies.voxel_or_indicies
+#define BRICK_POINTER_IMPL_DIMENSION 8
 
+#include "brick_pointer_traversal.glsl"
 #include <intersectables/voxel_brick_impl.glsl>
 
+#undef BRICK_POINTER_IMPL_ARRAY
 #undef VOXEL_BRICK_IMPL_ARRAY
 
 vec4 calculatePixelColor(const Ray ray);
@@ -48,71 +59,40 @@ void main()
     imageStore(out_image, pixelXY, calculatePixelColor(generateRay(pixelXY)));
 }
 
-uint lowbias32(uint x)
-{
-    x ^= x >> 16;
-    x *= 0x7feb352dU;
-    x ^= x >> 15;
-    x *= 0x846ca68bU;
-    x ^= x >> 16;
-    return x;
-}
-
 vec4 calculatePixelColor(const Ray ray)
 {
     IntersectionResult bestIntersection;
     bestIntersection.intersection_occurred = false;
 
-    const uint bound          = 8;
-    const uint SpreadDistance = 32;
-
-    for (int i = 0; i < bound; ++i)
-    {
-        for (int j = 0; j < bound; ++j)
-        {
-            for (int k = 0; k < bound; ++k)
-            {
-                propagateIntersection(
-                    bestIntersection,
-                    VoxelBrick_tryIntersect21(
-                        lowbias32(i + lowbias32(j + lowbias32(k))) % 64,
-                        vec3(
-                            i * SpreadDistance,
-                            j * SpreadDistance,
-                            k * SpreadDistance)
-                            - vec3(bound / 2) * SpreadDistance,
-                        ray));
-            }
-        }
-    }
-
-    // for (int i = 0; i < bound; ++i)
     // {
-    //     for (int j = 0; j < bound; ++j)
+    //     const uint bound          = 8;
+    //     const uint SpreadDistance = 8;
+
+    //     for (int i = 0; i < bound; ++i)
     //     {
-    //         propagateIntersection(
-    //             bestIntersection,
-    //             VoxelBrick_tryIntersect21(
-    //                 lowbias32(j + lowbias32(i)) % 64,
-    //                 vec3(i * 8, 0, j * 8) - vec3(bound / 2, 0, bound / 2) *
-    //                 8, ray));
+    //         for (int j = 0; j < bound; ++j)
+    //         {
+    //             for (int k = 0; k < bound; ++k)
+    //             {
+    //                 propagateIntersection(
+    //                     bestIntersection,
+    //                     VoxelBrick_tryIntersect(
+    //                         in_voxel_or_indicies
+    //                             .voxel_or_indicies
+    //                                 [(i * bound * bound) + (j * bound) + k]
+    //                             .index,
+    //                         vec3(
+    //                             i * SpreadDistance,
+    //                             j * SpreadDistance,
+    //                             k * SpreadDistance),
+    //                         ray));
+    //             }
+    //         }
     //     }
     // }
 
-    // propagateIntersection(
-    //     bestIntersection, VoxelBrick_tryIntersect21(0, vec3(0.0), ray));
-    // propagateIntersection(
-    //     bestIntersection,
-    //     VoxelBrick_tryIntersect21(0, vec3(0.0, 9.0, 0.0), ray));
-    // propagateIntersection(
-    //     bestIntersection,
-    //     VoxelBrick_tryIntersect21(0, vec3(0.0, 9.0, 9.0), ray));
-
-    // propagateIntersection(
-    //     bestIntersection,
-    //     VoxelBrick_tryIntersect21(0, vec3(9.0, 9.0, 9.0), ray));
-    // // propagateIntersection(
-    //     bestIntersection, VoxelBrick_tryIntersect(0, vec3(16.0), ray));
+    propagateIntersection(
+        bestIntersection, traverseBrickPointer(vec3(0, 0, 0), ray));
 
     {
         Cube cube;

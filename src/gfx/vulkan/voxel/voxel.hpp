@@ -32,7 +32,7 @@ namespace gfx::vulkan::voxel
 
     static_assert(sizeof(Voxel) == sizeof(std::uint64_t));
 
-    using Position = glm::vec<3, std::size_t>;
+    using Position = glm::vec<3, std::uint64_t>;
 
     struct Brick
     {
@@ -55,9 +55,12 @@ namespace gfx::vulkan::voxel
 
     /// States  |     Representation    |      Legend      |
     /// Invalid | 0x0000'0000'0000'0000 | _: any data      |
-    /// Voxel   | 0x~~__'____'____'____ | ~: non zero data |
-    /// Index   | 0x00??'????'~~~~'~~~~ | ?: unused        |
-    /// Unused  | 0x00??'????'0000'0000 |                  |
+    /// Voxel   | 0x____'____'____'__~~ | ~: non zero data |
+    /// Index   | 0x~~~~'~~~~'????'??00 | ?: unused        |
+    /// Unused  | 0x0000'0000'????'??00 |                  |
+    ///                              ^^
+    /// As a note, the sentinel value is here
+
     union VoxelOrIndex
     {
     public:
@@ -101,7 +104,7 @@ namespace gfx::vulkan::voxel
 
 } // namespace gfx::vulkan::voxel
 
-namespace boost
+namespace glm
 {
     inline std::size_t
     hash_value(const gfx::vulkan::voxel::Position& pos) // NOLINT
@@ -115,6 +118,6 @@ namespace boost
         return workingHash;
     }
 
-} // namespace boost
+} // namespace glm
 
 #endif // SRC_GFX_VULKAN_VOXEL_HPP

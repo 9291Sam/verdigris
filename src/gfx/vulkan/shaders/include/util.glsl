@@ -51,4 +51,14 @@ float minComponent(const vec3 vec)
     return min(vec.x, min(vec.y, vec.z));
 }
 
+uint hash(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+
 #endif // SRC_GFX_VULKAN_SHADERS_INCLUDE_UTIL_GLSL

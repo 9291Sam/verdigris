@@ -85,10 +85,16 @@ namespace engine
         mutable std::atomic<bool> gfx_validation_set {false};
         mutable std::atomic<bool> app_validation_set {false};
 
-        alignas(std::hardware_constructive_interference_size) mutable std::
-            atomic<bool> enable_gfx_validation;
-        alignas(std::hardware_constructive_interference_size) mutable std::
-            atomic<bool> enable_app_validation;
+#ifdef __cpp_lib_hardware_interference_size
+        static constexpr std::size_t Alignment =
+            std::hardware_destructive_interference_size;
+#else
+        // Good enough
+        static constexpr std::size_t Alignment = 128;
+#endif
+
+        alignas(Alignment) mutable std::atomic<bool> enable_gfx_validation;
+        alignas(Alignment) mutable std::atomic<bool> enable_app_validation;
     };
 
 } // namespace engine

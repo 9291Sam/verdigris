@@ -1,10 +1,14 @@
 #include "misc.hpp"
 #include <cstdio>
+#include <thread>
 #include <tuple>
 
-void util::debugBreak()
+[[noreturn]] void util::debugBreak()
 {
     std::ignore = std::fputs("util::debugBreak()\n", stderr);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds {100});
+
 #ifdef _MSC_VER
     __debugbreak();
 #elif defined(__GNUC__) || defined(__clang__)

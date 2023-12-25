@@ -2,10 +2,49 @@
 
 namespace util
 {
+    const char* BlockAllocator::OutOfBlocks::what() const noexcept
+    {
+        return "BlockAllocator::OutOfBlocks";
+    }
+
+    const char* BlockAllocator::FreeOfUntrackedValue::what() const noexcept
+    {
+        return "BlockAllocator::FreeOfUntrackedValue";
+    }
+
+    const char* BlockAllocator::DoubleFree::what() const noexcept
+    {
+        return "BlockAllocator::DoubleFree";
+    }
+
     BlockAllocator::BlockAllocator(std::size_t blocks)
         : next_available_block {0}
         , max_number_of_blocks {blocks}
     {}
+
+    BlockAllocator::BlockAllocator(BlockAllocator&& other) noexcept
+        : free_block_list {std::move(other.free_block_list)}
+        , next_available_block {other.next_available_block}
+        , max_number_of_blocks {other.max_number_of_blocks}
+    {
+        other.free_block_list      = {};
+        other.next_available_block = -1;
+        other.max_number_of_blocks = 0;
+    }
+
+    BlockAllocator& BlockAllocator::operator= (BlockAllocator&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        this->~BlockAllocator();
+
+        new (this) BlockAllocator {std::move(other)};
+
+        return *this;
+    }
 
     std::size_t BlockAllocator::allocate()
     {
