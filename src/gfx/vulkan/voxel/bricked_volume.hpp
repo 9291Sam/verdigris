@@ -60,6 +60,7 @@ namespace gfx::vulkan::voxel
             std::vector<VoxelOrIndex> brick_pointer_data;
 
             vulkan::Buffer brick_buffer;
+            std::size_t    brick_buffer_size_bricks;
 
             util::BlockAllocator allocator;
         };

@@ -32,6 +32,7 @@ namespace util
         // Creates a new BlockAllocator that can allocate blocks at indicies in
         // the range [0, blocks)
         // BlockAllocator(128) -> [0, 127]
+        BlockAllocator() = default;
         explicit BlockAllocator(std::size_t blocks);
         ~BlockAllocator() = default;
 

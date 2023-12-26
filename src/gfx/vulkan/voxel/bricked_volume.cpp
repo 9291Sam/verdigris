@@ -1,6 +1,7 @@
 #include "bricked_volume.hpp"
 #include <gfx/vulkan/allocator.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <numeric>
 
 namespace gfx::vulkan::voxel
 {
@@ -63,10 +64,6 @@ namespace gfx::vulkan::voxel
     BrickedVolume::BrickedVolume(
         Device* device, Allocator* allocator, std::size_t edgeLengthVoxels)
         : edge_length_bricks {edgeLengthVoxels / Brick::EdgeLength}
-        , locked_data {util::Mutex {LockedData {
-              .allocator {// TODO: move elsewhere?
-                          this->edge_length_bricks * this->edge_length_bricks
-                          * this->edge_length_bricks}}}}
     {
         util::assertFatal(
             edgeLengthVoxels % Brick::EdgeLength == 0,
@@ -74,53 +71,59 @@ namespace gfx::vulkan::voxel
             edgeLengthVoxels,
             Brick::EdgeLength);
 
-        const std::size_t numberOfBricks = this->edge_length_bricks
-                                         * this->edge_length_bricks
-                                         * this->edge_length_bricks;
+        const std::size_t totalNumberOfBricks = this->edge_length_bricks
+                                              * this->edge_length_bricks
+                                              * this->edge_length_bricks;
+        std::size_t brickBufferBricks =
+            170000; // TODO: make fallability on too much!
+        // std::min(16UZ * 16 * 16, totalNumberOfBricks);
 
         this->locked_data.lock(
             [&](LockedData& data)
             {
-                data.brick_pointer_buffer = vulkan::Buffer {
-                    allocator,
-                    sizeof(VoxelOrIndex) * numberOfBricks,
-                    vk::BufferUsageFlagBits::eStorageBuffer
-                        | vk::BufferUsageFlagBits::eTransferDst,
-                    vk::MemoryPropertyFlagBits::eDeviceLocal};
+                data = LockedData {
+                    .brick_pointer_buffer {
+                        allocator,
+                        sizeof(VoxelOrIndex) * totalNumberOfBricks,
+                        vk::BufferUsageFlagBits::eStorageBuffer
+                            | vk::BufferUsageFlagBits::eTransferDst,
+                        vk::MemoryPropertyFlagBits::eDeviceLocal},
+                    .brick_pointer_data {totalNumberOfBricks, VoxelOrIndex {}},
+                    .brick_buffer {
+                        allocator,
+                        sizeof(Brick) * brickBufferBricks, //! make dynamic
+                        vk::BufferUsageFlagBits::eStorageBuffer
+                            | vk::BufferUsageFlagBits::eTransferDst,
+                        vk::MemoryPropertyFlagBits::eDeviceLocal},
+                    .brick_buffer_size_bricks {brickBufferBricks},
+                    .allocator {brickBufferBricks}};
+            });
 
-                data.brick_pointer_data.resize(numberOfBricks, VoxelOrIndex {});
+        const vk::FenceCreateInfo fenceCreateInfo {
+            .sType {vk::StructureType::eFenceCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+        };
 
-                data.brick_buffer = vulkan::Buffer {
-                    allocator,
-                    sizeof(Brick) * numberOfBricks,
-                    vk::BufferUsageFlagBits::eStorageBuffer
-                        | vk::BufferUsageFlagBits::eTransferDst,
-                    vk::MemoryPropertyFlagBits::eDeviceLocal};
+        vk::UniqueFence endTransferFence =
+            device->asLogicalDevice().createFenceUnique(fenceCreateInfo);
 
-                const vk::FenceCreateInfo fenceCreateInfo {
-                    .sType {vk::StructureType::eFenceCreateInfo},
+        device->accessQueue(
+            vk::QueueFlagBits::eTransfer,
+            [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+            {
+                const vk::CommandBufferBeginInfo beginInfo {
+                    .sType {vk::StructureType::eCommandBufferBeginInfo},
                     .pNext {nullptr},
-                    .flags {},
+                    .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
+                    .pInheritanceInfo {nullptr},
                 };
 
-                vk::UniqueFence endTransferFence =
-                    device->asLogicalDevice().createFenceUnique(
-                        fenceCreateInfo);
+                commandBuffer.begin(beginInfo);
 
-                device->accessQueue(
-                    vk::QueueFlagBits::eTransfer,
-                    [&](vk::Queue queue, vk::CommandBuffer commandBuffer)
+                this->locked_data.lock(
+                    [&](LockedData& data)
                     {
-                        const vk::CommandBufferBeginInfo beginInfo {
-                            .sType {vk::StructureType::eCommandBufferBeginInfo},
-                            .pNext {nullptr},
-                            .flags {
-                                vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-                            .pInheritanceInfo {nullptr},
-                        };
-
-                        commandBuffer.begin(beginInfo);
-
                         // fill with invalid brick pointers
                         data.brick_pointer_buffer.fill(
                             commandBuffer, std::uint32_t {0});
@@ -128,55 +131,33 @@ namespace gfx::vulkan::voxel
                         // fill volumes with invalid Voxel (clear)
                         data.brick_buffer.fill(
                             commandBuffer, std::uint32_t {0});
-
-                        commandBuffer.end();
-
-                        const vk::SubmitInfo submitInfo {
-                            .sType {vk::StructureType::eSubmitInfo},
-                            .pNext {nullptr},
-                            .waitSemaphoreCount {0},
-                            .pWaitSemaphores {nullptr},
-                            .pWaitDstStageMask {nullptr},
-                            .commandBufferCount {1},
-                            .pCommandBuffers {&commandBuffer},
-                            .signalSemaphoreCount {0},
-                            .pSignalSemaphores {nullptr},
-                        };
-
-                        queue.submit(submitInfo, *endTransferFence);
                     });
 
-                const vk::Result result =
-                    device->asLogicalDevice().waitForFences(
-                        *endTransferFence,
-                        static_cast<vk::Bool32>(true),
-                        ~std::uint64_t {0});
+                commandBuffer.end();
 
-                util::assertFatal(
-                    result == vk::Result::eSuccess,
-                    "Failed to wait for BrickedVolume initialization");
+                const vk::SubmitInfo submitInfo {
+                    .sType {vk::StructureType::eSubmitInfo},
+                    .pNext {nullptr},
+                    .waitSemaphoreCount {0},
+                    .pWaitSemaphores {nullptr},
+                    .pWaitDstStageMask {nullptr},
+                    .commandBufferCount {1},
+                    .pCommandBuffers {&commandBuffer},
+                    .signalSemaphoreCount {0},
+                    .pSignalSemaphores {nullptr},
+                };
+
+                queue.submit(submitInfo, *endTransferFence);
             });
 
-        // util::logLog(
-        //     "Initalized BrickedVolume of size {}^3",
-        //     this->edge_length_bricks * Brick::EdgeLength);
+        const vk::Result result = device->asLogicalDevice().waitForFences(
+            *endTransferFence,
+            static_cast<vk::Bool32>(true),
+            ~std::uint64_t {0});
 
-        // this->locked_data.lock(
-        //     [&](LockedData& data)
-        //     {
-        //         util::assertFatal(
-        //             *data.brick_buffer != nullptr,
-        //             "Brick buffer was not initalized");
-
-        //         util::assertFatal(
-        //             *data.brick_pointer_buffer != nullptr,
-        //             "Brick buffer was not initalized");
-
-        //         util::logTrace(
-        //             "BrickedVolume buffers {} {}",
-        //             (void*)*data.brick_buffer,
-        //             (void*)*data.brick_pointer_buffer);
-        //     });
+        util::assertFatal(
+            result == vk::Result::eSuccess,
+            "Failed to wait for BrickedVolume initialization");
     }
 
     void BrickedVolume::writeVoxel(Position position, Voxel voxelToWrite) const
@@ -236,7 +217,7 @@ namespace gfx::vulkan::voxel
             this->voxel_changes.size());
 
         // TODO: seperate into brick and voxel updates
-        const std::size_t maxPerFrameUpdates = 512;
+        const std::size_t maxPerFrameUpdates = 8192;
 
         this->locked_data.lock(
             [&](LockedData& data)
@@ -455,6 +436,8 @@ namespace gfx::vulkan::voxel
             maybeValidNewIndex =
                 static_cast<std::uint32_t>(allocator.allocate());
         }
+
+        util::logTrace("Allocated block at {}", maybeValidNewIndex);
 
         return VoxelOrIndex {maybeValidNewIndex};
     }

@@ -223,9 +223,9 @@ target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 
 if (NOT (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
 
 

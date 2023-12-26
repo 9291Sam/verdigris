@@ -16,6 +16,7 @@ namespace util
     {
     public:
 
+        explicit Mutex() = default;
         explicit Mutex(T&&... t) // NOLINT
             : tuple {std::forward<T>(t)...}
         {}
@@ -25,14 +26,6 @@ namespace util
         Mutex(Mutex&&) noexcept             = default;
         Mutex& operator= (const Mutex&)     = delete;
         Mutex& operator= (Mutex&&) noexcept = default;
-
-        // void lock(std::invocable<T&...> auto func) const
-        //     noexcept(noexcept(std::apply(func, this->tuple)))
-        // {
-        //     std::unique_lock lock {this->mutex};
-
-        //     std::apply(func, this->tuple);
-        // }
 
         decltype(auto) lock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
