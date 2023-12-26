@@ -62,7 +62,8 @@ VoxelBrick_tryIntersect(const uint offset, const vec3 cornerPos, const Ray ray)
             || any(
                 greaterThan(localVoxelPosition, ivec3(VoxelBrick_EdgeLength))))
         {
-            return IntersectionResult_getMiss();
+            // return IntersectionResult_getMiss();'
+            continue;
         }
 
         // Otherwise, we may be on the cusp of the cube and only outside by one,

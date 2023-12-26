@@ -77,7 +77,8 @@ IntersectionResult traverseBrickPointer(const vec3 cornerPos, const Ray ray)
         if (any(lessThan(mapPos, ivec3(-1)))
             || any(greaterThan(mapPos, ivec3(BRICK_POINTER_IMPL_DIMENSION))))
         {
-            return IntersectionResult_getMiss();
+            // return IntersectionResult_getMiss();
+            continue;
         }
 
         // Otherwise, we may be on the cusp of the cube and only outside by one,

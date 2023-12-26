@@ -39,6 +39,8 @@ layout(set = 0, binding = 3, std430) readonly
 }
 in_voxel_or_indicies;
 
+//! !! TODO: maybe there was a reason for the continue?
+
 #define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
 #define BRICK_POINTER_IMPL_ARRAY     in_voxel_or_indicies.voxel_or_indicies
 #define BRICK_POINTER_IMPL_DIMENSION 128 //! sync with shader!
@@ -94,10 +96,7 @@ vec4 calculatePixelColor(const Ray ray)
     propagateIntersection(
         bestIntersection,
         traverseBrickPointer(
-            vec3(
-                BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5,
-                0,
-                BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5),
+            vec3(BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5),
             ray));
 
     {

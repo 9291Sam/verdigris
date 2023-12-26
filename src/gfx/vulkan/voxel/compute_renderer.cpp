@@ -1,5 +1,6 @@
 #include "compute_renderer.hpp"
 #include "voxel.hpp"
+#include <game/world/world.hpp>
 #include <gfx/renderer.hpp>
 #include <gfx/vulkan/allocator.hpp>
 #include <gfx/vulkan/buffer.hpp>
@@ -247,41 +248,80 @@ namespace gfx::vulkan::voxel
             std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
             std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
 
-        for (std::size_t i = 0; i < this->volume.getEdgeLengthVoxels(); ++i)
+        if (!this->insert_voxels.has_value())
         {
-            for (std::size_t j = 0; j < this->volume.getEdgeLengthVoxels(); ++j)
-            {
-                float iF = static_cast<float>(i);
-                float jF = static_cast<float>(j);
+            this->insert_voxels = std::async(
+                [&]
+                {
+                    std::uniform_real_distribution<float> dist {0.8f, 1.0f};
 
-                this->volume.writeVoxel(
-                    Position {
-                        i,
-                        4 * std::sin(iF / 4.0f) + 4 * std::cos(jF / 4.0f) + 32,
-                        j},
-                    Voxel {
-                        .alpha_or_emissive {128},
-                        .srgb_r {util::convertLinearToSRGB(0.0f)},
-                        .srgb_g {util::convertLinearToSRGB(util::map(
-                            iF,
-                            0.0f,
-                            static_cast<float>(
-                                this->volume.getEdgeLengthVoxels()),
-                            0.0f,
-                            1.0f))},
-                        .srgb_b {util::convertLinearToSRGB(util::map(
-                            jF,
-                            0.0f,
-                            static_cast<float>(
-                                this->volume.getEdgeLengthVoxels()),
-                            0.0f,
-                            1.0f))},
-                        .special {0},
-                        .specular {0},
-                        .roughness {255},
-                        .metallic {0},
-                    });
-            }
+                    auto distFunc = [&] -> float
+                    {
+                        return dist(this->generator);
+                    };
+
+                    for (std::size_t i = 0;
+                         i < this->volume.getEdgeLengthVoxels();
+                         ++i)
+                    {
+                        for (std::size_t j = 0;
+                             j < this->volume.getEdgeLengthVoxels();
+                             ++j)
+                        {
+                            float iF = static_cast<float>(i);
+                            float jF = static_cast<float>(j);
+
+                            std::int32_t i32oi =
+                                static_cast<std::int32_t>(i)
+                                - static_cast<std::int32_t>(
+                                    this->volume.getEdgeLengthVoxels() / 2);
+
+                            std::int32_t i32oj =
+                                static_cast<std::int32_t>(j)
+                                - static_cast<std::int32_t>(
+                                    this->volume.getEdgeLengthVoxels() / 2);
+
+                            this->volume.writeVoxel(
+                                Position {
+                                    i,
+                                    // 4 * std::sin(iF / 4.0f) + 4 * std::cos(jF
+                                    // / 4.0f)
+                                    // + 32,
+                                    ::game::world::World::generationFunc(
+                                        i32oi, i32oj)
+                                        + 512,
+                                    j},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(0.0f)},
+                                    .srgb_g {
+                                        util::convertLinearToSRGB(util::map(
+                                            iF,
+                                            0.0f,
+                                            distFunc()
+                                                * static_cast<float>(
+                                                    this->volume
+                                                        .getEdgeLengthVoxels()),
+                                            0.0f,
+                                            1.0f))},
+                                    .srgb_b {
+                                        util::convertLinearToSRGB(util::map(
+                                            jF,
+                                            0.0f,
+                                            distFunc()
+                                                * static_cast<float>(
+                                                    this->volume
+                                                        .getEdgeLengthVoxels()),
+                                            0.0f,
+                                            1.0f))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+                    }
+                });
         }
     }
 

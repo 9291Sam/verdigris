@@ -58,4 +58,6 @@ merge raster and rt image
 
 hack brickmap together
 
-shader rewrite
+add dynamic reallocing
+
+shader + compute renderer rewrite

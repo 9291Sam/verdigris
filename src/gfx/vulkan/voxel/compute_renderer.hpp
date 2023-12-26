@@ -74,6 +74,8 @@ namespace gfx::vulkan::voxel
         bool is_first_pass;
 
         BrickedVolume volume;
+
+        std::optional<std::future<void>> insert_voxels;
         // fixed world
         // dynamic size
         // dynamic world
