@@ -56,8 +56,10 @@ namespace gfx::vulkan::voxel
         , generator {std::random_device {}()}
         , foo {0}
         , is_first_pass {true}
-        , volume {this->device, this->allocator, 64}
+        // TODO: actually make the buffers sparse and reallocating (vkCmdCopyBuffer)
+        , volume {this->device, this->allocator, 1024} //! sync with shader!
     {
+        // TODO: fix, wasnt writign enough data to the gpu
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
 
@@ -245,9 +247,9 @@ namespace gfx::vulkan::voxel
             std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
             std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
 
-        for (std::size_t i = 0; i < 64; ++i)
+        for (std::size_t i = 0; i < this->volume.getEdgeLengthVoxels(); ++i)
         {
-            for (std::size_t j = 0; j < 64; ++j)
+            for (std::size_t j = 0; j < this->volume.getEdgeLengthVoxels(); ++j)
             {
                 float iF = static_cast<float>(i);
                 float jF = static_cast<float>(j);
@@ -260,8 +262,20 @@ namespace gfx::vulkan::voxel
                     Voxel {
                         .alpha_or_emissive {128},
                         .srgb_r {util::convertLinearToSRGB(0.0f)},
-                        .srgb_g {util::convertLinearToSRGB(iF * 4.0f / 255.0f)},
-                        .srgb_b {util::convertLinearToSRGB(jF * 4.0f / 255.0f)},
+                        .srgb_g {util::convertLinearToSRGB(util::map(
+                            iF,
+                            0.0f,
+                            static_cast<float>(
+                                this->volume.getEdgeLengthVoxels()),
+                            0.0f,
+                            1.0f))},
+                        .srgb_b {util::convertLinearToSRGB(util::map(
+                            jF,
+                            0.0f,
+                            static_cast<float>(
+                                this->volume.getEdgeLengthVoxels()),
+                            0.0f,
+                            1.0f))},
                         .special {0},
                         .specular {0},
                         .roughness {255},

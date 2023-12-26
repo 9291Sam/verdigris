@@ -24,12 +24,12 @@ namespace gfx
         glm::mat4 projection = glm::perspective(
             renderer.getFovYRadians(),
             renderer.getAspectRatio(),
-            // NOTE: these are hardcoded into uber_voxel.comp, do not change
+            //! sync with shader
             0.1f,       // NOLINT
             100000.0f); // NOLINT
 
         // glm is designed for openGL, vulkan's Y coordinate is flipped in
-        // comparason
+        // comparison
         projection[1][1] *= -1;
 
         return projection * this->getViewMatrix() * transform_.asModelMatrix();

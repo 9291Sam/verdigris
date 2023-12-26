@@ -217,6 +217,11 @@ namespace gfx::vulkan::voxel
         this->brick_changes.insert({indicies.brick_pointer_index, brick});
     }
 
+    std::size_t BrickedVolume::getEdgeLengthVoxels() const
+    {
+        return this->edge_length_bricks * Brick::EdgeLength;
+    }
+
     // TODO: do stuff with a dedicated transfer queue
     void BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
@@ -231,7 +236,7 @@ namespace gfx::vulkan::voxel
             this->voxel_changes.size());
 
         // TODO: seperate into brick and voxel updates
-        const std::size_t maxPerFrameUpdates = 256;
+        const std::size_t maxPerFrameUpdates = 512;
 
         this->locked_data.lock(
             [&](LockedData& data)

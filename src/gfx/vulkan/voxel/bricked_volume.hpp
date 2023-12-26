@@ -38,6 +38,8 @@ namespace gfx::vulkan::voxel
         void writeVoxel(Position, Voxel) const;
         void writeVoxel(Position, const Brick&) const;
 
+        std::size_t getEdgeLengthVoxels() const;
+
         void           flushToGPU(vk::CommandBuffer);
         DrawingBuffers getBuffers();
 

@@ -41,7 +41,7 @@ in_voxel_or_indicies;
 
 #define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
 #define BRICK_POINTER_IMPL_ARRAY     in_voxel_or_indicies.voxel_or_indicies
-#define BRICK_POINTER_IMPL_DIMENSION 8
+#define BRICK_POINTER_IMPL_DIMENSION 256 //! sync with shader!
 
 #include "brick_pointer_traversal.glsl"
 #include <intersectables/voxel_brick_impl.glsl>
@@ -92,7 +92,13 @@ vec4 calculatePixelColor(const Ray ray)
     // }
 
     propagateIntersection(
-        bestIntersection, traverseBrickPointer(vec3(0, 0, 0), ray));
+        bestIntersection,
+        traverseBrickPointer(
+            vec3(
+                BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5,
+                0,
+                BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5),
+            ray));
 
     {
         Cube cube;
@@ -119,7 +125,8 @@ vec4 calculatePixelColor(const Ray ray)
     if (bestIntersection.intersection_occurred)
     {
         // return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
-        return bestIntersection.maybe_color;
+        return bestIntersection.maybe_color
+             * vec4(bestIntersection.maybe_normal / 10 + 0.9, 1.0);
     }
     else
     {
@@ -139,7 +146,7 @@ Ray generateRay(const ivec2 pixelXY)
     const vec2 normalizedPixelXY = (vec2(pixelXY) / vec2(outImageSize)) * 2.0
                                  - 1.0 + (interPixelDelta / 2);
 
-    // NOTE: these are hardcoded into camera.cpp, do not change
+    //! These are hardcoded into camera.cpp, do not change
     const float nearPlaneDistance = 0.1;
     const float farPlaneDistance  = 100000.0;
 

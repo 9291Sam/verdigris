@@ -1,5 +1,6 @@
 #include "misc.hpp"
 #include <cstdio>
+#include <stdexcept>
 #include <thread>
 #include <tuple>
 
@@ -16,4 +17,5 @@
 #else
 #error Unsupported compiler
 #endif
+    throw std::runtime_error {"util::debugBreak()"};
 }

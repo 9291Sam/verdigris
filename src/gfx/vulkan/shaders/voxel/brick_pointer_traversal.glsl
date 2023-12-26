@@ -12,6 +12,7 @@
 #include "voxel_brick_pointer.glsl"
 #include <intersectables/voxel_brick_impl.glsl>
 
+// TODO: isolate the fact that booth the brick pointer and the brick size are 8
 IntersectionResult traverseBrickPointer(const vec3 cornerPos, const Ray ray)
 {
     // Dividing the ray by the the edge length of the brick, traversing, and
@@ -29,8 +30,8 @@ IntersectionResult traverseBrickPointer(const vec3 cornerPos, const Ray ray)
 
     if (Cube_contains(boundingCube, ray.origin))
     {
-        // TODO: where to put the / 8?
-        rayPos = ray.origin / 8 - cornerPos / 8;
+        rayPos = ray.origin / VoxelBrick_EdgeLength
+               - cornerPos / VoxelBrick_EdgeLength;
     }
     else
     {
@@ -41,7 +42,8 @@ IntersectionResult traverseBrickPointer(const vec3 cornerPos, const Ray ray)
         {
             // TODO: where to put the / 8?
             rayPos =
-                boundingCubeIntersection.maybe_hit_point / 8 - cornerPos / 8;
+                boundingCubeIntersection.maybe_hit_point / VoxelBrick_EdgeLength
+                - cornerPos / VoxelBrick_EdgeLength;
         }
         else
         {
@@ -91,7 +93,7 @@ IntersectionResult traverseBrickPointer(const vec3 cornerPos, const Ray ray)
                          * BRICK_POINTER_IMPL_DIMENSION
                      + mapPos.y * BRICK_POINTER_IMPL_DIMENSION + mapPos.z]))
         {
-            vec3 brickCorner = cornerPos + mapPos * 8;
+            vec3 brickCorner = cornerPos + mapPos * VoxelBrick_EdgeLength;
 
             IntersectionResult brickIntersectionResult =
                 VoxelBrick_tryIntersect(
