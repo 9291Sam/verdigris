@@ -27,7 +27,7 @@ namespace gfx::vulkan
         const vk::PresentModeKHR selectedPresentMode = [&]
         {
             const std::array presentModeSelectionOrder {
-                vk::PresentModeKHR::eMailbox,
+                // vk::PresentModeKHR::eMailbox,
                 vk::PresentModeKHR::eImmediate,
                 vk::PresentModeKHR::eFifo,
             };

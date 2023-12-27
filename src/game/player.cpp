@@ -15,8 +15,8 @@ namespace game
         // TODO: moving diaginally is faster
         const float MoveScale        = this->game.renderer.isActionActive(
                                     gfx::Window::Action::PlayerSprint)
-                                         ? 250.0f
-                                         : 7.50f;
+                                         ? 120.0f
+                                         : 5.50f;
         const float rotateSpeedScale = 1.0f;
 
         this->camera.addPosition(
