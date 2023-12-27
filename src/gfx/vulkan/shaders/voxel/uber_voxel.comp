@@ -43,7 +43,7 @@ in_voxel_or_indicies;
 
 #define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
 #define BRICK_POINTER_IMPL_ARRAY     in_voxel_or_indicies.voxel_or_indicies
-#define BRICK_POINTER_IMPL_DIMENSION 128 //! sync with shader!
+#define BRICK_POINTER_IMPL_DIMENSION 192 //! sync with shader!
 
 #include "brick_pointer_traversal.glsl"
 #include <intersectables/voxel_brick_impl.glsl>
@@ -96,7 +96,8 @@ vec4 calculatePixelColor(const Ray ray)
     propagateIntersection(
         bestIntersection,
         traverseBrickPointer(
-            vec3(BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5),
+            vec3(BRICK_POINTER_IMPL_DIMENSION * VoxelBrick_EdgeLength * -0.5)
+                - vec3(0.5),
             ray));
 
     {
@@ -125,7 +126,7 @@ vec4 calculatePixelColor(const Ray ray)
     {
         // return vec4(bestIntersection.maybe_normal / 2 + 0.5, 1.0);
         return bestIntersection.maybe_color
-             * vec4(bestIntersection.maybe_normal / 10 + 0.9, 1.0);
+             * vec4(bestIntersection.maybe_normal / 4 + 0.75, 1.0);
     }
     else
     {

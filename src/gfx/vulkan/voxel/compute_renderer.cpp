@@ -58,7 +58,7 @@ namespace gfx::vulkan::voxel
         , foo {0}
         , is_first_pass {true}
         // TODO: actually make the buffers sparse and reallocating (vkCmdCopyBuffer)
-        , volume {this->device, this->allocator, 1024} //! sync with shader!
+        , volume {this->device, this->allocator, 1536} //! sync with shader!
     {
         // TODO: fix, wasnt writign enough data to the gpu
         this->set = this->allocator->allocateDescriptorSet(
@@ -289,7 +289,7 @@ namespace gfx::vulkan::voxel
                                     // + 32,
                                     ::game::world::World::generationFunc(
                                         i32oi, i32oj)
-                                        + 512,
+                                        + 768,
                                     j},
                                 Voxel {
                                     .alpha_or_emissive {128},

@@ -12,7 +12,7 @@ namespace game::world
     World::World(const Game& game_)
         : game {game_}
     {
-        std::int32_t radius = 0;
+        std::int32_t radius = 1;
 
         for (std::int32_t x = -radius; x <= radius; x++)
         {
