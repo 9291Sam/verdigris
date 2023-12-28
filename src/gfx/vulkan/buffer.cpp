@@ -1,9 +1,11 @@
 #include "buffer.hpp"
 #include "allocator.hpp"
-#include <chrono>
+#include "device.hpp"
+#include <engine/settings.hpp>
 #include <util/log.hpp>
 #include <util/threads.hpp>
 #include <vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_enums.hpp>
 
 namespace gfx::vulkan
@@ -20,11 +22,13 @@ namespace gfx::vulkan
         Allocator*              allocator_,
         std::size_t             sizeBytes,
         vk::BufferUsageFlags    usage,
-        vk::MemoryPropertyFlags memoryPropertyFlags)
+        vk::MemoryPropertyFlags memoryPropertyFlags,
+        std::string             name_)
         : allocator {**allocator_}
         , buffer {nullptr}
         , allocation {nullptr}
         , size_bytes {sizeBytes}
+        , name {std::move(name_)}
         , mapped_memory {nullptr}
     {
         util::assertFatal(
@@ -71,6 +75,22 @@ namespace gfx::vulkan
             this->size_bytes);
 
         this->buffer = outputBuffer;
+
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableGFXValidation>())
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                .pNext {nullptr},
+                .objectType {vk::ObjectType::eBuffer},
+                .objectHandle {std::bit_cast<std::uint64_t>(this->buffer)},
+                .pObjectName {this->name.c_str()},
+            };
+
+            allocator_->getOwningDevice()
+                ->asLogicalDevice()
+                .setDebugUtilsObjectNameEXT(nameSetInfo);
+        }
     }
 
     Buffer::~Buffer()

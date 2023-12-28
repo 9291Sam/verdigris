@@ -169,14 +169,16 @@ gfx::SimpleTriangulatedObject::SimpleTriangulatedObject(
     // do the uploads asychronously and await the futures.
     this->future_vertex_buffer = std::async(
         [vertices   = std::move(vertices_),
-         &allocator = this->getRendererAllocator()]
+         &allocator = this->getRendererAllocator(),
+         debugName  = static_cast<std::string>(*this)]
         {
             vulkan::Buffer vertexBuffer {
                 &allocator,
                 std::span {vertices}.size_bytes(),
                 vk::BufferUsageFlagBits::eVertexBuffer,
                 vk::MemoryPropertyFlagBits::eHostVisible
-                    | vk::MemoryPropertyFlagBits::eDeviceLocal};
+                    | vk::MemoryPropertyFlagBits::eDeviceLocal,
+                fmt::format("Vertex Buffer | {}", debugName)};
 
             vertexBuffer.write(std::as_bytes(std::span {vertices}));
 

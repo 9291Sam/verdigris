@@ -89,7 +89,8 @@ namespace gfx::vulkan::voxel
                         sizeof(VoxelOrIndex) * totalNumberOfBricks,
                         vk::BufferUsageFlagBits::eStorageBuffer
                             | vk::BufferUsageFlagBits::eTransferDst,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal},
+                        vk::MemoryPropertyFlagBits::eDeviceLocal,
+                        "Brick Pointer Buffer"},
                     .brick_pointer_data {totalNumberOfBricks, VoxelOrIndex {}},
                     .brick_buffer {
                         allocator,
@@ -97,7 +98,8 @@ namespace gfx::vulkan::voxel
                         vk::BufferUsageFlagBits::eStorageBuffer
                             | vk::BufferUsageFlagBits::eTransferSrc
                             | vk::BufferUsageFlagBits::eTransferDst,
-                        vk::MemoryPropertyFlagBits::eDeviceLocal},
+                        vk::MemoryPropertyFlagBits::eDeviceLocal,
+                        "Brick Buffer"},
                     .allocator {brickBufferBricks}};
             });
 
@@ -225,7 +227,7 @@ namespace gfx::vulkan::voxel
             std::size_t is_realloc_required;
         };
 
-        std::size_t maxUpdates      = 16384;
+        std::size_t maxUpdates      = 8192;
         std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
 
         std::size_t currentUpdatesBytes = 0;
@@ -260,7 +262,8 @@ namespace gfx::vulkan::voxel
                 vk::BufferUsageFlagBits::eStorageBuffer
                     | vk::BufferUsageFlagBits::eTransferSrc
                     | vk::BufferUsageFlagBits::eTransferDst,
-                vk::MemoryPropertyFlagBits::eDeviceLocal};
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                "Brick Buffer realloc"};
 
             newBrickBuffer.copyFrom(data.brick_buffer, commandBuffer);
 
@@ -469,6 +472,8 @@ namespace gfx::vulkan::voxel
                 vk::AccessFlagBits::eShaderRead,
                 vk::PipelineStageFlagBits::eTransfer,
                 vk::PipelineStageFlagBits::eComputeShader);
+
+            util::logLog("emitted barriers");
         };
 
         this->locked_data.lock(

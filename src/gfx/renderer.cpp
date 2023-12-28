@@ -78,7 +78,7 @@ namespace gfx
         , device {std::make_unique<vulkan::Device>(
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
-              *this->instance, *this->device)}
+              *this->instance, &*this->device)}
         , menu_state {ImGuiMenu::State {}}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , show_menu {true}

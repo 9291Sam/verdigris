@@ -67,8 +67,6 @@ namespace util
 
             if (this->next_available_block - 1 >= this->max_number_of_blocks)
             {
-                util::logFatal("Allocator out of blocks!");
-
                 return std::unexpected(OutOfBlocks {});
             }
 

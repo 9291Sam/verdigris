@@ -18,7 +18,7 @@ namespace gfx::vulkan
     {
     public:
 
-        Allocator(const vulkan::Instance&, const vulkan::Device&);
+        Allocator(const vulkan::Instance&, Device*);
         ~Allocator();
 
         Allocator(const Allocator&)             = delete;
@@ -26,14 +26,19 @@ namespace gfx::vulkan
         Allocator& operator= (const Allocator&) = delete;
         Allocator& operator= (Allocator&&)      = delete;
 
-        VmaAllocator  operator* () const;
-        DescriptorSet allocateDescriptorSet(DescriptorSetType);
+        [[nodiscard]] VmaAllocator  operator* () const;
+        [[nodiscard]] DescriptorSet allocateDescriptorSet(DescriptorSetType);
 
         // not the best place to put this, but whatever, it needs to be
         // somewhere
-        DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetType);
+        [[nodiscard]] DescriptorSetLayout&
+            getDescriptorSetLayout(DescriptorSetType);
+
+        // this seems bad
+        [[nodiscard]] Device* getOwningDevice() const;
 
     private:
+        Device*        device;
         VmaAllocator   allocator;
         DescriptorPool pool;
     };

@@ -10,6 +10,7 @@ VK_DEFINE_HANDLE(VmaAllocator)
 namespace gfx::vulkan
 {
     class Allocator;
+    class Device;
 
     class Buffer
     {
@@ -17,10 +18,11 @@ namespace gfx::vulkan
 
         Buffer();
         Buffer(
-            Allocator*  allocator,
+            Allocator*,
             std::size_t sizeBytes,
             vk::BufferUsageFlags,
-            vk::MemoryPropertyFlags);
+            vk::MemoryPropertyFlags,
+            std::string name = {});
         ~Buffer();
 
         Buffer(const Buffer&) = delete;
@@ -52,6 +54,7 @@ namespace gfx::vulkan
         vk::Buffer                      buffer;
         VmaAllocation                   allocation;
         std::size_t                     size_bytes;
+        std::string                     name;
         mutable std::atomic<std::byte*> mapped_memory;
     };
 } // namespace gfx::vulkan

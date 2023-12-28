@@ -6,11 +6,11 @@
 
 namespace gfx::vulkan
 {
-    Allocator::Allocator(
-        const vulkan::Instance& instance, const vulkan::Device& device)
-        : allocator {nullptr}
+    Allocator::Allocator(const vulkan::Instance& instance, Device* device_)
+        : device {device_}
+        , allocator {nullptr}
         , pool {
-              device.asLogicalDevice(),
+              device_->asLogicalDevice(),
               std::unordered_map<vk::DescriptorType, std::uint32_t> {
                   {vk::DescriptorType::eStorageBuffer, 3},
                   {vk::DescriptorType::eUniformBuffer, 3},
@@ -25,8 +25,8 @@ namespace gfx::vulkan
 
         const VmaAllocatorCreateInfo allocatorCreateInfo {
             .flags {},
-            .physicalDevice {device.asPhysicalDevice()},
-            .device {device.asLogicalDevice()},
+            .physicalDevice {this->device->asPhysicalDevice()},
+            .device {this->device->asLogicalDevice()},
             .preferredLargeHeapBlockSize {0}, // chosen by VMA
             .pAllocationCallbacks {nullptr},
             .pDeviceMemoryCallbacks {nullptr},
@@ -66,5 +66,10 @@ namespace gfx::vulkan
     Allocator::getDescriptorSetLayout(DescriptorSetType setType)
     {
         return this->pool.lookupOrAddLayoutFromCache(setType);
+    }
+
+    Device* Allocator::getOwningDevice() const
+    {
+        return this->device;
     }
 } // namespace gfx::vulkan

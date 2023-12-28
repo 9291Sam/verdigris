@@ -425,8 +425,6 @@ namespace gfx::vulkan::voxel
 
         bool reallocRequired = this->volume.flushToGPU(commandBuffer);
 
-        // TODO: delete old buffer
-
         if (reallocRequired)
         {
             const vk::DescriptorBufferInfo brickBufferBindInfo {
