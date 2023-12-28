@@ -62,8 +62,9 @@ namespace gfx::vulkan::voxel
     } // namespace
 
     BrickedVolume::BrickedVolume(
-        Device* device, Allocator* allocator, std::size_t edgeLengthVoxels)
-        : edge_length_bricks {edgeLengthVoxels / Brick::EdgeLength}
+        Device* device, Allocator* allocator_, std::size_t edgeLengthVoxels)
+        : allocator {allocator_}
+        , edge_length_bricks {edgeLengthVoxels / Brick::EdgeLength}
     {
         util::assertFatal(
             edgeLengthVoxels % Brick::EdgeLength == 0,
@@ -74,9 +75,10 @@ namespace gfx::vulkan::voxel
         const std::size_t totalNumberOfBricks = this->edge_length_bricks
                                               * this->edge_length_bricks
                                               * this->edge_length_bricks;
-        std::size_t brickBufferBricks =
-            170000; // TODO: make fallability on too much!
-        // std::min(16UZ * 16 * 16, totalNumberOfBricks);
+
+        std::size_t brickBufferBricks = std::min(
+            this->edge_length_bricks * this->edge_length_bricks,
+            totalNumberOfBricks);
 
         this->locked_data.lock(
             [&](LockedData& data)
@@ -91,11 +93,11 @@ namespace gfx::vulkan::voxel
                     .brick_pointer_data {totalNumberOfBricks, VoxelOrIndex {}},
                     .brick_buffer {
                         allocator,
-                        sizeof(Brick) * brickBufferBricks, //! make dynamic
+                        brickBufferBricks * sizeof(Brick),
                         vk::BufferUsageFlagBits::eStorageBuffer
+                            | vk::BufferUsageFlagBits::eTransferSrc
                             | vk::BufferUsageFlagBits::eTransferDst,
                         vk::MemoryPropertyFlagBits::eDeviceLocal},
-                    .brick_buffer_size_bricks {brickBufferBricks},
                     .allocator {brickBufferBricks}};
             });
 
@@ -203,12 +205,12 @@ namespace gfx::vulkan::voxel
         return this->edge_length_bricks * Brick::EdgeLength;
     }
 
-    // TODO: do stuff with a dedicated transfer queue
-    void BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
+    //! TODO: wow this is a mess
+    bool BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
         if (this->brick_changes.empty() && this->voxel_changes.empty())
         {
-            return;
+            return false;
         }
 
         util::logTrace(
@@ -216,199 +218,289 @@ namespace gfx::vulkan::voxel
             this->brick_changes.size(),
             this->voxel_changes.size());
 
-        // TODO: seperate into brick and voxel updates
-        const std::size_t maxPerFrameUpdates = 3276800;
+        struct WorkingGpuChanges
+        {
+            std::size_t current_updates_bytes;
+            std::size_t current_updates;
+            std::size_t is_realloc_required;
+        };
+
+        std::size_t maxUpdates      = 16384;
+        std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
+
+        std::size_t currentUpdatesBytes = 0;
+        std::size_t currentUpdates      = 0;
+        bool        isReallocRequired   = false;
+        bool        reallocOcurred      = false;
+
+        auto shouldEarlyReturn = [&]
+        {
+            if (isReallocRequired)
+            {
+                return true;
+            }
+
+            if (currentUpdates > maxUpdates
+                || currentUpdatesBytes > maxUpdatesBytes)
+            {
+                return true;
+            }
+
+            return false;
+        };
+
+        auto handleRealloc = [&](LockedData& data)
+        {
+            util::logWarn("Realloc in frame!");
+
+            // TODO: do something smarter here than a flat 2x?
+            vulkan::Buffer newBrickBuffer {
+                this->allocator,
+                data.brick_buffer.sizeBytes() * 2,
+                vk::BufferUsageFlagBits::eStorageBuffer
+                    | vk::BufferUsageFlagBits::eTransferSrc
+                    | vk::BufferUsageFlagBits::eTransferDst,
+                vk::MemoryPropertyFlagBits::eDeviceLocal};
+
+            newBrickBuffer.copyFrom(data.brick_buffer, commandBuffer);
+
+            newBrickBuffer.emitBarrier(
+                commandBuffer,
+                vk::AccessFlagBits::eTransferWrite,
+                vk::AccessFlagBits::eTransferWrite,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::PipelineStageFlagBits::eTransfer);
+
+            data.maybe_prev_brick_buffer = std::move(data.brick_buffer);
+            data.brick_buffer            = std::move(newBrickBuffer);
+
+            data.allocator.updateAvailableBlockAmount(
+                data.brick_buffer.sizeBytes() / sizeof(Brick));
+        };
+
+        auto propagateChanges = [&](LockedData& data)
+        {
+            // TODO: need to 100% verify that writes dont overlap!
+            auto emplaceNewBrickPointer =
+                [&] [[nodiscard]] (VoxelOrIndex & maybeBrickPointer)
+            {
+                util::assertFatal(
+                    !maybeBrickPointer.isIndex(),
+                    "Tried to emplace already functional brick pointer");
+
+                std::expected<VoxelOrIndex, util::BlockAllocator::OutOfBlocks>
+                    maybeNewBrickPointer =
+                        BrickedVolume::allocateNewBrick(data.allocator);
+
+                // memory allocation failed, exit the loop
+                if (!maybeNewBrickPointer.has_value())
+                {
+                    isReallocRequired = true;
+                    return false;
+                }
+
+                // update cpu side
+                maybeBrickPointer = *maybeNewBrickPointer;
+
+                // update gpu side
+                commandBuffer.updateBuffer(
+                    *data.brick_pointer_buffer,
+                    static_cast<vk::DeviceSize>(
+                        &maybeBrickPointer - data.brick_pointer_data.data())
+                        * sizeof(VoxelOrIndex),
+                    sizeof(VoxelOrIndex),
+                    &maybeBrickPointer);
+
+                currentUpdates += 1;
+                currentUpdatesBytes += sizeof(VoxelOrIndex);
+
+                return true;
+            };
+
+            auto emplaceBrick =
+                [&] [[nodiscard]] (const Brick& brick, std::size_t gpuIndex)
+            {
+                commandBuffer.updateBuffer(
+                    *data.brick_buffer,
+                    gpuIndex * sizeof(Brick),
+                    sizeof(Brick),
+                    &brick);
+
+                currentUpdates += 1;
+                currentUpdatesBytes += sizeof(Brick);
+            };
+
+            // Brick changes
+            this->brick_changes.erase_if(
+                [&](const std::pair<std::uint32_t, Brick>& kv) -> bool
+                {
+                    if (shouldEarlyReturn())
+                    {
+                        return false;
+                    }
+
+                    const auto& [index, brickToWrite] = kv;
+                    VoxelOrIndex& maybeBrickPointer =
+                        data.brick_pointer_data[index];
+
+                    // if we don't already have a mapped allocation, we need
+                    // to map one, conveniently since we're writing a whole
+                    // Block, if its a voxel we don't care
+                    if (!maybeBrickPointer.isIndex())
+                    {
+                        if (!emplaceNewBrickPointer(maybeBrickPointer))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // maybeBrickPointer is a valid brick pointer, so we can
+                    // just jump to its brick and overwrite it
+                    emplaceBrick(brickToWrite, maybeBrickPointer.getIndex());
+
+                    return true;
+                });
+
+            this->voxel_changes.erase_if(
+                [&](const std::pair<Position, Voxel>& kv) -> bool
+                {
+                    if (shouldEarlyReturn())
+                    {
+                        return false;
+                    }
+
+                    const auto& [position, voxelToWrite] = kv;
+
+                    PositionIndicies indicies = convertVoxelPositionToIndicies(
+                        position, this->edge_length_bricks);
+
+                    VoxelOrIndex& maybeBrickPointer =
+                        data.brick_pointer_data[indicies.brick_pointer_index];
+
+                    if (!maybeBrickPointer.isValid())
+                    {
+                        if (!emplaceNewBrickPointer(maybeBrickPointer))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // From now on maybeBrickPointer is either an valid
+                    // index or a voxel
+
+                    // We need to allocate a new volume and bow instead
+                    // of it being empty, we need to fill it
+                    if (maybeBrickPointer.isVoxel())
+                    {
+                        Voxel voxelToFillVolume = maybeBrickPointer.getVoxel();
+
+                        if (!emplaceNewBrickPointer(maybeBrickPointer))
+                        {
+                            return false;
+                        }
+
+                        // Two changes need to be made to the gpu.
+                        // 1. update the pointer buffer (already done above)
+                        // 2. update the brick buffer with a solid brick
+
+                        // 2
+                        Brick brickToWrite {};
+                        fill3DArray(brickToWrite.voxels, voxelToFillVolume);
+
+                        emplaceBrick(
+                            brickToWrite, maybeBrickPointer.getIndex());
+                    }
+
+                    // From now on maybeBrickPointer is a valid index to
+                    // a brick It contains Nothing (if the original
+                    // pointer was invalid) A solid brick of the same
+                    // voxels (was voxel) or otherwise, what was already
+                    // there.
+                    //
+                    // In any case, it's now a valid place to write to,
+                    // so we can do so and place our _single_ voxel in
+                    // memory
+
+                    const std::size_t brickOffset =
+                        maybeBrickPointer.getIndex() * sizeof(Brick);
+
+                    const std::size_t voxelOffset =
+                        (indicies.voxel_internal_position.x * Brick::EdgeLength
+                             * Brick::EdgeLength
+                         + indicies.voxel_internal_position.y
+                               * Brick::EdgeLength
+                         + indicies.voxel_internal_position.z)
+                        * sizeof(Voxel);
+
+                    const std::size_t voxelOffsetInBrickBuffer =
+                        brickOffset + voxelOffset;
+
+                    // We now have a valid mapped pointer, so we can
+                    // write the voxel to it and overwrite whatever else
+                    // was already there
+                    commandBuffer.updateBuffer(
+                        *data.brick_buffer,
+                        voxelOffsetInBrickBuffer,
+                        sizeof(Voxel),
+                        &voxelToWrite);
+
+                    currentUpdates += 1;
+                    currentUpdatesBytes += sizeof(Voxel);
+
+                    return true;
+                });
+
+            util::logTrace(
+                "Processed {} updates for a total of {} bytes | Realloc?: {}",
+                currentUpdates,
+                currentUpdatesBytes,
+                isReallocRequired);
+
+            data.brick_buffer.emitBarrier(
+                commandBuffer,
+                vk::AccessFlagBits::eTransferWrite,
+                vk::AccessFlagBits::eShaderRead,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::PipelineStageFlagBits::eComputeShader);
+
+            data.brick_pointer_buffer.emitBarrier(
+                commandBuffer,
+                vk::AccessFlagBits::eTransferWrite,
+                vk::AccessFlagBits::eShaderRead,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::PipelineStageFlagBits::eComputeShader);
+        };
 
         this->locked_data.lock(
             [&](LockedData& data)
             {
-                // TODO: need to 100% verify that writes dont overlap!
-                std::size_t commandsQueued = 0;
+                isReallocRequired = data.is_realloc_required;
 
-                auto shouldEarlyReturn = [&]
+                if (isReallocRequired)
                 {
-                    return commandsQueued > maxPerFrameUpdates;
-                };
+                    handleRealloc(data);
+                    reallocOcurred = true;
 
-                this->brick_changes.erase_if(
-                    [&](const std::pair<std::uint32_t, Brick>& kv) -> bool
-                    {
-                        if (shouldEarlyReturn())
-                        {
-                            return false;
-                        }
+                    isReallocRequired = false;
+                }
+                else
+                {
+                    data.maybe_prev_brick_buffer = std::nullopt;
 
-                        const auto& [index, brickToWrite] = kv;
-                        VoxelOrIndex& maybeBrickPointer =
-                            data.brick_pointer_data[index];
+                    propagateChanges(data);
+                }
 
-                        if (!maybeBrickPointer.isValid())
-                        {
-                            // The brick pointer we have is invalid, that
-                            // means we need to populate it
-                            maybeBrickPointer =
-                                BrickedVolume::allocateNewBrick(data.allocator);
-
-                            commandsQueued++;
-
-                            // propagate this change to the gpu
-                            commandBuffer.updateBuffer(
-                                *data.brick_pointer_buffer,
-                                static_cast<vk::DeviceSize>(
-                                    &maybeBrickPointer
-                                    - data.brick_pointer_data.data())
-                                    * sizeof(VoxelOrIndex),
-                                sizeof(VoxelOrIndex),
-                                &maybeBrickPointer);
-                        }
-
-                        // We now have a valid mapped pointer, so we can
-                        // write the new data to it
-
-                        commandsQueued++;
-
-                        commandBuffer.updateBuffer(
-                            *data.brick_buffer,
-                            maybeBrickPointer.getIndex() * sizeof(Brick),
-                            sizeof(Brick),
-                            &brickToWrite);
-
-                        return true;
-                    });
-
-                this->voxel_changes.erase_if(
-                    [&](const std::pair<Position, Voxel>& kv) -> bool
-                    {
-                        if (shouldEarlyReturn())
-                        {
-                            return false;
-                        }
-
-                        const auto& [position, voxelToWrite] = kv;
-
-                        PositionIndicies indicies =
-                            convertVoxelPositionToIndicies(
-                                position, this->edge_length_bricks);
-
-                        VoxelOrIndex& maybeBrickPointer =
-                            data.brick_pointer_data[indicies
-                                                        .brick_pointer_index];
-
-                        if (!maybeBrickPointer.isValid())
-                        {
-                            // The brick pointer we have is invalid, that
-                            // means we need to populate it
-                            maybeBrickPointer =
-                                BrickedVolume::allocateNewBrick(data.allocator);
-
-                            ++commandsQueued;
-
-                            // propagate this change to the gpu
-                            commandBuffer.updateBuffer(
-                                *data.brick_pointer_buffer,
-                                static_cast<vk::DeviceSize>(
-                                    &maybeBrickPointer
-                                    - data.brick_pointer_data.data())
-                                    * sizeof(VoxelOrIndex),
-                                sizeof(VoxelOrIndex),
-                                &maybeBrickPointer);
-                        }
-
-                        // From now on maybeBrickPointer is either an valid
-                        // index or a voxel
-
-                        // We need to allocate a new volume and bow instead
-                        // of it being empty, we need to fill it
-                        if (maybeBrickPointer.isVoxel())
-                        {
-                            Voxel voxelToFillVolume =
-                                maybeBrickPointer.getVoxel();
-
-                            maybeBrickPointer =
-                                BrickedVolume::allocateNewBrick(data.allocator);
-
-                            // Two changes need to be made to the gpu.
-                            // 1. update the pointer buffer
-                            // 2. update the brick buffer with a solid brick
-
-                            commandsQueued++;
-
-                            // 1
-                            commandBuffer.updateBuffer(
-                                *data.brick_pointer_buffer,
-                                static_cast<vk::DeviceSize>(
-                                    &maybeBrickPointer
-                                    - data.brick_pointer_data.data())
-                                    * sizeof(VoxelOrIndex),
-                                sizeof(VoxelOrIndex),
-                                &maybeBrickPointer);
-
-                            // 2
-                            Brick brickToWrite {};
-                            fill3DArray(brickToWrite.voxels, voxelToFillVolume);
-
-                            commandsQueued++;
-                            commandBuffer.updateBuffer(
-                                *data.brick_buffer,
-                                maybeBrickPointer.getIndex() * sizeof(Brick),
-                                sizeof(Brick),
-                                &brickToWrite);
-                        }
-
-                        // From now on maybeBrickPointer is a valid index to
-                        // a brick It contains Nothing (if the original
-                        // pointer was invalid) A solid brick of the same
-                        // voxels (was voxel) or otherwise, what was already
-                        // there.
-                        //
-                        // In any case, it's now a valid place to write to,
-                        // so we can do so and place our _single_ voxel in
-                        // memory
-
-                        const std::size_t brickOffset =
-                            maybeBrickPointer.getIndex() * sizeof(Brick);
-
-                        const std::size_t voxelOffset =
-                            (indicies.voxel_internal_position.x
-                                 * Brick::EdgeLength * Brick::EdgeLength
-                             + indicies.voxel_internal_position.y
-                                   * Brick::EdgeLength
-                             + indicies.voxel_internal_position.z)
-                            * sizeof(Voxel);
-
-                        const std::size_t voxelOffsetInBrickBuffer =
-                            brickOffset + voxelOffset;
-
-                        // We now have a valid mapped pointer, so we can
-                        // write the voxel to it and ignore whatever else
-                        // was already there
-                        ++commandsQueued;
-
-                        commandBuffer.updateBuffer(
-                            *data.brick_buffer,
-                            voxelOffsetInBrickBuffer,
-                            sizeof(Voxel),
-                            &voxelToWrite);
-
-                        return true;
-                    });
-
-                util::logTrace("Processed {} changes", commandsQueued);
-
-                data.brick_buffer.emitBarrier(
-                    commandBuffer,
-                    vk::AccessFlagBits::eTransferWrite,
-                    vk::AccessFlagBits::eShaderRead,
-                    vk::PipelineStageFlagBits::eTransfer,
-                    vk::PipelineStageFlagBits::eComputeShader);
-
-                data.brick_pointer_buffer.emitBarrier(
-                    commandBuffer,
-                    vk::AccessFlagBits::eTransferWrite,
-                    vk::AccessFlagBits::eShaderRead,
-                    vk::PipelineStageFlagBits::eTransfer,
-                    vk::PipelineStageFlagBits::eComputeShader);
+                data.is_realloc_required = isReallocRequired;
             });
+
+        if (reallocOcurred) // NOLINT
+        {
+            return true; // NOLINT
+        }
+        else
+        {
+            return false;
+        }
     }
 
     BrickedVolume::DrawingBuffers BrickedVolume::getBuffers()
@@ -423,21 +515,34 @@ namespace gfx::vulkan::voxel
             });
     }
 
-    VoxelOrIndex
+    std::expected<VoxelOrIndex, util::BlockAllocator::OutOfBlocks>
     BrickedVolume::allocateNewBrick(util::BlockAllocator& allocator)
     {
-        std::uint32_t maybeValidNewIndex =
-            static_cast<std::uint32_t>(allocator.allocate());
+        std::expected<std::size_t, util::BlockAllocator::OutOfBlocks>
+            allocateResult = allocator.allocate();
 
-        // the index must be non zero
-        if (maybeValidNewIndex == 0)
+        if (!allocateResult.has_value())
         {
-            // leak 0 and try again
-            maybeValidNewIndex =
-                static_cast<std::uint32_t>(allocator.allocate());
+            return std::unexpected(std::move(allocateResult.error()));
         }
 
-        util::logTrace("Allocated block at {}", maybeValidNewIndex);
+        std::uint32_t maybeValidNewIndex =
+            static_cast<std::uint32_t>(*allocateResult);
+
+        // the index must be non zero as 0 is used as a null value
+        if (maybeValidNewIndex == 0)
+        {
+            allocateResult = allocator.allocate();
+
+            if (!allocateResult.has_value())
+            {
+                return std::unexpected(std::move(allocateResult.error()));
+            }
+
+            maybeValidNewIndex = static_cast<std::uint32_t>(*allocateResult);
+        }
+
+        // util::logTrace("Allocated block at {}", maybeValidNewIndex);
 
         return VoxelOrIndex {maybeValidNewIndex};
     }

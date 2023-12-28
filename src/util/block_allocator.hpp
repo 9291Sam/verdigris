@@ -3,6 +3,7 @@
 
 #include <boost/container/flat_set.hpp>
 #include <cstddef>
+#include <expected>
 
 namespace util
 {
@@ -41,8 +42,11 @@ namespace util
         BlockAllocator& operator= (const BlockAllocator&) = delete;
         BlockAllocator& operator= (BlockAllocator&&) noexcept;
 
-        std::size_t allocate();
-        void        free(std::size_t);
+        void updateAvailableBlockAmount(std::size_t newAmount);
+        // TODO: float getPercentAllocated() const;
+
+        std::expected<std::size_t, OutOfBlocks> allocate();
+        void                                    free(std::size_t);
 
     private:
         boost::container::flat_set<std::size_t> free_block_list;

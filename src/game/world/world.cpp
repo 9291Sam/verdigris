@@ -12,19 +12,19 @@ namespace game::world
     World::World(const Game& game_)
         : game {game_}
     {
-        std::int32_t radius = 1;
+        // std::int32_t radius = 0;
 
-        for (std::int32_t x = -radius; x <= radius; x++)
-        {
-            for (std::int32_t z = -radius; z <= radius; z++)
-            {
-                std::int32_t chunkX = static_cast<std::int32_t>(x * 512);
-                std::int32_t chunkZ = static_cast<std::int32_t>(z * 512);
+        // for (std::int32_t x = -radius; x <= radius; x++)
+        // {
+        //     for (std::int32_t z = -radius; z <= radius; z++)
+        //     {
+        //         std::int32_t chunkX = static_cast<std::int32_t>(x * 512);
+        //         std::int32_t chunkZ = static_cast<std::int32_t>(z * 512);
 
-                this->chunks.insert(Chunk {
-                    Position {chunkX - x, 0, chunkZ - z}, generationFunc});
-            }
-        }
+        //         this->chunks.insert(Chunk {
+        //             Position {chunkX - x, 0, chunkZ - z}, generationFunc});
+        //     }
+        // }
     }
 
     void World::updateChunkState()

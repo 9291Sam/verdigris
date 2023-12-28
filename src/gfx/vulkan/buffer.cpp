@@ -189,23 +189,30 @@ namespace gfx::vulkan
     Buffer::copyFrom(const Buffer& other, vk::CommandBuffer commandBuffer) const
     {
         util::assertFatal(
-            this->size_bytes == other.size_bytes,
+            this->size_bytes >= other.size_bytes,
             "Tried to write a buffer of size {} to a buffer of size {}",
             other.size_bytes,
             this->size_bytes);
 
+        util::logTrace(
+            "Writing buffer of size {} to buffer of size {}",
+            other.size_bytes,
+            this->size_bytes);
+
         // TODO: this should be things with the same memory pool
-        // if not require the pcie extension and throw a warning because bro wtf
+        // if not require the pcie extension and throw a warning because bro
+        // wtf
         util::assertFatal(
             this->allocator == other.allocator, "Allocators were not the same");
 
         const vk::BufferCopy bufferCopyParameters {
             .srcOffset {0},
             .dstOffset {0},
-            .size {vk::WholeSize},
+            .size {other.size_bytes},
         };
 
-        // SRC -> DST
+        //   SRC -> DST
+        // other -> this
         commandBuffer.copyBuffer(
             other.buffer, this->buffer, bufferCopyParameters);
     }

@@ -58,7 +58,7 @@ namespace gfx::vulkan::voxel
         , foo {0}
         , is_first_pass {true}
         // TODO: actually make the buffers sparse and reallocating (vkCmdCopyBuffer)
-        , volume {this->device, this->allocator, 1536} //! sync with shader!
+        , volume {this->device, this->allocator, 512} //! sync with shader!
     {
         // TODO: fix, wasnt writign enough data to the gpu
         this->set = this->allocator->allocateDescriptorSet(
@@ -289,7 +289,7 @@ namespace gfx::vulkan::voxel
                                     // + 32,
                                     ::game::world::World::generationFunc(
                                         i32oi, i32oj)
-                                        + 768,
+                                        + 256,
                                     j},
                                 Voxel {
                                     .alpha_or_emissive {128},
@@ -423,7 +423,34 @@ namespace gfx::vulkan::voxel
     {
         this->camera = c;
 
-        this->volume.flushToGPU(commandBuffer);
+        bool reallocRequired = this->volume.flushToGPU(commandBuffer);
+
+        // TODO: delete old buffer
+
+        if (reallocRequired)
+        {
+            const vk::DescriptorBufferInfo brickBufferBindInfo {
+                // .buffer {*this->input_voxel_buffer},
+                .buffer {this->volume.getBuffers().brick_buffer},
+                .offset {0},
+                .range {vk::WholeSize},
+            };
+
+            std::array update {vk::WriteDescriptorSet {
+                .sType {vk::StructureType::eWriteDescriptorSet},
+                .pNext {nullptr},
+                .dstSet {*this->set},
+                .dstBinding {2},
+                .dstArrayElement {0},
+                .descriptorCount {1},
+                .descriptorType {vk::DescriptorType::eStorageBuffer},
+                .pImageInfo {nullptr},
+                .pBufferInfo {&brickBufferBindInfo},
+                .pTexelBufferView {nullptr}}};
+
+            this->device->asLogicalDevice().updateDescriptorSets(
+                update, nullptr);
+        }
 
         const vulkan::ComputePipeline& pipeline =
             this->pipeline_manager->getComputePipeline(

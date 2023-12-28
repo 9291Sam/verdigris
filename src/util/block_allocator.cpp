@@ -1,4 +1,5 @@
 #include "block_allocator.hpp"
+#include <util/log.hpp>
 
 namespace util
 {
@@ -46,7 +47,17 @@ namespace util
         return *this;
     }
 
-    std::size_t BlockAllocator::allocate()
+    void BlockAllocator::updateAvailableBlockAmount(std::size_t newAmount)
+    {
+        util::assertFatal(
+            newAmount > this->max_number_of_blocks,
+            "Tried to update an allocator with less bricks!");
+
+        this->max_number_of_blocks = newAmount;
+    }
+
+    std::expected<std::size_t, BlockAllocator::OutOfBlocks>
+    BlockAllocator::allocate()
     {
         if (this->free_block_list.empty())
         {
@@ -56,7 +67,9 @@ namespace util
 
             if (this->next_available_block - 1 >= this->max_number_of_blocks)
             {
-                throw OutOfBlocks {};
+                util::logFatal("Allocator out of blocks!");
+
+                return std::unexpected(OutOfBlocks {});
             }
 
             return nextFreeBlock;
@@ -66,6 +79,15 @@ namespace util
             std::size_t freeListBlock = *this->free_block_list.rbegin();
 
             this->free_block_list.erase(freeListBlock);
+
+            if (freeListBlock >= this->max_number_of_blocks)
+            {
+                util::panic(
+                    "Out of bounds block #{} was in freelist of allocator of "
+                    "size #{}! Recursing!",
+                    freeListBlock,
+                    this->max_number_of_blocks);
+            }
 
             return freeListBlock;
         }

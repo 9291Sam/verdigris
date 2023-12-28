@@ -43,7 +43,7 @@ in_voxel_or_indicies;
 
 #define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
 #define BRICK_POINTER_IMPL_ARRAY     in_voxel_or_indicies.voxel_or_indicies
-#define BRICK_POINTER_IMPL_DIMENSION 192 //! sync with shader!
+#define BRICK_POINTER_IMPL_DIMENSION 64 //! sync with shader!
 
 #include "brick_pointer_traversal.glsl"
 #include <intersectables/voxel_brick_impl.glsl>

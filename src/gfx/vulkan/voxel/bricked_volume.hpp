@@ -40,30 +40,38 @@ namespace gfx::vulkan::voxel
 
         std::size_t getEdgeLengthVoxels() const;
 
-        void           flushToGPU(vk::CommandBuffer);
-        DrawingBuffers getBuffers();
+        // true if rebind is needed
+        [[nodiscard]] bool flushToGPU(vk::CommandBuffer);
+        DrawingBuffers     getBuffers();
 
     private:
-
-        mutable boost::unordered::concurrent_flat_map<std::uint32_t, Brick>
-            brick_changes;
-        mutable boost::unordered::concurrent_flat_map<Position, Voxel>
-            voxel_changes;
-
-        // allocates a new brick
-        [[nodiscard]] static VoxelOrIndex
-        allocateNewBrick(util::BlockAllocator&);
+        // TODO: make a shader that garbage collects the volumes
 
         struct LockedData
         {
             vulkan::Buffer            brick_pointer_buffer;
             std::vector<VoxelOrIndex> brick_pointer_data;
 
-            vulkan::Buffer brick_buffer;
-            std::size_t    brick_buffer_size_bricks;
+            vulkan::Buffer                brick_buffer;
+            // TODO: this is absolutely terrible, you need to solve this
+            // programmatically
+            std::size_t                   frames_stalled;
+            std::optional<vulkan::Buffer> maybe_prev_brick_buffer;
 
             util::BlockAllocator allocator;
+            bool                 is_realloc_required;
         };
+
+        [[nodiscard]] static std::
+            expected<VoxelOrIndex, util::BlockAllocator::OutOfBlocks>
+            allocateNewBrick(util::BlockAllocator&);
+
+        Allocator* allocator;
+
+        mutable boost::unordered::concurrent_flat_map<std::uint32_t, Brick>
+            brick_changes;
+        mutable boost::unordered::concurrent_flat_map<Position, Voxel>
+            voxel_changes;
 
         std::size_t edge_length_bricks;
 
