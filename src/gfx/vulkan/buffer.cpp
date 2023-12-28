@@ -250,10 +250,6 @@ namespace gfx::vulkan
         vk::PipelineStageFlags srcStage,
         vk::PipelineStageFlags dstStage)
     {
-        VmaAllocationInfo info;
-
-        vmaGetAllocationInfo(this->allocator, this->allocation, &info);
-
         vk::BufferMemoryBarrier barrier {
             .sType {vk::StructureType::eBufferMemoryBarrier},
             .pNext {nullptr},
@@ -262,7 +258,7 @@ namespace gfx::vulkan
             .srcQueueFamilyIndex {vk::QueueFamilyIgnored},
             .dstQueueFamilyIndex {vk::QueueFamilyIgnored},
             .buffer {this->buffer},
-            .offset {info.offset},
+            .offset {0},
             .size {vk::WholeSize}};
 
         commandBuffer.pipelineBarrier(

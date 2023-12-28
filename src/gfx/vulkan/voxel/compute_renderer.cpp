@@ -254,11 +254,41 @@ namespace gfx::vulkan::voxel
                 [&]
                 {
                     std::uniform_real_distribution<float> dist {0.8f, 1.0f};
+                    std::uniform_real_distribution<float> nDist {0.0f, 1.0f};
+                    std::uniform_int_distribution<std::size_t> distI {1, 2483};
 
                     auto distFunc = [&] -> float
                     {
                         return dist(this->generator);
                     };
+
+                    for (const auto [x, y, z] : std::views::cartesian_product(
+                             std::views::iota(
+                                 0UZ, this->volume.getEdgeLengthVoxels()),
+                             std::views::iota(
+                                 0UZ, this->volume.getEdgeLengthVoxels()),
+                             std::views::iota(
+                                 0UZ, this->volume.getEdgeLengthVoxels())))
+                    {
+                        if ((3 * x + 2 * y + z) % distI(this->generator) == 0)
+                        {
+                            this->volume.writeVoxel(
+                                {x, y, z},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_g {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_b {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+                    }
 
                     for (std::size_t i = 0;
                          i < this->volume.getEdgeLengthVoxels();

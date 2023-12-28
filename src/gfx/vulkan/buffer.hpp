@@ -37,8 +37,7 @@ namespace gfx::vulkan
         // TODO: make these not const...
         [[deprecated]] void copyFrom(const Buffer&, vk::CommandBuffer) const;
 
-        [[deprecated]] void write(std::span<const std::byte>) const;
-
+        void write(std::span<const std::byte>) const;
         void fill(vk::CommandBuffer, std::uint32_t);
         void emitBarrier(
             vk::CommandBuffer,

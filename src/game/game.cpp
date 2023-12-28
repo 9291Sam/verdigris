@@ -10,7 +10,7 @@ namespace game
     Game::Game(gfx::Renderer& renderer_)
         : renderer {renderer_}
         , entities {}
-        , player {*this, {30.0f, 20.0f, -20.0f}}
+        , player {*this, {330.0f, 330.0f, -330.0f}}
         , world {*this}
     {
         this->temp_entities.push_back(
@@ -19,7 +19,7 @@ namespace game
         this->temp_entities.push_back(
             entity::DiskEntity::create(*this, "../models/gizmo.obj"));
 
-        this->player.getCamera().addPitch(0.418879019f);
+        this->player.getCamera().addPitch(0.818879019f);
         this->player.getCamera().addYaw(-2.19911486f);
 
         this->last_tick_end_time = std::chrono::steady_clock::now();

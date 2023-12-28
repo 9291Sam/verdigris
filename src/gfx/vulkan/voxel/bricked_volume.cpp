@@ -227,7 +227,7 @@ namespace gfx::vulkan::voxel
             std::size_t is_realloc_required;
         };
 
-        std::size_t maxUpdates      = 8192;
+        std::size_t maxUpdates      = 4096;
         std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
 
         std::size_t currentUpdatesBytes = 0;
@@ -472,8 +472,6 @@ namespace gfx::vulkan::voxel
                 vk::AccessFlagBits::eShaderRead,
                 vk::PipelineStageFlagBits::eTransfer,
                 vk::PipelineStageFlagBits::eComputeShader);
-
-            util::logLog("emitted barriers");
         };
 
         this->locked_data.lock(

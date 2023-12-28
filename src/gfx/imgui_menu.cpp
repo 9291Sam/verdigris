@@ -247,7 +247,7 @@ namespace gfx
 
         const auto [x, y] = Viewport->Size;
 
-        const ImVec2 DesiredConsoleSize {5 * x / 9, y}; // 2 / 9 is normal
+        const ImVec2 DesiredConsoleSize {7 * x / 9, y}; // 2 / 9 is normal
 
         ImGui::SetNextWindowPos(
             ImVec2 {std::ceil(Viewport->Size.x - DesiredConsoleSize.x), 0});
