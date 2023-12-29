@@ -58,7 +58,8 @@ namespace gfx::vulkan::voxel
         vulkan::Buffer input_uniform_buffer;
         vulkan::Buffer input_voxel_buffer;
 
-        DescriptorSet set;
+        DescriptorSet                set;
+        std::optional<DescriptorSet> old_set;
 
         std::shared_ptr<gfx::SimpleTriangulatedObject> obj;
 

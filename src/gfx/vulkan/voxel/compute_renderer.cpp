@@ -451,12 +451,26 @@ namespace gfx::vulkan::voxel
     void
     ComputeRenderer::render(vk::CommandBuffer commandBuffer, const Camera& c)
     {
+        this->old_set = std::nullopt;
+
         this->camera = c;
 
-        bool reallocRequired = this->volume.flushToGPU(commandBuffer);
-
-        if (reallocRequired)
+        if (this->volume.flushToGPU(commandBuffer))
         {
+            DescriptorSet newSet = this->allocator->allocateDescriptorSet(
+                DescriptorSetType::VoxelRayTracing);
+
+            const vk::DescriptorImageInfo imageBindInfo {
+                .sampler {*this->output_image_sampler},
+                .imageView {*this->output_image},
+                .imageLayout {vk::ImageLayout::eGeneral}};
+
+            const vk::DescriptorBufferInfo uniformBufferBindInfo {
+                .buffer {*this->input_uniform_buffer},
+                .offset {0},
+                .range {sizeof(UniformUploadInfo)},
+            };
+
             const vk::DescriptorBufferInfo brickBufferBindInfo {
                 // .buffer {*this->input_voxel_buffer},
                 .buffer {this->volume.getBuffers().brick_buffer},
@@ -464,20 +478,69 @@ namespace gfx::vulkan::voxel
                 .range {vk::WholeSize},
             };
 
-            std::array update {vk::WriteDescriptorSet {
-                .sType {vk::StructureType::eWriteDescriptorSet},
-                .pNext {nullptr},
-                .dstSet {*this->set},
-                .dstBinding {2},
-                .dstArrayElement {0},
-                .descriptorCount {1},
-                .descriptorType {vk::DescriptorType::eStorageBuffer},
-                .pImageInfo {nullptr},
-                .pBufferInfo {&brickBufferBindInfo},
-                .pTexelBufferView {nullptr}}};
+            const vk::DescriptorBufferInfo brickPointerBufferBindInfo {
+                // .buffer {*this->input_voxel_buffer},
+                .buffer {this->volume.getBuffers().brick_pointer_buffer},
+                .offset {0},
+                .range {vk::WholeSize},
+            };
+
+            util::assertFatal(
+                this->volume.getBuffers().brick_buffer != nullptr,
+                "Brick Buffer was null!");
+
+            const std::array<vk::WriteDescriptorSet, 4> setUpdateInfo {
+                vk::WriteDescriptorSet {
+                    .sType {vk::StructureType::eWriteDescriptorSet},
+                    .pNext {nullptr},
+                    .dstSet {*newSet},
+                    .dstBinding {0},
+                    .dstArrayElement {0},
+                    .descriptorCount {1},
+                    .descriptorType {vk::DescriptorType::eStorageImage},
+                    .pImageInfo {&imageBindInfo},
+                    .pBufferInfo {nullptr},
+                    .pTexelBufferView {nullptr}},
+                vk::WriteDescriptorSet {
+                    .sType {vk::StructureType::eWriteDescriptorSet},
+                    .pNext {nullptr},
+                    .dstSet {*newSet},
+                    .dstBinding {1},
+                    .dstArrayElement {0},
+                    .descriptorCount {1},
+                    .descriptorType {vk::DescriptorType::eUniformBuffer},
+                    .pImageInfo {nullptr},
+                    .pBufferInfo {&uniformBufferBindInfo},
+                    .pTexelBufferView {nullptr}},
+                vk::WriteDescriptorSet {
+                    .sType {vk::StructureType::eWriteDescriptorSet},
+                    .pNext {nullptr},
+                    .dstSet {*newSet},
+                    .dstBinding {2},
+                    .dstArrayElement {0},
+                    .descriptorCount {1},
+                    .descriptorType {vk::DescriptorType::eStorageBuffer},
+                    .pImageInfo {nullptr},
+                    .pBufferInfo {&brickBufferBindInfo},
+                    .pTexelBufferView {nullptr}},
+                vk::WriteDescriptorSet {
+                    .sType {vk::StructureType::eWriteDescriptorSet},
+                    .pNext {nullptr},
+                    .dstSet {*newSet},
+                    .dstBinding {3},
+                    .dstArrayElement {0},
+                    .descriptorCount {1},
+                    .descriptorType {vk::DescriptorType::eStorageBuffer},
+                    .pImageInfo {nullptr},
+                    .pBufferInfo {&brickPointerBufferBindInfo},
+                    .pTexelBufferView {nullptr}},
+            };
 
             this->device->asLogicalDevice().updateDescriptorSets(
-                update, nullptr);
+                setUpdateInfo, nullptr);
+
+            this->old_set = std::move(this->set);
+            this->set     = std::move(newSet);
         }
 
         const vulkan::ComputePipeline& pipeline =

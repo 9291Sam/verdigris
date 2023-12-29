@@ -1,7 +1,6 @@
 #include "bricked_volume.hpp"
 #include <gfx/vulkan/allocator.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <numeric>
 
 namespace gfx::vulkan::voxel
 {
@@ -220,13 +219,6 @@ namespace gfx::vulkan::voxel
             this->brick_changes.size(),
             this->voxel_changes.size());
 
-        struct WorkingGpuChanges
-        {
-            std::size_t current_updates_bytes;
-            std::size_t current_updates;
-            std::size_t is_realloc_required;
-        };
-
         std::size_t maxUpdates      = 4096;
         std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
 
@@ -270,9 +262,9 @@ namespace gfx::vulkan::voxel
             newBrickBuffer.emitBarrier(
                 commandBuffer,
                 vk::AccessFlagBits::eTransferWrite,
-                vk::AccessFlagBits::eTransferWrite,
+                vk::AccessFlagBits::eShaderRead,
                 vk::PipelineStageFlagBits::eTransfer,
-                vk::PipelineStageFlagBits::eTransfer);
+                vk::PipelineStageFlagBits::eComputeShader);
 
             data.maybe_prev_brick_buffer = std::move(data.brick_buffer);
             data.brick_buffer            = std::move(newBrickBuffer);
