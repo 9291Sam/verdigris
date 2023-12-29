@@ -219,7 +219,7 @@ namespace gfx::vulkan::voxel
             this->brick_changes.size(),
             this->voxel_changes.size());
 
-        std::size_t maxUpdates      = 4096;
+        std::size_t maxUpdates      = 32768;
         std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
 
         std::size_t currentUpdatesBytes = 0;
@@ -476,14 +476,21 @@ namespace gfx::vulkan::voxel
                     handleRealloc(data);
                     reallocOcurred = true;
 
+                    data.brick_buffer.emitBarrier(
+                        commandBuffer,
+                        vk::AccessFlagBits::eTransferWrite,
+                        vk::AccessFlagBits::eTransferWrite,
+                        vk::PipelineStageFlagBits::eTransfer,
+                        vk::PipelineStageFlagBits::eTransfer);
+
                     isReallocRequired = false;
                 }
                 else
                 {
                     data.maybe_prev_brick_buffer = std::nullopt;
-
-                    propagateChanges(data);
                 }
+
+                propagateChanges(data);
 
                 data.is_realloc_required = isReallocRequired;
             });

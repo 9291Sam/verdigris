@@ -36,7 +36,7 @@ float map(
 bool isApproxEqual(const float a, const float b)
 {
     const float maxMagnitude = max(abs(a), abs(b));
-    const float epsilon      = maxMagnitude * VERDIGRIS_EPSILON_MULTIPLIER;
+    const float epsilon = maxMagnitude * VERDIGRIS_EPSILON_MULTIPLIER * 0.1;
 
     return abs(a - b) < epsilon;
 }

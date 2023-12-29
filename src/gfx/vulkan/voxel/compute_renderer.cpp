@@ -255,7 +255,7 @@ namespace gfx::vulkan::voxel
                 {
                     std::uniform_real_distribution<float> dist {0.8f, 1.0f};
                     std::uniform_real_distribution<float> nDist {0.0f, 1.0f};
-                    std::uniform_int_distribution<std::size_t> distI {1, 2483};
+                    std::uniform_int_distribution<std::size_t> distI {1, 5383};
 
                     auto distFunc = [&] -> float
                     {

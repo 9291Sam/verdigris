@@ -310,43 +310,43 @@ namespace gfx
             this->swapchain.get(),
             this->allocator.get());
 
-        // {
-        //     std::vector<std::future<void>> pipelineFutures {};
+        {
+            std::vector<std::future<void>> pipelineFutures {};
 
-        //     magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
-        //         [&](vulkan::GraphicsPipelineType type)
-        //         {
-        //             if (type == vulkan::GraphicsPipelineType::NoPipeline)
-        //             {
-        //                 return;
-        //             }
+            magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
+                [&](vulkan::GraphicsPipelineType type)
+                {
+                    if (type == vulkan::GraphicsPipelineType::NoPipeline)
+                    {
+                        return;
+                    }
 
-        //             pipelineFutures.push_back(std::async(
-        //                 std::launch::async,
-        //                 [this, type]
-        //                 {
-        //                     std::ignore =
-        //                         this->pipelines->getGraphicsPipeline(type);
-        //                 }));
-        //         });
+                    pipelineFutures.push_back(std::async(
+                        std::launch::async,
+                        [this, type]
+                        {
+                            std::ignore =
+                                this->pipelines->getGraphicsPipeline(type);
+                        }));
+                });
 
-        //     magic_enum::enum_for_each<vulkan::ComputePipelineType>(
-        //         [&](vulkan::ComputePipelineType type)
-        //         {
-        //             if (type == vulkan::ComputePipelineType::NoPipeline)
-        //             {
-        //                 return;
-        //             }
+            magic_enum::enum_for_each<vulkan::ComputePipelineType>(
+                [&](vulkan::ComputePipelineType type)
+                {
+                    if (type == vulkan::ComputePipelineType::NoPipeline)
+                    {
+                        return;
+                    }
 
-        //             pipelineFutures.push_back(std::async(
-        //                 std::launch::async,
-        //                 [this, type]
-        //                 {
-        //                     std::ignore =
-        //                         this->pipelines->getComputePipeline(type);
-        //                 }));
-        //         });
-        // }
+                    pipelineFutures.push_back(std::async(
+                        std::launch::async,
+                        [this, type]
+                        {
+                            std::ignore =
+                                this->pipelines->getComputePipeline(type);
+                        }));
+                });
+        }
 
         this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
             *this,
