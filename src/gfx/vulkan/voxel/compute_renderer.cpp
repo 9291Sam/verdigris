@@ -393,58 +393,58 @@ namespace gfx::vulkan::voxel
                 return static_cast<std::uint8_t>(dist(this->generator));
             };
 
-            this->foo = 0;
-            glm::ivec3 index {};
+            //     this->foo = 0;
+            //     glm::ivec3 index {};
 
-            for (auto& x0 : b)
-            {
-                for (auto& x1 : x0.voxels)
-                {
-                    for (auto& x2 : x1)
-                    {
-                        for (Voxel& voxel : x2)
-                        {
-                            ++this->foo;
-                            if (this->foo % distFunc() == 0
-                                || this->foo % distFunc() == 0)
-                            {
-                                voxel = Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {static_cast<std::uint8_t>(
-                                        index.x * 32 * distFunc())},
-                                    .srgb_g {static_cast<std::uint8_t>(
-                                        index.y * 32 * distFunc())},
-                                    .srgb_b {static_cast<std::uint8_t>(
-                                        index.z * 32 * distFunc())},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                };
-                            }
-                            else
-                            {
-                                voxel = Voxel {};
-                            }
-                            ++index.x %= 8;
-                        }
-                        ++index.y %= 8;
-                    }
-                    ++index.z %= 8;
-                }
-            }
+            //     for (auto& x0 : b)
+            //     {
+            //         for (auto& x1 : x0.voxels)
+            //         {
+            //             for (auto& x2 : x1)
+            //             {
+            //                 for (Voxel& voxel : x2)
+            //                 {
+            //                     ++this->foo;
+            //                     if (this->foo % distFunc() == 0
+            //                         || this->foo % distFunc() == 0)
+            //                     {
+            //                         voxel = Voxel {
+            //                             .alpha_or_emissive {128},
+            //                             .srgb_r {static_cast<std::uint8_t>(
+            //                                 index.x * 32 * distFunc())},
+            //                             .srgb_g {static_cast<std::uint8_t>(
+            //                                 index.y * 32 * distFunc())},
+            //                             .srgb_b {static_cast<std::uint8_t>(
+            //                                 index.z * 32 * distFunc())},
+            //                             .special {0},
+            //                             .specular {0},
+            //                             .roughness {255},
+            //                             .metallic {0},
+            //                         };
+            //                     }
+            //                     else
+            //                     {
+            //                         voxel = Voxel {};
+            //                     }
+            //                     ++index.x %= 8;
+            //                 }
+            //                 ++index.y %= 8;
+            //             }
+            //             ++index.z %= 8;
+            //         }
+            //     }
 
-            VoxelUploadInfo voxelUploadInfo {.voxels {b}};
+            //     VoxelUploadInfo voxelUploadInfo {.voxels {b}};
 
-            this->obj->transform.lock(
-                [&](Transform& t)
-                {
-                    t.translation = uniformUploadInfo.sphere_center;
-                    t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
-                            * uniformUploadInfo.sphere_radius;
-                });
+            //     this->obj->transform.lock(
+            //         [&](Transform& t)
+            //         {
+            //             t.translation = uniformUploadInfo.sphere_center;
+            //             t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
+            //                     * uniformUploadInfo.sphere_radius;
+            //         });
 
-            this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
+            //     this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
         }
     }
 

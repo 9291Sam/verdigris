@@ -39,6 +39,12 @@ layout(set = 0, binding = 3, std430) readonly
 }
 in_voxel_or_indicies;
 
+layout(set = 0, binding = 4, std430) readonly restrict buffer Bar
+{
+    uint32_t[] foo;
+}
+test[];
+
 //! !! TODO: maybe there was a reason for the continue?
 
 #define VOXEL_BRICK_IMPL_ARRAY       in_voxels.bricks
