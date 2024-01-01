@@ -60,6 +60,10 @@ namespace gfx::vulkan::voxel
         // TODO: actually make the buffers sparse and reallocating (vkCmdCopyBuffer)
         , volume {this->device, this->allocator, 512} //! sync with shader!
     {
+        util::logLog(
+            "Raytracer running at resolution of {}, {}",
+            extent.width,
+            extent.height);
         // TODO: fix, wasnt writign enough data to the gpu
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -270,7 +274,108 @@ namespace gfx::vulkan::voxel
                              std::views::iota(
                                  0UZ, this->volume.getEdgeLengthVoxels())))
                     {
-                        if ((3 * x + 2 * y + z) % distI(this->generator) == 0)
+                        // if ((3 * x + 2 * y + z) % distI(this->generator) ==
+                        // 0)
+                        // {
+                        //     this->volume.writeVoxel(
+                        //         {x, y, z},
+                        //         Voxel {
+                        //             .alpha_or_emissive {128},
+                        //             .srgb_r {util::convertLinearToSRGB(
+                        //                 nDist(this->generator))},
+                        //             .srgb_g {util::convertLinearToSRGB(
+                        //                 nDist(this->generator))},
+                        //             .srgb_b {util::convertLinearToSRGB(
+                        //                 nDist(this->generator))},
+                        //             .special {0},
+                        //             .specular {0},
+                        //             .roughness {255},
+                        //             .metallic {0},
+                        //         });
+                        // }
+
+                        if (std::tuple {x, y, z}
+                            == std::tuple {512 - 256, 512 - 256, 512 - 256})
+                        {
+                            this->volume.writeVoxel(
+                                {x, y, z},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_g {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_b {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+
+                        if (std::tuple {x, y, z}
+                            == std::tuple {520 - 256, 513 - 256, 513 - 256})
+                        {
+                            this->volume.writeVoxel(
+                                {x, y, z},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_g {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_b {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+
+                        if (std::tuple {x, y, z}
+                            == std::tuple {528 - 256, 514 - 256, 514 - 256})
+                        {
+                            this->volume.writeVoxel(
+                                {x, y, z},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_g {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_b {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+
+                        if (std::tuple {x, y, z}
+                            == std::tuple {536 - 256, 515 - 256, 515 - 256})
+                        {
+                            this->volume.writeVoxel(
+                                {x, y, z},
+                                Voxel {
+                                    .alpha_or_emissive {128},
+                                    .srgb_r {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_g {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .srgb_b {util::convertLinearToSRGB(
+                                        nDist(this->generator))},
+                                    .special {0},
+                                    .specular {0},
+                                    .roughness {255},
+                                    .metallic {0},
+                                });
+                        }
+
+                        if (x > 256 - 15 && x <= 272 - 15 && y > 256 - 15
+                            && y <= 272 - 15 && z > 256 - 15 && z <= 272 - 15)
                         {
                             this->volume.writeVoxel(
                                 {x, y, z},

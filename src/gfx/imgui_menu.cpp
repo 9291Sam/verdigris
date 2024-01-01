@@ -292,7 +292,11 @@ namespace gfx
                 ImGui::TextUnformatted(playerPosition.c_str());
 
                 const std::string fpsAndTps = std::format(
-                    "FPS: {:.3f} | TPS: {:.3f}", state.fps, state.tps);
+                    "FPS: {:.3f} | TPS: {:.3f}"
+                    " | Frame Time (ms): {:.3f} | ",
+                    state.fps,
+                    state.tps,
+                    1000 / state.fps);
 
                 ImGui::TextUnformatted(fpsAndTps.c_str());
 

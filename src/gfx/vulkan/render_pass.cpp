@@ -10,7 +10,7 @@ namespace
 {
     const std::uint64_t Timeout =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::duration<std::uint64_t, std::ratio<1, 1>> {5})
+            std::chrono::seconds {5})
             .count();
 } // namespace
 
