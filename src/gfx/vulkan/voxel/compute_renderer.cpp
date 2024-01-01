@@ -60,6 +60,10 @@ namespace gfx::vulkan::voxel
         // TODO: actually make the buffers sparse and reallocating (vkCmdCopyBuffer)
         , volume {this->device, this->allocator, 512} //! sync with shader!
     {
+        util::logLog(
+            "Raytracer running at resolution of {}, {}",
+            extent.width,
+            extent.height);
         // TODO: fix, wasnt writign enough data to the gpu
         this->set = this->allocator->allocateDescriptorSet(
             DescriptorSetType::VoxelRayTracing);
@@ -248,6 +252,7 @@ namespace gfx::vulkan::voxel
             std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
             std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
 
+        // return;
         if (!this->insert_voxels.has_value())
         {
             this->insert_voxels = std::async(
@@ -262,33 +267,137 @@ namespace gfx::vulkan::voxel
                         return dist(this->generator);
                     };
 
-                    for (const auto [x, y, z] : std::views::cartesian_product(
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels()),
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels()),
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels())))
-                    {
-                        if ((3 * x + 2 * y + z) % distI(this->generator) == 0)
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
-                    }
+                    // for (const auto [x, y, z] :
+                    // std::views::cartesian_product(
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels()),
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels()),
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels())))
+                    // {
+                    //     // if ((3 * x + 2 * y + z) % distI(this->generator)
+                    //     ==
+                    //     // 0)
+                    //     // {
+                    //     //     this->volume.writeVoxel(
+                    //     //         {x, y, z},
+                    //     //         Voxel {
+                    //     //             .alpha_or_emissive {128},
+                    //     //             .srgb_r {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .srgb_g {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .srgb_b {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .special {0},
+                    //     //             .specular {0},
+                    //     //             .roughness {255},
+                    //     //             .metallic {0},
+                    //     //         });
+                    //     // }
+
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {512 - 256, 512 - 256, 512 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {520 - 256, 513 - 256, 513 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {528 - 256, 514 - 256, 514 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {536 - 256, 515 - 256, 515 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+
+                    //     if (x > 256 - 15 && x <= 272 - 15 && y > 256 - 15
+                    //         && y <= 272 - 15 && z > 256 - 15 && z <= 272 -
+                    //         15)
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+                    // }
 
                     for (std::size_t i = 0;
                          i < this->volume.getEdgeLengthVoxels();
@@ -363,6 +472,8 @@ namespace gfx::vulkan::voxel
     /// that they can be synchronized with the command buffer's interleaving
     void ComputeRenderer::tick()
     {
+        // return;
+
         // TODO: move to a logical place
         this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
 
@@ -380,77 +491,12 @@ namespace gfx::vulkan::voxel
         };
 
         this->input_uniform_buffer.write(util::asBytes(&uniformUploadInfo));
-
-        {
-            std::array<Brick, 64> b {};
-
-            // ok, for some blessed reason, you can't have a uniform int
-            // distribution over some types, including char
-            std::uniform_int_distribution<std::uint16_t> dist {1, 255};
-
-            auto distFunc = [&] -> std::uint8_t
-            {
-                return static_cast<std::uint8_t>(dist(this->generator));
-            };
-
-            //     this->foo = 0;
-            //     glm::ivec3 index {};
-
-            //     for (auto& x0 : b)
-            //     {
-            //         for (auto& x1 : x0.voxels)
-            //         {
-            //             for (auto& x2 : x1)
-            //             {
-            //                 for (Voxel& voxel : x2)
-            //                 {
-            //                     ++this->foo;
-            //                     if (this->foo % distFunc() == 0
-            //                         || this->foo % distFunc() == 0)
-            //                     {
-            //                         voxel = Voxel {
-            //                             .alpha_or_emissive {128},
-            //                             .srgb_r {static_cast<std::uint8_t>(
-            //                                 index.x * 32 * distFunc())},
-            //                             .srgb_g {static_cast<std::uint8_t>(
-            //                                 index.y * 32 * distFunc())},
-            //                             .srgb_b {static_cast<std::uint8_t>(
-            //                                 index.z * 32 * distFunc())},
-            //                             .special {0},
-            //                             .specular {0},
-            //                             .roughness {255},
-            //                             .metallic {0},
-            //                         };
-            //                     }
-            //                     else
-            //                     {
-            //                         voxel = Voxel {};
-            //                     }
-            //                     ++index.x %= 8;
-            //                 }
-            //                 ++index.y %= 8;
-            //             }
-            //             ++index.z %= 8;
-            //         }
-            //     }
-
-            //     VoxelUploadInfo voxelUploadInfo {.voxels {b}};
-
-            //     this->obj->transform.lock(
-            //         [&](Transform& t)
-            //         {
-            //             t.translation = uniformUploadInfo.sphere_center;
-            //             t.scale       = glm::vec3 {1.0f, 1.0f, 1.0f}
-            //                     * uniformUploadInfo.sphere_radius;
-            //         });
-
-            //     this->input_voxel_buffer.write(util::asBytes(&voxelUploadInfo));
-        }
     }
 
     void
     ComputeRenderer::render(vk::CommandBuffer commandBuffer, const Camera& c)
     {
+        // return;
         this->old_set = std::nullopt;
 
         this->camera = c;

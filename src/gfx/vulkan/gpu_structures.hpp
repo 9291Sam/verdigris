@@ -12,34 +12,6 @@ namespace gfx::vulkan
 {
     using Index = std::uint32_t;
 
-    template<class T, std::size_t N>
-    concept VulkanVertex = requires(const T t) {
-        {
-            T::getBindingDescription
-        } -> std::same_as<const vk::VertexInputBindingDescription*>;
-
-        {
-            T::getAttributeDescriptions
-        } -> std::same_as<
-            const std::array<vk::VertexInputAttributeDescription, N>*>;
-
-        {
-            t.operator std::string ()
-        } -> std::same_as<std::string>;
-
-        {
-            t == t
-        } -> std::same_as<bool>;
-
-        {
-            t <=> t
-        } -> std::same_as<std::partial_ordering>;
-
-        {
-            std::is_trivially_copyable_v<T>
-        };
-    };
-
     /// NOTE:
     /// If you change any of these, dont forget to update their
     /// corresponding structs in the shaders!
@@ -109,9 +81,57 @@ namespace gfx::vulkan
         // operator<=> (const Vertex& other) const = default;
     };
 
+    struct ParallaxVertex
+    {
+        glm::vec3     position;
+        std::uint32_t brick_pointer;
+
+        [[nodiscard]] static const vk::VertexInputBindingDescription*
+        getBindingDescription()
+        {
+            static const vk::VertexInputBindingDescription Bindings {
+                .binding {0},
+                .stride {sizeof(ParallaxVertex)},
+                .inputRate {vk::VertexInputRate::eVertex},
+            };
+
+            return &Bindings;
+        }
+
+        [[nodiscard]] static const std::
+            array<vk::VertexInputAttributeDescription, 2>*
+            getAttributeDescriptions()
+
+        {
+            static const std::array<vk::VertexInputAttributeDescription, 2>
+                Descriptions {
+                    vk::VertexInputAttributeDescription {
+                        .location {0},
+                        .binding {0},
+                        .format {vk::Format::eR32G32B32Sfloat},
+                        .offset {offsetof(ParallaxVertex, position)},
+                    },
+                    vk::VertexInputAttributeDescription {
+                        .location {1},
+                        .binding {0},
+                        .format {vk::Format::eR32Uint},
+                        .offset {offsetof(ParallaxVertex, brick_pointer)},
+                    }};
+
+            return &Descriptions;
+        }
+    };
+
     struct PushConstants
     {
         glm::mat4 model_view_proj;
+    };
+
+    struct ParallaxPushConstants
+    {
+        glm::mat4 model_view_proj;
+        glm::mat4 model;
+        glm::vec3 camera_pos;
     };
 } // namespace gfx::vulkan
 

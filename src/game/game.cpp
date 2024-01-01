@@ -10,7 +10,7 @@ namespace game
     Game::Game(gfx::Renderer& renderer_)
         : renderer {renderer_}
         , entities {}
-        , player {*this, {330.0f, 330.0f, -330.0f}}
+        , player {*this, {30.0f, 30.0f, -30.0f}}
         , world {*this}
     {
         this->temp_entities.push_back(
@@ -65,6 +65,7 @@ namespace game
 
         this->renderer.setCamera(this->player.getCamera());
 
+        this->world.tick();
         this->world.updateChunkState();
 
         strongEntityTickFutures.clear(); // await all futures

@@ -334,7 +334,7 @@ function(compile_shader target)
                 $<$<BOOL:${arg_SPV}>:--target-spv=${arg_SPV}>
                 $<$<BOOL:${arg_FORMAT}>:-mfmt=${arg_FORMAT}>
                 $<$<BOOL:${arg_INCLUDE_DIRS}>:-I${CMAKE_SOURCE_DIR}/src/gfx/vulkan/shaders/include>
-                -O # enable opts
+                -O -g # enable opts & debug symbols
                 -MD -MF ${source}.d
                 -o ${source}.${arg_FORMAT}
                 ${CMAKE_CURRENT_SOURCE_DIR}/${source}
@@ -353,6 +353,8 @@ compile_shader(verdigris
     src/gfx/vulkan/shaders/flat_pipeline.frag
     src/gfx/vulkan/shaders/voxel.vert
     src/gfx/vulkan/shaders/voxel.frag
+    src/gfx/vulkan/shaders/parallax_raymarching.vert
+    src/gfx/vulkan/shaders/parallax_raymarching.frag
 
     src/gfx/vulkan/shaders/voxel/uber_voxel.comp
 )

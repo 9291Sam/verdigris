@@ -9,6 +9,7 @@
 #include <util.glsl>
 #include <voxel.glsl>
 
+//! sync with compute renderer
 layout(local_size_x = 32, local_size_y = 32) in;
 
 layout(set = 0, binding = 0, rgba8_snorm) writeonly
@@ -106,27 +107,28 @@ vec4 calculatePixelColor(const Ray ray)
                 - vec3(0.5),
             ray));
 
-    {
-        Cube cube;
-        cube.center      = in_world_info.sphere_center;
-        cube.edge_length = in_world_info.sphere_radius;
+    // {
+    //     Cube cube;
+    //     cube.center      = in_world_info.sphere_center;
+    //     cube.edge_length = in_world_info.sphere_radius;
 
-        propagateIntersection(bestIntersection, Cube_tryIntersect(cube, ray));
-    }
+    //     propagateIntersection(bestIntersection, Cube_tryIntersect(cube,
+    //     ray));
+    // }
 
-    {
-        Sphere sphere;
-        sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
-        sphere.radius = in_world_info.sphere_radius;
+    // {
+    //     Sphere sphere;
+    //     sphere.center = in_world_info.sphere_center + vec3(0, 10.0, 0);
+    //     sphere.radius = in_world_info.sphere_radius;
 
-        propagateIntersection(
-            bestIntersection, Sphere_tryIntersect(sphere, ray));
+    //     propagateIntersection(
+    //         bestIntersection, Sphere_tryIntersect(sphere, ray));
 
-        sphere.center += vec3(13.0, 10.0, 0.0);
+    //     sphere.center += vec3(13.0, 10.0, 0.0);
 
-        propagateIntersection(
-            bestIntersection, Sphere_tryIntersect(sphere, ray));
-    }
+    //     propagateIntersection(
+    //         bestIntersection, Sphere_tryIntersect(sphere, ray));
+    // }
 
     if (bestIntersection.intersection_occurred)
     {

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <compare>
 #include <engine/settings.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <util/log.hpp>
 
 namespace gfx
@@ -261,4 +262,113 @@ void gfx::SimpleTriangulatedObject::bindAndDraw(
 
     commandBuffer.drawIndexed(
         static_cast<std::uint32_t>(this->number_of_indices), 1, 0, 0, 0);
+}
+
+std::shared_ptr<gfx::ParallaxRaymarchedVoxelObject>
+gfx::ParallaxRaymarchedVoxelObject::create(
+    const gfx::Renderer&                renderer_,
+    std::vector<vulkan::ParallaxVertex> vertices)
+{
+    std::shared_ptr<gfx::ParallaxRaymarchedVoxelObject> object {
+        new gfx::ParallaxRaymarchedVoxelObject {
+            renderer_, std::move(vertices)}};
+
+    object->registerSelf();
+
+    return object;
+}
+
+gfx::ParallaxRaymarchedVoxelObject::ParallaxRaymarchedVoxelObject(
+    const gfx::Renderer&                renderer_,
+    std::vector<vulkan::ParallaxVertex> vertices_)
+    : Object(
+        renderer_,
+        fmt::format(
+            "ParallaxRaymarchedVoxelObject | Vertices: {}", vertices_.size()),
+        BindState {
+            .pipeline {vulkan::GraphicsPipelineType::ParallaxRayMarching},
+            .descriptors {
+                {ObjectBoundDescriptor {std::nullopt},
+                 ObjectBoundDescriptor {std::nullopt},
+                 ObjectBoundDescriptor {std::nullopt},
+                 ObjectBoundDescriptor {std::nullopt}}}},
+        Transform {},
+        false) // parens for clang-format
+    , number_of_vertices {vertices_.size()}
+    , vertex_buffer {std::nullopt}
+{
+    // do the uploads asychronously and await the futures.
+    this->future_vertex_buffer = std::async(
+        [vertices   = std::move(vertices_),
+         &allocator = this->getRendererAllocator(),
+         debugName  = static_cast<std::string>(*this)]
+        {
+            vulkan::Buffer vertexBuffer {
+                &allocator,
+                std::span {vertices}.size_bytes(),
+                vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible
+                    | vk::MemoryPropertyFlagBits::eDeviceLocal,
+                fmt::format("Vertex Buffer | {}", debugName)};
+
+            vertexBuffer.write(std::as_bytes(std::span {vertices}));
+
+            return vertexBuffer;
+        });
+}
+
+void gfx::ParallaxRaymarchedVoxelObject::updateFrameState() const
+{
+    if (this->future_vertex_buffer.has_value()
+        && this->future_vertex_buffer->valid())
+    {
+        this->vertex_buffer = this->future_vertex_buffer->get();
+
+        this->future_vertex_buffer = std::nullopt;
+    }
+
+    if (this->vertex_buffer.has_value() && !this->shouldDraw())
+    {
+        this->should_draw.store(true, std::memory_order::release);
+    }
+}
+
+void gfx::ParallaxRaymarchedVoxelObject::bindAndDraw(
+    vk::CommandBuffer commandBuffer,
+    BindState&        rendererState,
+    const Camera&     camera) const
+{
+    util::logDebug("drawing ParallaxRaymarchedVoxelObject");
+
+    if (engine::getSettings()
+            .lookupSetting<engine::Setting::EnableAppValidation>())
+    {
+        util::assertFatal(
+            this->vertex_buffer.has_value(),
+            "buffers weren't valid when drawing occurred");
+    }
+
+    this->updateBindState(
+        commandBuffer, rendererState, {nullptr, nullptr, nullptr, nullptr});
+
+    commandBuffer.bindVertexBuffers(0, **this->vertex_buffer, {0}); // NOLINT
+
+    Transform renderTransform = this->transform.copyInner();
+
+    vulkan::ParallaxPushConstants pushConstants {
+        .model_view_proj {camera.getPerspectiveMatrix(
+            this->renderer, this->transform.copyInner())},
+        .model {renderTransform.asModelMatrix()},
+        .camera_pos {camera.getPosition()}};
+
+    util::logDebug("Camera pos: {}", glm::to_string(camera.getPosition()));
+
+    commandBuffer.pushConstants<vulkan::ParallaxPushConstants>(
+        this->getCurrentPipelineLayout(),
+        vk::ShaderStageFlagBits::eVertex,
+        0,
+        pushConstants);
+
+    commandBuffer.draw(
+        static_cast<std::uint32_t>(this->number_of_vertices), 1, 0, 0);
 }

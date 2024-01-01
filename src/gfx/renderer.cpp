@@ -81,7 +81,7 @@ namespace gfx
               *this->instance, &*this->device)}
         , menu_state {ImGuiMenu::State {}}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
-        , show_menu {true}
+        , show_menu {false}
         , is_cursor_attached {true}
     {
         this->initializeRenderer();

@@ -199,7 +199,9 @@ namespace gfx::vulkan
                 [&] // -> vk::UniquePipelineLayout
                 {
                     const vk::PushConstantRange pushConstantsInformation {
-                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .stageFlags {
+                            vk::ShaderStageFlagBits::eVertex
+                            | vk::ShaderStageFlagBits::eFragment},
                         .offset {0},
                         .size {sizeof(vulkan::PushConstants)},
                     };
@@ -212,6 +214,65 @@ namespace gfx::vulkan
                             .flags {},
                             .setLayoutCount {0},
                             .pSetLayouts {nullptr},
+                            .pushConstantRangeCount {1},
+                            .pPushConstantRanges {&pushConstantsInformation},
+                        });
+                }()};
+        }
+
+        case gfx::vulkan::GraphicsPipelineType::ParallaxRayMarching: {
+            vk::UniqueShaderModule fragmentShader = createShaderFromFile(
+                device, "src/gfx/vulkan/shaders/parallax_raymarching.frag.bin");
+
+            vk::UniqueShaderModule vertexShader = createShaderFromFile(
+                device, "src/gfx/vulkan/shaders/parallax_raymarching.vert.bin");
+
+            std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages {
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eVertex},
+                    .module {*vertexShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+                vk::PipelineShaderStageCreateInfo {
+                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .stage {vk::ShaderStageFlagBits::eFragment},
+                    .module {*fragmentShader},
+                    .pName {"main"},
+                    .pSpecializationInfo {},
+                },
+            };
+
+            return GraphicsPipeline {
+                GraphicsPipeline::VertexType::Parallax,
+                this->device,
+                this->render_pass,
+                *this->swapchain,
+                shaderStages,
+                vk::PrimitiveTopology::eTriangleList,
+                [&] // -> vk::UniquePipelineLayout
+                {
+                    const vk::PushConstantRange pushConstantsInformation {
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
+                        .offset {0},
+                        .size {sizeof(vulkan::ParallaxPushConstants)},
+                    };
+
+                    return this->device.createPipelineLayoutUnique(
+                        vk::PipelineLayoutCreateInfo {
+                            .sType {
+                                vk::StructureType::ePipelineLayoutCreateInfo},
+                            .pNext {nullptr},
+                            .flags {},
+                            .setLayoutCount {1},
+                            .pSetLayouts {
+                                *this->allocator->getDescriptorSetLayout(
+                                    DescriptorSetType::VoxelRayTracing)},
                             .pushConstantRangeCount {1},
                             .pPushConstantRanges {&pushConstantsInformation},
                         });
@@ -346,6 +407,20 @@ namespace gfx::vulkan
 
         switch (vertexType)
         {
+        case VertexType::Parallax:
+            vertexInputState = vk::PipelineVertexInputStateCreateInfo {
+                .sType {vk::StructureType::ePipelineVertexInputStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .vertexBindingDescriptionCount {1},
+                .pVertexBindingDescriptions {
+                    ParallaxVertex::getBindingDescription()},
+                .vertexAttributeDescriptionCount {static_cast<std::uint32_t>(
+                    ParallaxVertex::getAttributeDescriptions()->size())},
+                .pVertexAttributeDescriptions {
+                    ParallaxVertex::getAttributeDescriptions()->data()},
+            };
+            break;
         case VertexType::Normal:
             vertexInputState = vk::PipelineVertexInputStateCreateInfo {
                 .sType {vk::StructureType::ePipelineVertexInputStateCreateInfo},
