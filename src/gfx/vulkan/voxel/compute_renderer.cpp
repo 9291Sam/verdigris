@@ -252,6 +252,7 @@ namespace gfx::vulkan::voxel
             std::vector<gfx::vulkan::Vertex> {Vertices.begin(), Vertices.end()},
             std::vector<gfx::vulkan::Index> {Indices.begin(), Indices.end()});
 
+        // return;
         if (!this->insert_voxels.has_value())
         {
             this->insert_voxels = std::async(
@@ -266,134 +267,137 @@ namespace gfx::vulkan::voxel
                         return dist(this->generator);
                     };
 
-                    for (const auto [x, y, z] : std::views::cartesian_product(
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels()),
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels()),
-                             std::views::iota(
-                                 0UZ, this->volume.getEdgeLengthVoxels())))
-                    {
-                        // if ((3 * x + 2 * y + z) % distI(this->generator) ==
-                        // 0)
-                        // {
-                        //     this->volume.writeVoxel(
-                        //         {x, y, z},
-                        //         Voxel {
-                        //             .alpha_or_emissive {128},
-                        //             .srgb_r {util::convertLinearToSRGB(
-                        //                 nDist(this->generator))},
-                        //             .srgb_g {util::convertLinearToSRGB(
-                        //                 nDist(this->generator))},
-                        //             .srgb_b {util::convertLinearToSRGB(
-                        //                 nDist(this->generator))},
-                        //             .special {0},
-                        //             .specular {0},
-                        //             .roughness {255},
-                        //             .metallic {0},
-                        //         });
-                        // }
+                    // for (const auto [x, y, z] :
+                    // std::views::cartesian_product(
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels()),
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels()),
+                    //          std::views::iota(
+                    //              0UZ, this->volume.getEdgeLengthVoxels())))
+                    // {
+                    //     // if ((3 * x + 2 * y + z) % distI(this->generator)
+                    //     ==
+                    //     // 0)
+                    //     // {
+                    //     //     this->volume.writeVoxel(
+                    //     //         {x, y, z},
+                    //     //         Voxel {
+                    //     //             .alpha_or_emissive {128},
+                    //     //             .srgb_r {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .srgb_g {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .srgb_b {util::convertLinearToSRGB(
+                    //     //                 nDist(this->generator))},
+                    //     //             .special {0},
+                    //     //             .specular {0},
+                    //     //             .roughness {255},
+                    //     //             .metallic {0},
+                    //     //         });
+                    //     // }
 
-                        if (std::tuple {x, y, z}
-                            == std::tuple {512 - 256, 512 - 256, 512 - 256})
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {512 - 256, 512 - 256, 512 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
 
-                        if (std::tuple {x, y, z}
-                            == std::tuple {520 - 256, 513 - 256, 513 - 256})
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {520 - 256, 513 - 256, 513 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
 
-                        if (std::tuple {x, y, z}
-                            == std::tuple {528 - 256, 514 - 256, 514 - 256})
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {528 - 256, 514 - 256, 514 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
 
-                        if (std::tuple {x, y, z}
-                            == std::tuple {536 - 256, 515 - 256, 515 - 256})
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
+                    //     if (std::tuple {x, y, z}
+                    //         == std::tuple {536 - 256, 515 - 256, 515 - 256})
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
 
-                        if (x > 256 - 15 && x <= 272 - 15 && y > 256 - 15
-                            && y <= 272 - 15 && z > 256 - 15 && z <= 272 - 15)
-                        {
-                            this->volume.writeVoxel(
-                                {x, y, z},
-                                Voxel {
-                                    .alpha_or_emissive {128},
-                                    .srgb_r {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_g {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .srgb_b {util::convertLinearToSRGB(
-                                        nDist(this->generator))},
-                                    .special {0},
-                                    .specular {0},
-                                    .roughness {255},
-                                    .metallic {0},
-                                });
-                        }
-                    }
+                    //     if (x > 256 - 15 && x <= 272 - 15 && y > 256 - 15
+                    //         && y <= 272 - 15 && z > 256 - 15 && z <= 272 -
+                    //         15)
+                    //     {
+                    //         this->volume.writeVoxel(
+                    //             {x, y, z},
+                    //             Voxel {
+                    //                 .alpha_or_emissive {128},
+                    //                 .srgb_r {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_g {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .srgb_b {util::convertLinearToSRGB(
+                    //                     nDist(this->generator))},
+                    //                 .special {0},
+                    //                 .specular {0},
+                    //                 .roughness {255},
+                    //                 .metallic {0},
+                    //             });
+                    //     }
+                    // }
 
                     for (std::size_t i = 0;
                          i < this->volume.getEdgeLengthVoxels();
@@ -468,6 +472,8 @@ namespace gfx::vulkan::voxel
     /// that they can be synchronized with the command buffer's interleaving
     void ComputeRenderer::tick()
     {
+        // return;
+
         // TODO: move to a logical place
         this->time_alive += this->renderer.getFrameDeltaTimeSeconds();
 
@@ -490,6 +496,7 @@ namespace gfx::vulkan::voxel
     void
     ComputeRenderer::render(vk::CommandBuffer commandBuffer, const Camera& c)
     {
+        // return;
         this->old_set = std::nullopt;
 
         this->camera = c;

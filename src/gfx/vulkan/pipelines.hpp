@@ -22,6 +22,7 @@ namespace gfx::vulkan
         NoPipeline,
         Flat,
         Voxel,
+        ParallaxRayMarching
     };
 
     enum class ComputePipelineType
@@ -66,6 +67,7 @@ namespace gfx::vulkan
 
         enum class VertexType
         {
+            Parallax,
             Normal,
             None,
         };

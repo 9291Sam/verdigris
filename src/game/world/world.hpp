@@ -54,12 +54,14 @@ namespace game::world
         World& operator= (const World&) = delete;
         World& operator= (World&&)      = delete;
 
+        void                      tick();
         [[nodiscard]] std::size_t estimateSize() const;
         void                      updateChunkState();
 
     private:
-        const Game&     game;
-        std::set<Chunk> chunks;
+        const Game&                                         game;
+        std::set<Chunk>                                     chunks;
+        std::shared_ptr<gfx::ParallaxRaymarchedVoxelObject> obj;
     };
 } // namespace game::world
 

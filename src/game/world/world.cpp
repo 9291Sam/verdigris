@@ -2,9 +2,68 @@
 #include "game/world/world.hpp"
 #include "game/world/sparse_volume.hpp"
 #include <game/game.hpp>
+#include <gfx/object.hpp>
 #include <gfx/renderer.hpp>
 #include <util/misc.hpp>
 #include <util/noise.hpp>
+
+namespace
+{
+    constexpr std::array<gfx::vulkan::Vertex, 8> CubeVertices {
+        gfx::vulkan::Vertex {
+            .position {-1.0f, -1.0f, -1.0f},
+            .color {0.0f, 0.0f, 0.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {-1.0f, -1.0f, 1.0f},
+            .color {0.0f, 0.0f, 1.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {-1.0f, 1.0f, -1.0f},
+            .color {0.0f, 1.0f, 0.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {-1.0f, 1.0f, 1.0f},
+            .color {0.0f, 1.0f, 1.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {1.0f, -1.0f, -1.0f},
+            .color {1.0f, 0.0f, 0.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {1.0f, -1.0f, 1.0f},
+            .color {1.0f, 0.0f, 1.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {1.0f, 1.0f, -1.0f},
+            .color {1.0f, 1.0f, 0.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+        gfx::vulkan::Vertex {
+            .position {1.0f, 1.0f, 1.0f},
+            .color {1.0f, 1.0f, 1.0f, 1.0f},
+            .normal {},
+            .uv {},
+        },
+    };
+
+    constexpr std::array<gfx::vulkan::Index, 36> CubeIndicies {
+        6, 2, 7, 2, 3, 7, 0, 4, 5, 1, 0, 5, 0, 2, 6, 4, 0, 6,
+        3, 1, 7, 1, 5, 7, 2, 0, 3, 0, 1, 3, 4, 6, 7, 5, 4, 7};
+} // namespace
 
 namespace game::world
 {
@@ -25,6 +84,37 @@ namespace game::world
         //             Position {chunkX - x, 0, chunkZ - z}, generationFunc});
         //     }
         // }
+
+        std::vector<gfx::vulkan::ParallaxVertex> vertices {};
+
+        for (const gfx::vulkan::Index& i : CubeIndicies)
+        {
+            const gfx::vulkan::Vertex& v = CubeVertices.at(i);
+
+            vertices.push_back(gfx::vulkan::ParallaxVertex {
+                .position {v.position}, .brick_pointer {~0U}});
+        }
+
+        this->obj = gfx::ParallaxRaymarchedVoxelObject::create(
+            this->game.renderer, std::move(vertices));
+
+        this->obj->transform.lock(
+            [](gfx::Transform& t)
+            {
+                t.translation = {15, 15, 15};
+            });
+    }
+
+    void World::tick()
+    {
+        static float sum = 0.0f;
+        sum += this->game.getTickDeltaTimeSeconds();
+
+        this->obj->transform.lock(
+            [](gfx::Transform& t)
+            {
+                t.translation = {5, std::sin(sum) * 5, 5};
+            });
     }
 
     void World::updateChunkState()

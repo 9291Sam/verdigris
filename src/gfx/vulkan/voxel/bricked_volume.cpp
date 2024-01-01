@@ -209,6 +209,9 @@ namespace gfx::vulkan::voxel
     //! TODO: wow this is a mess
     bool BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
+#warning Early term
+        return false;
+
         if (this->brick_changes.empty() && this->voxel_changes.empty())
         {
             return false;
@@ -219,7 +222,7 @@ namespace gfx::vulkan::voxel
             this->brick_changes.size(),
             this->voxel_changes.size());
 
-        std::size_t maxUpdates      = 16384;
+        std::size_t maxUpdates      = 4096;
         std::size_t maxUpdatesBytes = 4UZ * 1024 * 1024; // 4Mb
 
         std::size_t currentUpdatesBytes = 0;

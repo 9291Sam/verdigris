@@ -121,6 +121,27 @@ namespace gfx
             std::vector<vulkan::Index>);
     };
 
+    class ParallaxRaymarchedVoxelObject final : public Object
+    {
+    public:
+        static std::shared_ptr<ParallaxRaymarchedVoxelObject>
+        create(const gfx::Renderer&, std::vector<vulkan::ParallaxVertex>);
+
+        ~ParallaxRaymarchedVoxelObject() override = default;
+
+        void updateFrameState() const override;
+        void bindAndDraw(
+            vk::CommandBuffer, BindState&, const Camera&) const override;
+
+    private:
+        mutable std::optional<std::future<vulkan::Buffer>> future_vertex_buffer;
+        std::size_t                                        number_of_vertices;
+        mutable std::optional<vulkan::Buffer>              vertex_buffer;
+
+        ParallaxRaymarchedVoxelObject(
+            const gfx::Renderer&, std::vector<vulkan::ParallaxVertex>);
+    };
+
 } // namespace gfx
 
 #endif // SRC_GFX_OBJECT_HPP
