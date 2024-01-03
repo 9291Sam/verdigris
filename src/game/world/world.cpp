@@ -85,36 +85,36 @@ namespace game::world
         //     }
         // }
 
-        std::vector<gfx::vulkan::ParallaxVertex> vertices {};
+        // std::vector<gfx::vulkan::ParallaxVertex> vertices {};
 
-        for (const gfx::vulkan::Index& i : CubeIndicies)
-        {
-            const gfx::vulkan::Vertex& v = CubeVertices.at(i);
+        // for (const gfx::vulkan::Index& i : CubeIndicies)
+        // {
+        //     const gfx::vulkan::Vertex& v = CubeVertices.at(i);
 
-            vertices.push_back(gfx::vulkan::ParallaxVertex {
-                .position {v.position}, .brick_pointer {~0U}});
-        }
+        //     vertices.push_back(gfx::vulkan::ParallaxVertex {
+        //         .position {v.position}, .brick_pointer {~0U}});
+        // }
 
-        this->obj = gfx::ParallaxRaymarchedVoxelObject::create(
-            this->game.renderer, std::move(vertices));
+        // this->obj = gfx::ParallaxRaymarchedVoxelObject::create(
+        //     this->game.renderer, std::move(vertices));
 
-        this->obj->transform.lock(
-            [](gfx::Transform& t)
-            {
-                t.translation = {15, 15, 15};
-            });
+        // this->obj->transform.lock(
+        //     [](gfx::Transform& t)
+        //     {
+        //         t.translation = {15, 15, 15};
+        //     });
     }
 
     void World::tick()
     {
-        static float sum = 0.0f;
-        sum += this->game.getTickDeltaTimeSeconds();
+        // static float sum = 0.0f;
+        // sum += this->game.getTickDeltaTimeSeconds();
 
-        this->obj->transform.lock(
-            [](gfx::Transform& t)
-            {
-                t.translation = {5, std::sin(sum) * 5, 5};
-            });
+        // this->obj->transform.lock(
+        //     [](gfx::Transform& t)
+        //     {
+        //         t.translation = {5, std::sin(sum) * 5, 5};
+        //     });
     }
 
     void World::updateChunkState()

@@ -97,25 +97,21 @@ namespace gfx
         friend class ::gfx::ImGuiMenu;
 
         GLFWwindow*               window;
-        std::atomic<std::size_t>  ignore_frames;
         std::atomic<vk::Extent2D> framebuffer_size;
 
-        std::atomic<Delta> screen_space_mouse_delta;
-
         std::map<GlfwKeyType, std::vector<Action>> key_to_actions_map;
-        std::map<
-            Action,
-            std::atomic<std::chrono::time_point<std::chrono::steady_clock>>>
-                                            action_to_maybe_active_time_map;
-        std::map<Action, InteractionMethod> action_interaction_map;
-        std::array<std::atomic<bool>, 8> mouse_buttons_pressed_state; // NOLINT
+        std::map<Action, std::atomic<bool>>        action_active_map;
+        std::map<Action, InteractionMethod>        action_interaction_map;
 
         std::chrono::time_point<std::chrono::steady_clock> last_frame_end_time;
         std::atomic<std::chrono::duration<float>>          last_frame_duration;
 
-        std::atomic<Delta> previous_mouse_position;
-        std::atomic<Delta> mouse_delta_pixels;
-        std::atomic<bool>  is_cursor_attached;
+        std::array<std::atomic<bool>, 8> mouse_buttons_pressed_state; // NOLINT
+        std::atomic<std::size_t>         mouse_ignore_frames;
+        std::atomic<Delta>               previous_mouse_position;
+        std::atomic<Delta>               mouse_delta_pixels;
+        std::atomic<Delta>               screen_space_mouse_delta;
+        std::atomic<bool>                is_cursor_attached;
     };
 } // namespace gfx
 

@@ -27,98 +27,109 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 // NOLINTEND clang-format on
 
+// refacator goals
+// make more readable
+// remove ignore frames
+
 namespace gfx
 {
-    using std::chrono_literals::operator""ms;
-    using Order = std::memory_order;
-
-    constexpr std::chrono::time_point<std::chrono::steady_clock> NullTime {};
-    constexpr std::chrono::duration<float> MaximumSingleFireTime {0.01ms};
-
     Window::Window(
         const std::map<Action, ActionInformation>& keyInformationMap,
         vk::Extent2D                               size,
         const char*                                name)
         : window {nullptr}
-        , ignore_frames {3}
         , framebuffer_size {size}
-        , screen_space_mouse_delta {{0.0f, 0.0f}}
-        , key_to_actions_map {}              // NOLINT
-        , action_to_maybe_active_time_map {} // NOLINT
-        , action_interaction_map {}          // NOLINT
+        , key_to_actions_map {}     // NOLINT
+        , action_active_map {}      // NOLINT
+        , action_interaction_map {} // NOLINT
         , last_frame_end_time {std::chrono::steady_clock::now()}
-        , last_frame_duration {16ms} // NOLINT
+        , last_frame_duration {std::chrono::milliseconds {16}} // NOLINT
+        , mouse_ignore_frames {3}
         , previous_mouse_position {{0.0f, 0.0f}}
         , mouse_delta_pixels {{0.0f, 0.0f}}
+        , screen_space_mouse_delta {{0.0f, 0.0f}}
         , is_cursor_attached {true}
     {
-        // Glfw initalization
-        util::assertFatal(
-            glfwSetErrorCallback(Window::errorCallback) == nullptr,
-            "Error callback was set multiple times! Multiple windows were "
-            "spawned!");
-
-        util::assertFatal(
-            glfwInit() == GLFW_TRUE, "Failed to initialize GLFW!");
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-        this->window = glfwCreateWindow( // NOLINT
-            static_cast<int>(size.width),
-            static_cast<int>(size.height),
-            name,
-            nullptr,
-            nullptr);
-
-        // move the window to the corner so I can see my debug logs
-        glfwSetWindowPos(this->window, 100, 100);
-
-        util::assertFatal(
-            this->window != nullptr, "Failed to create GLFW window!");
-
-        // populate key maps
-        for (const auto& [action, information] : keyInformationMap)
+        // Initialize GLFW
         {
-            this->key_to_actions_map[information.key].push_back(action);
-            this->action_to_maybe_active_time_map[action].store(
-                NullTime, Order::release);
-            this->action_interaction_map[action] = information.method;
+            util::assertFatal(
+                glfwSetErrorCallback(Window::errorCallback) == nullptr,
+                "Error callback was set multiple times! Multiple windows were "
+                "spawned!");
+
+            util::assertFatal(
+                glfwInit() == GLFW_TRUE, "Failed to initialize GLFW!");
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         }
 
-        magic_enum::enum_for_each<Action>(
-            [&](Action a)
+        // Spawn Window
+        {
+            this->window = glfwCreateWindow(
+                static_cast<int>(size.width),
+                static_cast<int>(size.height),
+                name,
+                nullptr,
+                nullptr);
+
+            util::assertFatal(
+                this->window != nullptr, "Failed to create GLFW window!");
+
+            // move the window to the corner so I can see my debug logs
+            glfwSetWindowPos(this->window, 100, 100);
+        }
+
+        // Populate Keybinds
+        {
+            // assert given keybinds are valid
+            magic_enum::enum_for_each<Action>(
+                [&](Action a)
+                {
+                    util::assertFatal(
+                        keyInformationMap.contains(a),
+                        "Action {} was not populated",
+                        magic_enum::enum_name(a));
+                });
+
+            for (const auto& [action, information] : keyInformationMap)
             {
-                util::assertFatal(
-                    this->action_interaction_map.contains(a),
-                    "Action {} was not populated",
-                    magic_enum::enum_name(a));
-            });
+                this->key_to_actions_map[information.key].push_back(action);
+                this->action_active_map[action].store(
+                    false, std::memory_order_release);
+                this->action_interaction_map[action] = information.method;
+            }
+        }
 
-        // update other callbacks
-        glfwSetWindowUserPointer(this->window, static_cast<void*>(this));
+        // Configure Callbacks
+        {
+            glfwSetWindowUserPointer(this->window, static_cast<void*>(this));
 
-        std::ignore = glfwSetFramebufferSizeCallback(
-            this->window, Window::frameBufferResizeCallback);
+            std::ignore = glfwSetFramebufferSizeCallback(
+                this->window, Window::frameBufferResizeCallback);
 
-        std::ignore =
-            glfwSetKeyCallback(this->window, Window::keypressCallback);
+            std::ignore =
+                glfwSetKeyCallback(this->window, Window::keypressCallback);
 
-        std::ignore = glfwSetWindowFocusCallback(
-            this->window, Window::windowFocusCallback);
+            std::ignore = glfwSetWindowFocusCallback(
+                this->window, Window::windowFocusCallback);
 
-        std::ignore = glfwSetMouseButtonCallback(
-            this->window, Window::mouseButtonCallback);
+            std::ignore = glfwSetMouseButtonCallback(
+                this->window, Window::mouseButtonCallback);
+        }
 
-        // the requested framebuffer size may be different than the window size
-        int width  = -1;
-        int height = -1;
-        glfwGetFramebufferSize(this->window, &width, &height);
+        // Configure framebuffer size, it may be different than the actual
+        // window size (scaled displays)
+        {
+            int width  = -1;
+            int height = -1;
+            glfwGetFramebufferSize(this->window, &width, &height);
 
-        this->framebuffer_size.store(
-            vk::Extent2D {
-                static_cast<std::uint32_t>(width),
-                static_cast<std::uint32_t>(height)},
-            Order::release);
+            this->framebuffer_size.store(
+                vk::Extent2D {
+                    static_cast<std::uint32_t>(width),
+                    static_cast<std::uint32_t>(height)},
+                std::memory_order_release);
+        }
 
         util::logTrace("Initalized window");
     }
@@ -131,13 +142,13 @@ namespace gfx
 
     Window::Delta Window::getScreenSpaceMouseDelta() const
     {
-        if (this->is_cursor_attached.load(Order::acquire)
-            && this->ignore_frames.load(Order::acquire) == 0)
+        if (this->is_cursor_attached.load(std::memory_order_acquire)
+            && this->mouse_ignore_frames.load(std::memory_order_acquire) == 0)
         {
             const vk::Extent2D framebufferSizePixels =
-                this->framebuffer_size.load(Order::acquire);
+                this->framebuffer_size.load(std::memory_order_acquire);
             const Delta mouseDeltaPixels =
-                this->mouse_delta_pixels.load(Order::acquire);
+                this->mouse_delta_pixels.load(std::memory_order_acquire);
 
             return Delta {
                 .x {mouseDeltaPixels.x
@@ -154,33 +165,37 @@ namespace gfx
 
     bool Window::isActionActive(Action action, bool ignoreCursorAttached) const
     {
-        if (ignoreCursorAttached)
+        if (!ignoreCursorAttached)
         {
-            return this->action_to_maybe_active_time_map.at(action).load(
-                       Order::acquire)
-                != NullTime;
-        }
-        else
-        {
-            if (!this->is_cursor_attached.load(Order::acquire))
+            if (!this->is_cursor_attached.load(std::memory_order_acquire))
             {
                 return false;
             }
+        }
 
-            return this->action_to_maybe_active_time_map.at(action).load(
-                       Order::acquire)
-                != NullTime;
+        if (this->action_interaction_map.at(action)
+            == InteractionMethod::SinglePress)
+        {
+            return const_cast<std::atomic<bool>&>( // NOLINT: this is an atomic
+                       this->action_active_map.at(action))
+                .exchange(false, std::memory_order_acq_rel);
+        }
+        else
+        {
+            return this->action_active_map.at(action).load(
+                std::memory_order_acquire);
         }
     }
 
     float Window::getDeltaTimeSeconds() const
     {
-        return this->last_frame_duration.load(Order::acquire).count();
+        return this->last_frame_duration.load(std::memory_order_acquire)
+            .count();
     }
 
     vk::Extent2D Window::getFramebufferSize() const
     {
-        return this->framebuffer_size.load(Order::acquire);
+        return this->framebuffer_size.load(std::memory_order_acquire);
     }
 
     vk::UniqueSurfaceKHR Window::createSurface(vk::Instance instance)
@@ -211,13 +226,15 @@ namespace gfx
 
     void Window::blockThisThreadWhileMinimized()
     {
-        vk::Extent2D currentSize = this->framebuffer_size.load(Order::acquire);
+        vk::Extent2D currentSize =
+            this->framebuffer_size.load(std::memory_order_acquire);
 
         while (currentSize.width == 0 || currentSize.height == 0)
         {
             glfwWaitEvents();
             std::this_thread::yield();
-            currentSize = this->framebuffer_size.load(Order::acquire);
+            currentSize =
+                this->framebuffer_size.load(std::memory_order_acquire);
         }
     }
 
@@ -225,13 +242,13 @@ namespace gfx
     {
         glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-        this->is_cursor_attached.store(true, Order::release);
+        this->is_cursor_attached.store(true, std::memory_order_release);
     }
 
     void Window::detachCursor()
     {
         const vk::Extent2D currentSize =
-            this->framebuffer_size.load(Order::acquire);
+            this->framebuffer_size.load(std::memory_order_acquire);
 
         glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         glfwSetCursorPos(
@@ -241,36 +258,19 @@ namespace gfx
             static_cast<double>(
                 currentSize.height / 2)); // NOLINT: Desired behavior
 
-        this->is_cursor_attached.store(false, Order::release);
+        this->is_cursor_attached.store(false, std::memory_order_release);
     }
 
     void Window::endFrame()
     {
-        const std::chrono::time_point<std::chrono::steady_clock>
-            startEndFrameTime = std::chrono::steady_clock::now();
-
-        // cull InteractionMethod::SinglePress that exist for more than the
-        // Frame time
-        // nasty condition :|
-        // clang-format off
-        for (auto& [action, actionTime] : this->action_to_maybe_active_time_map)
-        {
-            if (this->action_interaction_map.at(action) == InteractionMethod::SinglePress
-                && actionTime.load(Order::acquire) - startEndFrameTime < MaximumSingleFireTime)
-            {
-                actionTime.store(NullTime, Order::release);
-            }
-        }
-        // clang-format on
-
         // fire callbacks
         glfwPollEvents();
 
         // this is only ever decremented here and this function is already
         // in a critical section, i.e the render loop
-        if (this->ignore_frames > 0)
+        if (this->mouse_ignore_frames > 0)
         {
-            --this->ignore_frames;
+            --this->mouse_ignore_frames;
         }
 
         // Mouse processing
@@ -285,21 +285,21 @@ namespace gfx
             static_cast<float>(currentMousePositionDoubles.first),
             static_cast<float>(currentMousePositionDoubles.second)};
         const Delta previousMousePosition {
-            this->previous_mouse_position.load(Order::acquire)};
+            this->previous_mouse_position.load(std::memory_order_acquire)};
 
         this->mouse_delta_pixels.store(
             {currentMousePosition.x - previousMousePosition.x,
              currentMousePosition.y - previousMousePosition.y},
-            Order::release);
+            std::memory_order_release);
 
         this->previous_mouse_position.store(
-            currentMousePosition, Order::release);
+            currentMousePosition, std::memory_order_release);
 
         // Delta time processing
         const auto currentTime = std::chrono::steady_clock::now();
 
         this->last_frame_duration.store(
-            currentTime - this->last_frame_end_time, Order::release);
+            currentTime - this->last_frame_end_time, std::memory_order_release);
 
         this->last_frame_end_time = currentTime;
     }
@@ -328,8 +328,8 @@ namespace gfx
         case GLFW_RELEASE:
             for (Action a : actionsFromKey)
             {
-                window->action_to_maybe_active_time_map.at(a).store(
-                    NullTime, Order::release);
+                window->action_active_map.at(a).store(
+                    false, std::memory_order_release);
             }
 
             break;
@@ -337,8 +337,8 @@ namespace gfx
         case GLFW_PRESS:
             for (Action a : actionsFromKey)
             {
-                window->action_to_maybe_active_time_map.at(a).store(
-                    std::chrono::steady_clock::now(), Order::release);
+                window->action_active_map.at(a).store(
+                    true, std::memory_order_release);
             }
             break;
 
@@ -360,7 +360,7 @@ namespace gfx
             vk::Extent2D {
                 .width {static_cast<std::uint32_t>(newWidth)},
                 .height {static_cast<std::uint32_t>(newHeight)}},
-            Order::release);
+            std::memory_order_release);
     }
 
     void Window::mouseButtonCallback(

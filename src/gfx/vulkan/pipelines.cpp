@@ -199,9 +199,7 @@ namespace gfx::vulkan
                 [&] // -> vk::UniquePipelineLayout
                 {
                     const vk::PushConstantRange pushConstantsInformation {
-                        .stageFlags {
-                            vk::ShaderStageFlagBits::eVertex
-                            | vk::ShaderStageFlagBits::eFragment},
+                        .stageFlags {vk::ShaderStageFlagBits::eVertex},
                         .offset {0},
                         .size {sizeof(vulkan::PushConstants)},
                     };

@@ -178,30 +178,3 @@ void parseCommandLineArgumentsAndUpdateSettings(int argc, char** argv)
         engine::getSettings().lookupSetting<Setting::EnableGFXValidation>(),
         engine::getSettings().lookupSetting<Setting::EnableAppValidation>());
 }
-
-// void directIndirectAlgorithm()
-// {
-
-//     // Face refers to cubes + the voxel directely adjacent to them
-//     struct
-//     {
-//         std::vector<Face> discoveredDirectFaces;
-//         Image             directFaces;
-//     } = rasterPass();
-
-//     struct
-//     {
-//         std::map<Face, Face> discoveredIndirectFaces;
-//     } = computePass();
-
-//     // list the indirect faces that influence another face
-
-//     std::vector<Face> directAndIndirectFaces {};
-
-//     struct
-//     {
-//         std::map<Face, Color> faceColors
-//     } = computePass(sum(directAndIndirectFaces))
-
-//     // comebine faces as the result of direct and indirect colors
-// }
