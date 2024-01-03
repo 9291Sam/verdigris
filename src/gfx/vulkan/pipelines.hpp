@@ -1,8 +1,7 @@
 #ifndef SRC_GFX_VULKAN_PIPELINE_HPP
 #define SRC_GFX_VULKAN_PIPELINE_HPP
 
-#include <memory>
-#include <unordered_map>
+#include <boost/unordered/concurrent_flat_map.hpp>
 #include <util/threads.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -12,80 +11,81 @@ namespace gfx::vulkan
     class Device;
     class RenderPass;
     class Swapchain;
+    class Pipeline;
     class GraphicsPipeline;
     class DescriptorPool;
     class ComputePipeline;
     class Allocator;
 
-    enum class GraphicsPipelineType
-    {
-        NoPipeline,
-        Flat,
-        Voxel,
-        ParallaxRayMarching
-    };
-
-    enum class ComputePipelineType
-    {
-        NoPipeline,
-        RayCaster
-    };
-
-    class PipelineManager
+    class PipelineCache
     {
     public:
+        struct PipelineHandle
+        {
+            std::strong_ordering
+            operator<=> (const PipelineHandle&) const = default;
+        private:
+            friend class PipelineCache;
 
-        PipelineManager(vk::Device, vk::RenderPass, Swapchain*, Allocator*);
-        ~PipelineManager() = default;
+            explicit PipelineHandle(std::size_t newID)
+                : id {newID}
+            {}
+            std::size_t id;
+        };
+    public:
 
-        PipelineManager(const PipelineManager&)             = delete;
-        PipelineManager(PipelineManager&&)                  = delete;
-        PipelineManager& operator= (const PipelineManager&) = delete;
-        PipelineManager& operator= (PipelineManager&&)      = delete;
+        PipelineCache();
+        ~PipelineCache() = default;
 
-        const GraphicsPipeline& getGraphicsPipeline(GraphicsPipelineType) const;
-        const ComputePipeline&  getComputePipeline(ComputePipelineType) const;
+        PipelineCache(const PipelineCache&)             = delete;
+        PipelineCache(PipelineCache&&)                  = delete;
+        PipelineCache& operator= (const PipelineCache&) = delete;
+        PipelineCache& operator= (PipelineCache&&)      = delete;
+
+        PipelineHandle cachePipeline(Pipeline) const;
+        std::pair<vk::Pipeline, vk::PipelineLayout>
+            lookupPipeline(PipelineHandle) const;
 
     private:
-        GraphicsPipeline createGraphicsPipeline(GraphicsPipelineType) const;
-        ComputePipeline  createComputePipeline(ComputePipelineType) const;
-
-        vk::Device     device;
-        vk::RenderPass render_pass;
-        Swapchain*     swapchain;
-        Allocator*     allocator;
-
-        util::RwLock<std::unordered_map<GraphicsPipelineType, GraphicsPipeline>>
-            graphics_pipeline_cache;
-        util::RwLock<std::unordered_map<ComputePipelineType, ComputePipeline>>
-            compute_pipeline_cache;
+        mutable std::atomic<std::size_t> next_free_id;
+        mutable boost::unordered::concurrent_flat_map<PipelineHandle, Pipeline>
+            cache;
     };
 
-    class GraphicsPipeline // GraphicsPipeline
+    class Pipeline
     {
     public:
 
-        enum class VertexType
-        {
-            Parallax,
-            Normal,
-            None,
-        };
+        Pipeline()  = default;
+        ~Pipeline() = default;
 
+        explicit Pipeline(const Pipeline&)    = default; // NOLINT
+        Pipeline(Pipeline&&)                  = default;
+        Pipeline& operator= (const Pipeline&) = delete;
+        Pipeline& operator= (Pipeline&&)      = default;
+
+        [[nodiscard]] vk::Pipeline       operator* () const;
+        [[nodiscard]] vk::PipelineLayout getLayout() const;
+
+    protected:
+        vk::UniquePipeline       pipeline;
+        vk::UniquePipelineLayout layout;
+    };
+
+    class ComputePipeline : public Pipeline
+    {
     public:
-
-        GraphicsPipeline() = default;
-        // "optimized" constructor, (shorter)
-        GraphicsPipeline(
-            VertexType,
+        ComputePipeline(
             vk::Device,
-            vk::RenderPass,
-            const Swapchain&,
-            std::span<vk::PipelineShaderStageCreateInfo>,
-            vk::PrimitiveTopology,
-            vk::UniquePipelineLayout);
+            vk::ShaderModule,
+            std::array<vk::DescriptorSetLayout, 4>,
+            std::optional<vk::PushConstantRange>,
+            const std::string& name);
+    };
 
-        // manual constructor
+    class GraphicsPipeline : public Pipeline
+    {
+    public:
         GraphicsPipeline(
             vk::Device,
             vk::RenderPass,
@@ -99,44 +99,6 @@ namespace gfx::vulkan
             std::optional<vk::PipelineDepthStencilStateCreateInfo>,
             std::optional<vk::PipelineColorBlendStateCreateInfo>,
             vk::UniquePipelineLayout);
-        ~GraphicsPipeline() = default;
-
-        GraphicsPipeline(const GraphicsPipeline&)             = delete;
-        GraphicsPipeline(GraphicsPipeline&&)                  = default;
-        GraphicsPipeline& operator= (const GraphicsPipeline&) = delete;
-        GraphicsPipeline& operator= (GraphicsPipeline&&)      = default;
-
-        [[nodiscard]] vk::Pipeline       operator* () const;
-        [[nodiscard]] vk::PipelineLayout getLayout() const;
-
-    private:
-        vk::UniquePipelineLayout layout;
-        vk::UniquePipeline       pipeline;
-    };
-
-    class ComputePipeline
-    {
-    public:
-
-        ComputePipeline() = default;
-        ComputePipeline(
-            vk::Device,
-            vk::UniqueShaderModule,
-            std::span<const vk::DescriptorSetLayout>);
-        ~ComputePipeline() = default;
-
-        ComputePipeline(const ComputePipeline&)             = delete;
-        ComputePipeline(ComputePipeline&&)                  = default;
-        ComputePipeline& operator= (const ComputePipeline&) = delete;
-        ComputePipeline& operator= (ComputePipeline&&)      = default;
-
-        [[nodiscard]] vk::Pipeline       operator* () const;
-        [[nodiscard]] vk::PipelineLayout getLayout() const;
-
-
-    private:
-        vk::UniquePipelineLayout layout;
-        vk::UniquePipeline       pipeline;
     };
 
 } // namespace gfx::vulkan
