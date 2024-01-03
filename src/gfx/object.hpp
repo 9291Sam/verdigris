@@ -1,17 +1,12 @@
 #ifndef SRC_GFX_OBJECT_HPP
 #define SRC_GFX_OBJECT_HPP
 
-#include "camera.hpp"
-#include "vulkan/buffer.hpp"
-#include "vulkan/gpu_structures.hpp"
-#include "vulkan/pipelines.hpp"
-#include <future>
-#include <memory>
-#include <optional>
-#include <util/threads.hpp>
+#include "vulkan/descriptors.hpp"
+#include <array>
 #include <util/uuid.hpp>
+#include <vulkan/vulkan_format_traits.hpp>
+#include <vulkan/vulkan_handles.hpp>
 
-// TODO: can this be re-done so its not a steaming pile of shit?
 namespace gfx
 {
     class Renderer;
@@ -19,31 +14,21 @@ namespace gfx
     namespace vulkan
     {
         class Allocator;
+        class Pipeline;
     } // namespace vulkan
-
-    struct ObjectBoundDescriptor
-    {
-        std::optional<util::UUID> id;
-
-        [[nodiscard]] bool
-        operator== (const ObjectBoundDescriptor&) const = default;
-        [[nodiscard]] std::strong_ordering
-        operator<=> (const ObjectBoundDescriptor&) const = default;
-    };
-
-    struct BindState
-    {
-        // TODO: replace with std::variant
-        vulkan::GraphicsPipelineType pipeline =
-            vulkan::GraphicsPipelineType::NoPipeline;
-        std::array<ObjectBoundDescriptor, 4> descriptors;
-
-        [[nodiscard]] std::strong_ordering
-        operator<=> (const BindState&) const = default;
-    };
 
     class Object : public std::enable_shared_from_this<Object>
     {
+    public:
+        using DescriptorRefArray   = std::array<vk::DescriptorSet, 4>;
+        using OwnedDescriptorArray = std::array<vulkan::DescriptorSet, 4>;
+
+        enum class DrawStage
+        {
+            PrePass,
+            RenderPass,
+            PostPass
+        };
     public:
         virtual ~Object() = default;
 
@@ -52,96 +37,64 @@ namespace gfx
         Object& operator= (const Object&) = delete;
         Object& operator= (Object&&)      = delete;
 
-        /// lightweight state update function, called on render thread
+        /// Lightweight state update function, called on render thread just
+        /// before drawing. Do not do heavy work!
         virtual void updateFrameState() const = 0;
 
-        /// Handles all of the actions required to execute the draw call
+        /// Binds given pipeline and descriptors
+        void bind(
+            vk::CommandBuffer,
+            vk::Pipeline&       currentlyBoundPipeline,
+            DescriptorRefArray& currentlyBoundDescriptors) const;
+
+        /// Function that actually draws / dispatches the object, place your
+        /// vkCmdDraw[s] here
         virtual void
-        bindAndDraw(vk::CommandBuffer, BindState&, const Camera&) const = 0;
+            drawOrDispatch(vk::CommandBuffer, vk::PipelineLayout) const = 0;
 
-        // Misc. helper functions
-        std::strong_ordering operator<=> (const Object&) const;
-        explicit virtual     operator std::string () const;
-        bool                 shouldDraw() const;
-        util::UUID           getUUID() const;
-
-        util::Mutex<Transform>    transform;
-        mutable std::atomic<bool> should_draw;
+        std::strong_ordering     operator<=> (const Object&) const;
+        explicit                 operator std::string () const;
+        [[nodiscard]] bool       shouldDraw() const;
+        [[nodiscard]] util::UUID getUUID() const;
 
     protected:
-        // Some renderer internals need to be exposed so they're boxed in by
-        // these functions rather than making them public
-        [[nodiscard]] vulkan::Allocator& getRendererAllocator() const;
-        [[nodiscard]] vk::PipelineLayout getCurrentPipelineLayout() const;
-        void                             registerSelf() const;
+        [[nodiscard]] vulkan::Allocator& getAllocator() const;
+        void                             registerSelf();
 
-        void updateBindState(
-            vk::CommandBuffer,
-            BindState&,
-            std::array<vk::DescriptorSet, 4> setsToBindIfRequired) const;
+        const Renderer&   renderer;
+        const std::string name;
+        const util::UUID  uuid;
+        const DrawStage   stage;
 
-        const gfx::Renderer& renderer;
-        const std::string    name;
-        const util::UUID     id;
-        const BindState      bind_state;
+        /// These are just references to the things that will be bound,
+        /// you must ensure they remain alive.
+        DescriptorRefArray sets;
+        vulkan::Pipeline*  pipeline;
+
+        mutable std::atomic<bool> should_draw;
 
         Object(
             const gfx::Renderer&,
             std::string name,
-            BindState   requiredBindState,
-            Transform   transform,
-            bool        shouldDraw);
+            DescriptorRefArray,
+            vulkan::Pipeline*,
+            bool shouldDraw);
     };
 
-    class SimpleTriangulatedObject final : public Object
+    class ComputeObject : public Object
     {
     public:
-        static std::shared_ptr<SimpleTriangulatedObject> create(
-            const gfx::Renderer&,
-            std::vector<vulkan::Vertex>,
-            std::vector<vulkan::Index>);
-        ~SimpleTriangulatedObject() override = default;
-
-        void updateFrameState() const override;
-        void bindAndDraw(
-            vk::CommandBuffer, BindState&, const Camera&) const override;
-
-    private:
-        mutable std::optional<std::future<vulkan::Buffer>> future_vertex_buffer;
-        std::size_t                                        number_of_vertices;
-        mutable std::optional<vulkan::Buffer>              vertex_buffer;
-
-        mutable std::optional<std::future<vulkan::Buffer>> future_index_buffer;
-        std::size_t                                        number_of_indices;
-        mutable std::optional<vulkan::Buffer>              index_buffer;
-
-        SimpleTriangulatedObject(
-            const gfx::Renderer&,
-            std::vector<vulkan::Vertex>,
-            std::vector<vulkan::Index>);
+        static std::shared_ptr<ComputeObject>
+        create(const gfx::Renderer&, std::string name, std::ara)
     };
 
-    class ParallaxRaymarchedVoxelObject final : public Object
+    class DrawObject
     {
     public:
-        static std::shared_ptr<ParallaxRaymarchedVoxelObject>
-        create(const gfx::Renderer&, std::vector<vulkan::ParallaxVertex>);
 
-        ~ParallaxRaymarchedVoxelObject() override = default;
 
-        void updateFrameState() const override;
-        void bindAndDraw(
-            vk::CommandBuffer, BindState&, const Camera&) const override;
-
-    private:
-        mutable std::optional<std::future<vulkan::Buffer>> future_vertex_buffer;
-        std::size_t                                        number_of_vertices;
-        mutable std::optional<vulkan::Buffer>              vertex_buffer;
-
-        ParallaxRaymarchedVoxelObject(
-            const gfx::Renderer&, std::vector<vulkan::ParallaxVertex>);
+    protected:
     };
-
 } // namespace gfx
 
 #endif // SRC_GFX_OBJECT_HPP

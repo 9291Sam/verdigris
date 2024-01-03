@@ -4,6 +4,7 @@
 #include <expected>
 #include <span>
 #include <unordered_map>
+#include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -12,28 +13,6 @@ namespace gfx::vulkan
     class Device;
     class DescriptorSet;
     class DescriptorSetLayout;
-
-    // TODO: have constexpr layouts that can easily be grabbed for pipeline
-    // creation
-
-    enum class DescriptorSetType
-    {
-        None,
-        Voxel,
-        VoxelRayTracing,
-    };
-
-    struct DescriptorState
-    {
-        DescriptorState();
-        explicit DescriptorState(auto... d)
-            : descriptors {d...}
-        {}
-
-        void reset();
-
-        std::array<DescriptorSetType, 4> descriptors; // NOLINT
-    };
 
     // TODO: add proper atomics to this
     class DescriptorPool
@@ -44,6 +23,11 @@ namespace gfx::vulkan
             std::size_t        tried_to_allocate;
             vk::DescriptorType type;
             std::size_t        number_available;
+        };
+
+        struct DescriptorHandle
+        {
+            util::UUID id;
         };
     public:
 
@@ -58,8 +42,9 @@ namespace gfx::vulkan
         DescriptorPool& operator= (const DescriptorPool&) = delete;
         DescriptorPool& operator= (DescriptorPool&&)      = delete;
 
-        [[nodiscard]] DescriptorSet allocate(DescriptorSetType);
-        DescriptorSetLayout& lookupOrAddLayoutFromCache(DescriptorSetType);
+        [[nodiscard]] DescriptorHandle createNewDescriptorType(/* init info*/);
+
+        [[nodiscard]] DescriptorSet allocate(DescriptorHandle);
 
     private:
 
