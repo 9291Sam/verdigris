@@ -209,9 +209,6 @@ namespace gfx::vulkan::voxel
     //! TODO: wow this is a mess
     bool BrickedVolume::flushToGPU(vk::CommandBuffer commandBuffer)
     {
-#warning Early term
-        return false;
-
         if (this->brick_changes.empty() && this->voxel_changes.empty())
         {
             return false;
