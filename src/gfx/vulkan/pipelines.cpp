@@ -39,6 +39,20 @@ namespace
 
         return device.createShaderModuleUnique(shaderCreateInfo);
     }
+
+    template<class T>
+    T* getValueOrNullptr(std::optional<T>& oT)
+    {
+        if (oT.has_value())
+        {
+            return &*oT;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
 } // namespace
 
 namespace gfx::vulkan
@@ -88,7 +102,7 @@ namespace gfx::vulkan
         vk::Device                             device,
         vk::ShaderModule                       shader,
         std::array<vk::DescriptorSetLayout, 4> descriptors,
-        std::optional<vk::PushConstantRange>   maybePushConstants,
+        std::span<const vk::PushConstantRange> maybePushConstants,
         const std::string&                     name)
     {
         const vk::PipelineShaderStageCreateInfo shaderStageCreateInfo {
@@ -108,10 +122,11 @@ namespace gfx::vulkan
             .flags {},
             .setLayoutCount {static_cast<std::uint32_t>(descriptors.size())},
             .pSetLayouts {descriptors.data()},
-            .pushConstantRangeCount {maybePushConstants.has_value() ? 1U : 0U},
+            .pushConstantRangeCount {
+                static_cast<std::uint32_t>(maybePushConstants.size())},
             .pPushConstantRanges {
-                maybePushConstants.has_value() ? &*maybePushConstants
-                                               : nullptr},
+                maybePushConstants.empty() ? nullptr
+                                           : maybePushConstants.data()},
         };
 
         this->layout = device.createPipelineLayoutUnique(layoutCreateInfo);
@@ -165,100 +180,97 @@ namespace gfx::vulkan
         }
     }
 
+    GraphicsPipeline::GraphicsPipeline(
+        vk::Device                                   device,
+        vk::RenderPass                               renderPass,
+        std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
+        vk::PipelineVertexInputStateCreateInfo       vertexInputState,
+        std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly,
+        std::optional<vk::PipelineTessellationStateCreateInfo>  tesselationInfo,
+        std::optional<vk::PipelineViewportStateCreateInfo>      viewportState,
+        std::optional<vk::PipelineRasterizationStateCreateInfo> rasterization,
+        std::optional<vk::PipelineMultisampleStateCreateInfo>  multiSampleState,
+        std::optional<vk::PipelineDepthStencilStateCreateInfo> depthState,
+        std::optional<vk::PipelineColorBlendStateCreateInfo>   colorBlendState,
+        std::array<vk::DescriptorSetLayout, 4>                 descriptors,
+        std::span<const vk::PushConstantRange>                 pushConstants,
+        const std::string&                                     name)
+    {
+        this->layout =
+            device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo {
+                .sType {vk::StructureType::ePipelineLayoutCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .setLayoutCount {
+                    static_cast<std::uint32_t>(descriptors.size())},
+                .pSetLayouts {descriptors.data()},
+                .pushConstantRangeCount {
+                    static_cast<std::uint32_t>(pushConstants.size())},
+                .pPushConstantRanges {pushConstants.data()},
+            });
+
+        const vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo {
+            .sType {vk::StructureType::eGraphicsPipelineCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .stageCount {static_cast<std::uint32_t>(shaderStages.size())},
+            .pStages {shaderStages.data()},
+            .pVertexInputState {&vertexInputState},
+            .pInputAssemblyState {getValueOrNullptr(inputAssembly)},
+            .pTessellationState {getValueOrNullptr(tesselationInfo)},
+            .pViewportState {getValueOrNullptr(viewportState)},
+            .pRasterizationState {getValueOrNullptr(rasterization)},
+            .pMultisampleState {getValueOrNullptr(multiSampleState)},
+            .pDepthStencilState {getValueOrNullptr(depthState)},
+            .pColorBlendState {getValueOrNullptr(colorBlendState)},
+            .pDynamicState {nullptr},
+            .layout {*this->layout},
+            .renderPass {renderPass},
+            .subpass {0},
+            .basePipelineHandle {nullptr},
+            .basePipelineIndex {-1},
+        };
+
+        auto [result, maybePipeline] = device.createGraphicsPipelineUnique(
+            nullptr, graphicsPipelineCreateInfo);
+
+        util::assertFatal(
+            result == vk::Result::eSuccess,
+            "Failed to create graphics pipeline");
+
+        this->pipeline = std::move(maybePipeline); // NOLINT
+
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableGFXValidation>())
+        {
+            {
+                vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                    .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                    .pNext {nullptr},
+                    .objectType {vk::ObjectType::ePipelineLayout},
+                    .objectHandle {std::bit_cast<std::uint64_t>(*this->layout)},
+                    .pObjectName {name.c_str()},
+                };
+
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
+            }
+
+            {
+                vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                    .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                    .pNext {nullptr},
+                    .objectType {vk::ObjectType::ePipeline},
+                    .objectHandle {
+                        std::bit_cast<std::uint64_t>(*this->pipeline)},
+                    .pObjectName {name.c_str()},
+                };
+
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
+            }
+        }
+    }
+
 } // namespace gfx::vulkan
-// {
-//     const GraphicsPipeline& PipelineManager::getGraphicsPipeline(
-//         GraphicsPipelineType pipelineToGet) const
-//     {
-//         const GraphicsPipeline* maybePipeline = nullptr;
-
-//         this->graphics_pipeline_cache.readLock(
-//             [pipelineToGet, &maybePipeline](const std::unordered_map<
-//                                             GraphicsPipelineType,
-//                                             GraphicsPipeline>& cache)
-//             {
-//                 if (cache.contains(pipelineToGet))
-//                 {
-//                     maybePipeline = &cache.at(pipelineToGet);
-//                 }
-//             });
-
-//         if (maybePipeline != nullptr)
-//         {
-//             return *maybePipeline;
-//         }
-//         else // we probablly to create the pipeline
-//         {
-//             this->graphics_pipeline_cache.writeLock(
-//                 [pipelineToGet, &maybePipeline, this](
-//                     std::unordered_map<GraphicsPipelineType,
-//                     GraphicsPipeline>&
-//                         cache)
-//                 {
-//                     // Double check someone else hasn't already created the
-//                     // pipeline
-//                     if (cache.contains(pipelineToGet))
-//                     {
-//                         maybePipeline = &cache.at(pipelineToGet);
-//                         return;
-//                     }
-
-//                     cache[pipelineToGet] =
-//                         this->createGraphicsPipeline(pipelineToGet);
-
-//                     maybePipeline = &cache[pipelineToGet];
-//                 });
-//         }
-
-//         return *maybePipeline;
-//     }
-
-//     const ComputePipeline&
-//     PipelineManager::getComputePipeline(ComputePipelineType pipelineToGet)
-//     const
-//     {
-//         const ComputePipeline* maybePipeline = nullptr;
-
-//         this->compute_pipeline_cache.readLock(
-//             [pipelineToGet, &maybePipeline](
-//                 const std::unordered_map<ComputePipelineType,
-//                 ComputePipeline>&
-//                     cache)
-//             {
-//                 if (cache.contains(pipelineToGet))
-//                 {
-//                     maybePipeline = &cache.at(pipelineToGet);
-//                 }
-//             });
-
-//         if (maybePipeline != nullptr)
-//         {
-//             return *maybePipeline;
-//         }
-//         else // we probablly to create the pipeline
-//         {
-//             this->compute_pipeline_cache.writeLock(
-//                 [pipelineToGet, &maybePipeline, this](
-//                     std::unordered_map<ComputePipelineType, ComputePipeline>&
-//                         cache)
-//                 {
-//                     // Double check someone else hasn't already created the
-//                     // pipeline
-//                     if (cache.contains(pipelineToGet))
-//                     {
-//                         maybePipeline = &cache.at(pipelineToGet);
-//                         return;
-//                     }
-
-//                     cache[pipelineToGet] =
-//                         this->createComputePipeline(pipelineToGet);
-
-//                     maybePipeline = &cache[pipelineToGet];
-//                 });
-//         }
-
-//         return *maybePipeline;
-//     }
 
 //     GraphicsPipeline PipelineManager::createGraphicsPipeline(
 //         GraphicsPipelineType typeToCreate) const
@@ -645,61 +657,6 @@ namespace gfx::vulkan
 //                 .blendConstants {{0.0f, 0.0f, 0.0f, 0.0f}},
 //             },
 //             std::move(layout_)};
-//     }
-
-//     GraphicsPipeline::GraphicsPipeline(
-//         vk::Device                                   device,
-//         vk::RenderPass                               renderPass,
-//         std::span<vk::PipelineShaderStageCreateInfo> shaderStages,
-//         vk::PipelineVertexInputStateCreateInfo       vertexInputState,
-//         std::optional<vk::PipelineInputAssemblyStateCreateInfo>
-//         inputAssembly, std::optional<vk::PipelineTessellationStateCreateInfo>
-//         tesselationInfo, std::optional<vk::PipelineViewportStateCreateInfo>
-//         viewportState,
-//         std::optional<vk::PipelineRasterizationStateCreateInfo>
-//         rasterization, std::optional<vk::PipelineMultisampleStateCreateInfo>
-//         multiSampleState,
-//         std::optional<vk::PipelineDepthStencilStateCreateInfo> depthState,
-//         std::optional<vk::PipelineColorBlendStateCreateInfo> colorBlendState,
-//         vk::UniquePipelineLayout                               layout_)
-//         : layout {std::move(layout_)}
-//         , pipeline {nullptr}
-//     {
-//         auto getValueOrNullptr = []<class T>(const std::optional<T>& o)
-//         {
-//             return (o.has_value() ? &*o : nullptr);
-//         };
-
-//         const vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo {
-//             .sType {vk::StructureType::eGraphicsPipelineCreateInfo},
-//             .pNext {nullptr},
-//             .flags {},
-//             .stageCount {static_cast<std::uint32_t>(shaderStages.size())},
-//             .pStages {shaderStages.data()},
-//             .pVertexInputState {&vertexInputState},
-//             .pInputAssemblyState {getValueOrNullptr(inputAssembly)},
-//             .pTessellationState {getValueOrNullptr(tesselationInfo)},
-//             .pViewportState {getValueOrNullptr(viewportState)},
-//             .pRasterizationState {getValueOrNullptr(rasterization)},
-//             .pMultisampleState {getValueOrNullptr(multiSampleState)},
-//             .pDepthStencilState {getValueOrNullptr(depthState)},
-//             .pColorBlendState {getValueOrNullptr(colorBlendState)},
-//             .pDynamicState {nullptr},
-//             .layout {*this->layout},
-//             .renderPass {renderPass},
-//             .subpass {0},
-//             .basePipelineHandle {nullptr},
-//             .basePipelineIndex {-1},
-//         };
-
-//         auto [result, maybePipeline] = device.createGraphicsPipelineUnique(
-//             nullptr, graphicsPipelineCreateInfo);
-
-//         util::assertFatal(
-//             result == vk::Result::eSuccess,
-//             "Failed to create graphics pipeline");
-
-//         this->pipeline = std::move(maybePipeline); // NOLINT
 //     }
 
 //     vk::Pipeline GraphicsPipeline::operator* () const

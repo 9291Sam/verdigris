@@ -79,7 +79,7 @@ namespace gfx::vulkan
             vk::Device,
             vk::ShaderModule,
             std::array<vk::DescriptorSetLayout, 4>,
-            std::optional<vk::PushConstantRange>,
+            std::span<const vk::PushConstantRange>,
             const std::string& name);
     };
 
@@ -98,7 +98,9 @@ namespace gfx::vulkan
             std::optional<vk::PipelineMultisampleStateCreateInfo>,
             std::optional<vk::PipelineDepthStencilStateCreateInfo>,
             std::optional<vk::PipelineColorBlendStateCreateInfo>,
-            vk::UniquePipelineLayout);
+            std::array<vk::DescriptorSetLayout, 4>,
+            std::span<const vk::PushConstantRange>,
+            const std::string& name);
     };
 
 } // namespace gfx::vulkan
