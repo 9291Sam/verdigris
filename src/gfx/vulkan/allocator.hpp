@@ -13,6 +13,7 @@ namespace gfx::vulkan
     class Instance;
     class Device;
     class DescriptorPool;
+    class PipelineCache;
 
     class Allocator
     {
@@ -26,16 +27,9 @@ namespace gfx::vulkan
         Allocator& operator= (const Allocator&) = delete;
         Allocator& operator= (Allocator&&)      = delete;
 
-        [[nodiscard]] VmaAllocator  operator* () const;
-        [[nodiscard]] DescriptorSet allocateDescriptorSet(DescriptorSetType);
-
-        // not the best place to put this, but whatever, it needs to be
-        // somewhere
-        [[nodiscard]] DescriptorSetLayout&
-            getDescriptorSetLayout(DescriptorSetType);
-
-        // this seems bad
-        [[nodiscard]] Device* getOwningDevice() const;
+        [[nodiscard]] VmaAllocator          operator* () const;
+        [[nodiscard]] const DescriptorPool& getDescriptorPool() const;
+        [[nodiscard]] const PipelineCache&  getPipelineCache() const;
 
     private:
         Device*        device;

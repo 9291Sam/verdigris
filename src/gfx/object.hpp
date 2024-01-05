@@ -69,7 +69,8 @@ namespace gfx
         /// These are just references to the things that will be bound,
         /// you must ensure they remain alive.
         DescriptorRefArray sets;
-        vulkan::Pipeline*  pipeline;
+        vk::Pipeline       pipeline;
+        vk::PipelineLayout layout;
 
         mutable std::atomic<bool> should_draw;
 

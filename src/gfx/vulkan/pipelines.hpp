@@ -59,7 +59,7 @@ namespace gfx::vulkan
         Pipeline()  = default;
         ~Pipeline() = default;
 
-        explicit Pipeline(const Pipeline&)    = default; // NOLINT
+        Pipeline(const Pipeline&)             = delete;
         Pipeline(Pipeline&&)                  = default;
         Pipeline& operator= (const Pipeline&) = delete;
         Pipeline& operator= (Pipeline&&)      = default;
