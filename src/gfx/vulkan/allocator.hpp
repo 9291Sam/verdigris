@@ -32,9 +32,9 @@ namespace gfx::vulkan
         [[nodiscard]] const PipelineCache&  getPipelineCache() const;
 
     private:
-        Device*        device;
-        VmaAllocator   allocator;
-        DescriptorPool pool;
+        Device*                         device;
+        VmaAllocator                    allocator;
+        std::shared_ptr<DescriptorPool> pool;
     };
 
 } // namespace gfx::vulkan

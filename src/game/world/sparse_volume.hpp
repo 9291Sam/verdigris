@@ -4,6 +4,7 @@
 #include <array>
 #include <compare>
 #include <cstdint>
+#include <gfx/recordables/flat_recordable.hpp>
 #include <gfx/vulkan/gpu_structures.hpp>
 #include <glm/fwd.hpp>
 #include <memory>
@@ -55,8 +56,8 @@ namespace game::world
         Voxel& accessFromLocalPosition(Position localPosition);
 
         void drawToVectors(
-            std::vector<gfx::vulkan::Vertex>&,
-            std::vector<gfx::vulkan::Index>&,
+            std::vector<gfx::recordables::FlatRecordable::Vertex>&,
+            std::vector<gfx::recordables::FlatRecordable::Index>&,
             Position localOffset);
 
     private:
@@ -98,8 +99,8 @@ namespace game::world
         Voxel& accessFromLocalPosition(Position localPosition);
 
         [[nodiscard]] std::pair<
-            std::vector<gfx::vulkan::Vertex>,
-            std::vector<gfx::vulkan::Index>>
+            std::vector<gfx::recordables::FlatRecordable::Vertex>,
+            std::vector<gfx::recordables::FlatRecordable::Index>>
         draw(Position offset);
     private:
         //   TODO: change to be contigious!

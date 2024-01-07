@@ -14,7 +14,7 @@
 namespace gfx
 {
     class Window;
-    class Object;
+    class Recordable;
 
     namespace vulkan
     {
@@ -29,7 +29,9 @@ namespace gfx
         class Swapchain;
         class Image2D;
         class RenderPass;
-        class PipelineManager;
+        class PipelineCache;
+        class GraphicsPipeline;
+        class ComputePipeline;
     } // namespace vulkan
 
     class Renderer
@@ -44,10 +46,10 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
+        // TODO: use events.
         [[nodiscard]] const util::Mutex<ImGuiMenu::State>& getMenuState() const;
         [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
         [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
-        [[nodiscard]] Camera        getCamera() const;
 
         [[nodiscard]] bool  isActionActive(Window::Action) const;
         [[nodiscard]] float getFovYRadians() const;
@@ -62,10 +64,17 @@ namespace gfx
 
     private:
         void resize();
-        void initializeRenderer();
+        void
+        initializeRenderer(std::optional<std::unique_ptr<vulkan::RenderPass>*>
+                               maybeWriteLockedRenderPass);
 
-        friend Object;
-        void registerObject(const std::shared_ptr<const Object>&) const;
+        friend Recordable;
+        void registerRecordable(const std::shared_ptr<const Recordable>&) const;
+
+        friend vulkan::GraphicsPipeline;
+        friend vulkan::ComputePipeline;
+        [[nodiscard]] util::RwLock<std::unique_ptr<vulkan::RenderPass>>
+        getRenderPass() const;
 
         // Vulkan prelude objects
         std::unique_ptr<Window>               window;
@@ -75,17 +84,17 @@ namespace gfx
         std::unique_ptr<vulkan::Allocator>    allocator;
 
         // Rendering objects
-        std::unique_ptr<vulkan::Swapchain>       swapchain;
-        std::unique_ptr<vulkan::Image2D>         depth_buffer;
-        std::unique_ptr<vulkan::RenderPass>      render_pass;
-        std::unique_ptr<vulkan::PipelineManager> pipelines;
+        std::unique_ptr<vulkan::Swapchain>                swapchain;
+        std::unique_ptr<vulkan::Image2D>                  depth_buffer;
+        util::RwLock<std::unique_ptr<vulkan::RenderPass>> render_pass;
+        std::unique_ptr<vulkan::PipelineCache>            pipelines;
 
         // Drawing things
-        std::unique_ptr<vulkan::voxel::ComputeRenderer> voxel_renderer;
-        std::unique_ptr<ImGuiMenu>                      menu;
+        std::unique_ptr<ImGuiMenu> menu;
 
         // Rasterizeables
-        util::Registrar<util::UUID, std::weak_ptr<const Object>> draw_objects;
+        util::Registrar<util::UUID, std::weak_ptr<const Recordable>>
+            draw_objects;
 
         // State
         util::Mutex<ImGuiMenu::State> menu_state;

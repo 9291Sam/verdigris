@@ -1,9 +1,9 @@
 #include "render_pass.hpp"
 #include "device.hpp"
-#include "gfx/vulkan/voxel/compute_renderer.hpp"
 #include "image.hpp"
 #include "swapchain.hpp"
 #include <gfx/imgui_menu.hpp>
+#include <gfx/recordable.hpp>
 #include <util/log.hpp>
 
 namespace
@@ -63,8 +63,7 @@ namespace gfx::vulkan
 
             const vk::SubpassDescription subpass {
                 .flags {},
-                .pipelineBindPoint {
-                    VULKAN_HPP_NAMESPACE::PipelineBindPoint::eGraphics},
+                .pipelineBindPoint {vk::PipelineBindPoint::eGraphics},
                 .inputAttachmentCount {0},
                 .pInputAttachments {nullptr},
                 .colorAttachmentCount {1},
@@ -76,7 +75,7 @@ namespace gfx::vulkan
             };
 
             const vk::SubpassDependency subpassDependency {
-                .srcSubpass {VK_SUBPASS_EXTERNAL},
+                .srcSubpass {vk::SubpassExternal},
                 .dstSubpass {0},
                 .srcStageMask {
                     vk::PipelineStageFlagBits::eColorAttachmentOutput
@@ -264,23 +263,63 @@ namespace gfx::vulkan
     }
 
     std::expected<void, Frame::ResizeNeeded> Frame::render(
-        Camera                         camera,
-        const std::span<const Object*> unsortedObjects,
-        voxel::ComputeRenderer*        computeRenderer,
-        ImGuiMenu*                     menu,
-        std::optional<vk::Fence>       previousFrameInFlightFence)
+        Camera                             camera,
+        const std::span<const Recordable*> unsortedRecordables,
+        ImGuiMenu*                         menu,
+        std::optional<vk::Fence>           previousFrameInFlightFence)
     {
-        std::vector<const Object*> sortedObjects;
-        sortedObjects.insert(
-            sortedObjects.cend(),
-            unsortedObjects.begin(),
-            unsortedObjects.end());
+        std::vector<const Recordable*> sortedRecordables;
+        sortedRecordables.insert(
+            sortedRecordables.cend(),
+            unsortedRecordables.begin(),
+            unsortedRecordables.end());
         std::ranges::sort(
-            sortedObjects,
-            [](const Object* l, const Object* r)
+            sortedRecordables,
+            [](const Recordable* l, const Recordable* r)
             {
                 return *l < *r;
             });
+
+        auto start  = std::make_move_iterator(sortedRecordables.begin());
+        auto render = std::make_move_iterator(std::find_if(
+            sortedRecordables.begin(),
+            sortedRecordables.end(),
+            [](const Recordable* recordable)
+            {
+                return recordable->getDrawStage()
+                    >= Recordable::DrawStage::RenderPass;
+            }));
+        auto post   = std::make_move_iterator(std::find_if(
+            sortedRecordables.begin(),
+            sortedRecordables.end(),
+            [](const Recordable* recordable)
+            {
+                return recordable->getDrawStage()
+                    >= Recordable::DrawStage::PostPass;
+            }));
+        auto end    = std::make_move_iterator(sortedRecordables.end());
+
+        std::vector<const Recordable*> prePassRecordables {start, render};
+        std::vector<const Recordable*> renderRecordables {render, post};
+        std::vector<const Recordable*> postPassRecordables {post, end};
+
+        for (const Recordable* r : prePassRecordables)
+        {
+            util::logDebug(
+                "pre recordables : {}", static_cast<std::string>(*r));
+        }
+
+        for (const Recordable* r : renderRecordables)
+        {
+            util::logDebug(
+                "render recordables : {}", static_cast<std::string>(*r));
+        }
+
+        for (const Recordable* r : postPassRecordables)
+        {
+            util::logDebug(
+                "post recordables : {}", static_cast<std::string>(*r));
+        }
 
         this->device->asLogicalDevice().resetCommandPool(*this->command_pool);
 
@@ -368,27 +407,55 @@ namespace gfx::vulkan
             .pClearValues {clearValues.data()},
         };
 
-        if (computeRenderer != nullptr)
+        vk::Pipeline                   currentPipeline {};
+        Recordable::DescriptorRefArray currentDescriptors {};
+
+        // Prepass
         {
-            computeRenderer->render(*this->command_buffer, camera);
+            for (const Recordable* r : prePassRecordables)
+            {
+                r->bind(
+                    *this->command_buffer, currentPipeline, currentDescriptors);
+                r->record(*this->command_buffer, camera);
+            }
+
+            currentPipeline    = nullptr;
+            currentDescriptors = {nullptr, nullptr, nullptr, nullptr};
         }
 
         this->command_buffer->beginRenderPass(
             renderPassBeginInfo, vk::SubpassContents::eInline);
 
-        BindState bindState {};
-
-        for (const Object* o : sortedObjects)
+        // Renderpass
         {
-            o->bindAndDraw(*this->command_buffer, bindState, camera);
-        }
+            for (const Recordable* r : renderRecordables)
+            {
+                r->bind(
+                    *this->command_buffer, currentPipeline, currentDescriptors);
+                r->record(*this->command_buffer, camera);
+            }
 
-        if (menu != nullptr)
-        {
-            menu->draw(*this->command_buffer);
+            currentPipeline    = nullptr;
+            currentDescriptors = {nullptr, nullptr, nullptr, nullptr};
+
+            if (menu != nullptr)
+            {
+                menu->draw(*this->command_buffer);
+            }
         }
 
         this->command_buffer->endRenderPass();
+
+        // Postpass
+        {
+            for (const Recordable* r : postPassRecordables)
+            {
+                r->bind(
+                    *this->command_buffer, currentPipeline, currentDescriptors);
+                r->record(*this->command_buffer, camera);
+            }
+        }
+
         this->command_buffer->end();
 
         const vk::PipelineStageFlags waitStages =
@@ -447,9 +514,8 @@ namespace gfx::vulkan
                         VkResult result =
                             VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
                                 static_cast<VkQueue>(queue),
-                                reinterpret_cast<
-                                    const VkPresentInfoKHR*>( // NOLINT
-                                    &presentInfo));
+                                reinterpret_cast< // NOLINT
+                                    const VkPresentInfoKHR*>(&presentInfo));
 
                         if (result == VK_ERROR_OUT_OF_DATE_KHR
                             || result == VK_SUBOPTIMAL_KHR)

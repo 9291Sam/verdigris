@@ -6,6 +6,11 @@
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
+namespace gfx
+{
+    class Renderer;
+}
+
 namespace gfx::vulkan
 {
     class Device;
@@ -22,6 +27,15 @@ namespace gfx::vulkan
     public:
         struct PipelineHandle
         {
+            PipelineHandle()
+                : id {~0UZ}
+            {}
+
+            [[nodiscard]] bool isValid() const
+            {
+                return this->id != ~0UZ;
+            }
+
             std::strong_ordering
             operator<=> (const PipelineHandle&) const = default;
         private:
@@ -42,22 +56,24 @@ namespace gfx::vulkan
         PipelineCache& operator= (const PipelineCache&) = delete;
         PipelineCache& operator= (PipelineCache&&)      = delete;
 
-        PipelineHandle cachePipeline(Pipeline) const;
-        std::pair<vk::Pipeline, vk::PipelineLayout>
-            lookupPipeline(PipelineHandle) const;
+        PipelineHandle  cachePipeline(std::unique_ptr<Pipeline>) const;
+        const Pipeline* lookupPipeline(PipelineHandle) const;
+
+        void updateRenderPass(vk::RenderPass, const Swapchain&);
 
     private:
         mutable std::atomic<std::size_t> next_free_id;
-        mutable boost::unordered::concurrent_flat_map<PipelineHandle, Pipeline>
-            cache;
+        mutable boost::unordered::
+            concurrent_flat_map<PipelineHandle, std::unique_ptr<Pipeline>>
+                cache;
     };
 
     class Pipeline
     {
     public:
 
-        Pipeline()  = default;
-        ~Pipeline() = default;
+        Pipeline()          = default;
+        virtual ~Pipeline() = default;
 
         Pipeline(const Pipeline&)             = delete;
         Pipeline(Pipeline&&)                  = default;
@@ -67,29 +83,43 @@ namespace gfx::vulkan
         [[nodiscard]] vk::Pipeline       operator* () const;
         [[nodiscard]] vk::PipelineLayout getLayout() const;
 
+        virtual void recreate(vk::RenderPass, const Swapchain&) = 0;
+
     protected:
         vk::UniquePipeline       pipeline;
         vk::UniquePipelineLayout layout;
     };
 
-    class ComputePipeline : public Pipeline
+    class ComputePipeline final : public Pipeline
     {
     public:
         ComputePipeline(
-            vk::Device,
+            const Renderer&,
             vk::ShaderModule,
-            std::array<vk::DescriptorSetLayout, 4>,
+            std::span<const vk::DescriptorSetLayout>,
             std::span<const vk::PushConstantRange>,
             const std::string& name);
+
+        void recreate(vk::RenderPass, const Swapchain&) override;
     };
 
-    class GraphicsPipeline : public Pipeline
+    class GraphicsPipeline final : public Pipeline
     {
     public:
         GraphicsPipeline(
-            vk::Device,
-            vk::RenderPass,
-            std::span<vk::PipelineShaderStageCreateInfo>,
+            const Renderer&,
+            std::span<
+                std::pair<vk::ShaderStageFlagBits, vk::UniqueShaderModule>>,
+            vk::PipelineVertexInputStateCreateInfo,
+            vk::PrimitiveTopology,
+            std::span<const vk::DescriptorSetLayout>,
+            std::span<const vk::PushConstantRange>,
+            std::string name);
+
+        GraphicsPipeline(
+            const Renderer&,
+            std::span<
+                std::pair<vk::ShaderStageFlagBits, vk::UniqueShaderModule>>,
             vk::PipelineVertexInputStateCreateInfo,
             std::optional<vk::PipelineInputAssemblyStateCreateInfo>,
             std::optional<vk::PipelineTessellationStateCreateInfo>,
@@ -98,9 +128,19 @@ namespace gfx::vulkan
             std::optional<vk::PipelineMultisampleStateCreateInfo>,
             std::optional<vk::PipelineDepthStencilStateCreateInfo>,
             std::optional<vk::PipelineColorBlendStateCreateInfo>,
-            std::array<vk::DescriptorSetLayout, 4>,
+            std::span<const vk::DescriptorSetLayout>,
             std::span<const vk::PushConstantRange>,
-            const std::string& name);
+            std::string name);
+
+        void recreate(vk::RenderPass, const Swapchain&) override;
+
+    private:
+        vk::Device  device;
+        std::string name;
+
+        std::vector<vk::PipelineShaderStageCreateInfo> shader_create_infos;
+        std::vector<vk::UniqueShaderModule>            shaders;
+        vk::GraphicsPipelineCreateInfo                 create_info;
     };
 
 } // namespace gfx::vulkan

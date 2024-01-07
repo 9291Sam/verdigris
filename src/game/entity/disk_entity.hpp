@@ -8,7 +8,11 @@ namespace gfx
 {
     class Renderer;
     class Object;
-    class SimpleTriangulatedObject;
+
+    namespace recordables
+    {
+        class FlatRecordable;
+    }
 } // namespace gfx
 
 namespace game::entity
@@ -24,7 +28,7 @@ namespace game::entity
         void tick() const override;
 
     private:
-        std::shared_ptr<gfx::SimpleTriangulatedObject> object;
+        std::shared_ptr<gfx::recordables::FlatRecordable> object;
 
         DiskEntity(const Game&, const char* filepath);
     }; // class DiskEntity

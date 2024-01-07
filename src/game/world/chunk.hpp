@@ -2,10 +2,10 @@
 #define SRC_GAME_WORLD_CHUNK_HPP
 
 #include "game/world/sparse_volume.hpp"
-#include "gfx/object.hpp"
-#include "util/misc.hpp"
+#include <gfx/recordables/flat_recordable.hpp>
 #include <memory>
 #include <optional>
+#include <util/misc.hpp>
 
 namespace game::world
 {
@@ -87,13 +87,13 @@ namespace game::world
         LodLevel            lod;
         mutable ChunkStates state;
 
-        std::shared_ptr<SparseVoxelVolume>             volume;
-        std::shared_ptr<gfx::SimpleTriangulatedObject> object;
+        std::shared_ptr<SparseVoxelVolume>                volume;
+        std::shared_ptr<gfx::recordables::FlatRecordable> object;
 
         std::optional<std::future<std::shared_ptr<SparseVoxelVolume>>>
             future_volume;
         std::optional<
-            std::future<std::shared_ptr<gfx::SimpleTriangulatedObject>>>
+            std::future<std::shared_ptr<gfx::recordables::FlatRecordable>>>
             future_object;
     };
 } // namespace game::world

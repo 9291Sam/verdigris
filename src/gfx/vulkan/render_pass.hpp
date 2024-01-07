@@ -3,7 +3,6 @@
 
 #include <expected>
 #include <gfx/camera.hpp>
-#include <gfx/object.hpp>
 #include <span>
 #include <util/misc.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
@@ -12,6 +11,7 @@
 namespace gfx
 {
     class ImGuiMenu;
+    class Recordable;
 } // namespace gfx
 
 namespace gfx::vulkan
@@ -20,7 +20,6 @@ namespace gfx::vulkan
     class Image2D;
     class Swapchain;
     class Frame;
-    class PipelineManager;
 
     namespace voxel
     {
@@ -82,8 +81,7 @@ namespace gfx::vulkan
         // @return {true}, is resize needed
         [[nodiscard]] std::expected<void, ResizeNeeded> render(
             Camera,
-            std::span<const Object*>,
-            voxel::ComputeRenderer*,
+            std::span<const Recordable*>,
             ImGuiMenu*,
             std::optional<vk::Fence> previousFrameInFlightFence);
 

@@ -1,12 +1,12 @@
 #include "chunk.hpp"
 #include "game/world/chunk.hpp"
 #include "game/world/sparse_volume.hpp"
-#include "gfx/object.hpp"
 #include "gfx/renderer.hpp"
 #include "util/log.hpp"
 #include "util/misc.hpp"
 #include "util/threads.hpp"
 #include <chrono>
+#include <gfx/recordables/flat_recordable.hpp>
 #include <memory>
 #include <ranges>
 #include <thread>
@@ -172,7 +172,7 @@ namespace game::world
                     [lambdaLocation  = this->location,
                      lambdaVolume    = this->volume,
                      &lambdaRenderer = renderer]
-                    -> std::shared_ptr<gfx::SimpleTriangulatedObject>
+                    -> std::shared_ptr<gfx::recordables::FlatRecordable>
                     {
                         auto start = std::chrono::high_resolution_clock::now();
 
@@ -190,10 +190,12 @@ namespace game::world
                                 std::chrono::milliseconds>(end - start)
                                 .count());
 
-                        return gfx::SimpleTriangulatedObject::create(
+                        return gfx::recordables::FlatRecordable::create(
                             lambdaRenderer,
                             std::move(vertices),
-                            std::move(indices));
+                            std::move(indices),
+                            gfx::Transform {},
+                            "Chunk");
                     });
 
                 this->state = ChunkStates::WaitingForObject;

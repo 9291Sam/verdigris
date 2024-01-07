@@ -1,6 +1,6 @@
 #include "renderer.hpp"
 #include "imgui_menu.hpp"
-#include "object.hpp"
+#include "recordable.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
 #include "vulkan/image.hpp"
@@ -8,7 +8,6 @@
 #include "vulkan/pipelines.hpp"
 #include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
-#include "vulkan/voxel/compute_renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
@@ -79,12 +78,13 @@ namespace gfx
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, &*this->device)}
+        , render_pass {nullptr}
         , menu_state {ImGuiMenu::State {}}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , show_menu {false}
         , is_cursor_attached {true}
     {
-        this->initializeRenderer();
+        this->initializeRenderer(std::nullopt);
 
         this->window->attachCursor();
     }
@@ -178,11 +178,14 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        // collect objects and draw the frame TODO: move to isolate thread
         {
-            auto [currentFrame, previousFence] =
-                this->render_pass->getNextFrame();
+            auto [currentFrame, previousFence] = this->render_pass.readLock(
+                [](const std::unique_ptr<vulkan::RenderPass>& renderPass)
+                {
+                    return renderPass->getNextFrame();
+                });
 
+            // TODO: move to a draw object.
             std::future<void> menuRender = std::async(
                 std::launch::async,
                 [&]
@@ -197,37 +200,29 @@ namespace gfx
                     }
                 });
 
-            std::future<void> voxelRender = std::async(
-                std::launch::async,
-                [&]
-                {
-                    this->voxel_renderer->tick();
-                });
-
-            std::vector<std::shared_ptr<const Object>> strongObjects;
-            std::vector<const Object*>                 rawObjects;
+            std::vector<std::shared_ptr<const Recordable>> strongRecordables;
+            std::vector<const Recordable*>                 rawRecordables;
 
             for (const auto& [id, weakRenderable] : this->draw_objects.access())
             {
-                if (std::shared_ptr<const Object> obj = weakRenderable.lock())
+                if (std::shared_ptr<const Recordable> obj =
+                        weakRenderable.lock())
                 {
                     obj->updateFrameState();
 
                     if (obj->shouldDraw())
                     {
-                        rawObjects.push_back(obj.get());
-                        strongObjects.push_back(std::move(obj));
+                        rawRecordables.push_back(obj.get());
+                        strongRecordables.push_back(std::move(obj));
                     }
                 }
             }
 
             menuRender.get();
-            voxelRender.get();
 
             if (!currentFrame.render(
                     this->draw_camera,
-                    rawObjects,
-                    this->voxel_renderer.get(),
+                    rawRecordables,
                     this->show_menu ? this->menu.get() : nullptr,
                     previousFence))
             {
@@ -275,17 +270,24 @@ namespace gfx
         this->window->blockThisThreadWhileMinimized();
         this->device->asLogicalDevice().waitIdle(); // stall TODO: make better?
 
-        this->menu.reset();
-        this->voxel_renderer.reset();
-        this->pipelines.reset();
-        this->render_pass.reset();
-        this->depth_buffer.reset();
-        this->swapchain.reset();
+        this->render_pass.writeLock(
+            [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
+            {
+                this->menu.reset();
+                // this->pipelines.reset();
+                renderPass.reset();
+                this->depth_buffer.reset();
+                this->swapchain.reset();
 
-        this->initializeRenderer();
+                this->initializeRenderer(&renderPass);
+
+                this->pipelines->updateRenderPass(**renderPass);
+            });
     }
 
-    void Renderer::initializeRenderer()
+    void Renderer::initializeRenderer(
+        std::optional<std::unique_ptr<vulkan::RenderPass>*>
+            maybeWriteLockedRenderPass)
     {
         this->swapchain = std::make_unique<vulkan::Swapchain>(
             *this->device, **this->surface, this->window->getFramebufferSize());
@@ -301,71 +303,43 @@ namespace gfx
             vk::ImageTiling::eOptimal,
             vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-        this->render_pass = std::make_unique<vulkan::RenderPass>(
-            this->device.get(), this->swapchain.get(), *this->depth_buffer);
-
-        this->pipelines = std::make_unique<vulkan::PipelineManager>(
-            this->device->asLogicalDevice(),
-            **this->render_pass,
-            this->swapchain.get(),
-            this->allocator.get());
-
+        if (maybeWriteLockedRenderPass.has_value())
         {
-            std::vector<std::future<void>> pipelineFutures {};
+            **maybeWriteLockedRenderPass = std::make_unique<vulkan::RenderPass>(
+                this->device.get(), this->swapchain.get(), *this->depth_buffer);
 
-            magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
-                [&](vulkan::GraphicsPipelineType type)
+            this->menu = std::make_unique<ImGuiMenu>(
+                *this->window,
+                **this->instance,
+                *this->device,
+                ****maybeWriteLockedRenderPass); // lol
+        }
+        else
+        {
+            this->render_pass.writeLock(
+                [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
                 {
-                    if (type == vulkan::GraphicsPipelineType::NoPipeline)
-                    {
-                        return;
-                    }
+                    renderPass = std::make_unique<vulkan::RenderPass>(
+                        this->device.get(),
+                        this->swapchain.get(),
+                        *this->depth_buffer);
 
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getGraphicsPipeline(type);
-                        }));
-                });
-
-            magic_enum::enum_for_each<vulkan::ComputePipelineType>(
-                [&](vulkan::ComputePipelineType type)
-                {
-                    if (type == vulkan::ComputePipelineType::NoPipeline)
-                    {
-                        return;
-                    }
-
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getComputePipeline(type);
-                        }));
+                    this->menu = std::make_unique<ImGuiMenu>(
+                        *this->window,
+                        **this->instance,
+                        *this->device,
+                        **renderPass);
                 });
         }
 
-        this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
-            *this,
-            this->device.get(),
-            this->allocator.get(),
-            this->pipelines.get(),
-            this->swapchain->getExtent());
-
-        this->menu = std::make_unique<ImGuiMenu>(
-            *this->window,
-            **this->instance,
-            *this->device,
-            **this->render_pass);
-
-        this->menu->bindImage(this->voxel_renderer->getImage());
+        if (this->pipelines == nullptr)
+        {
+            this->pipelines = std::make_unique<vulkan::PipelineCache>();
+        }
     }
 
-    void Renderer::registerObject(
-        const std::shared_ptr<const Object>& objectToRegister) const
+    void Renderer::registerRecordable(
+        const std::shared_ptr<const Recordable>& objectToRegister) const
     {
         this->draw_objects.insert(
             {objectToRegister->getUUID(), std::weak_ptr {objectToRegister}});

@@ -30,6 +30,8 @@ Checks: >
   -modernize-use-default-member-init,
   -cppcoreguidelines-use-default-member-init,
   -fuchsia-trailing-return,
+  -modernize-use-emplace,
+  -hicpp-use-emplace
 
 CheckOptions:
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true       }

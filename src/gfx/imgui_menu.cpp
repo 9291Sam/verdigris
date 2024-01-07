@@ -167,20 +167,20 @@ namespace gfx
             vk::QueueFlagBits::eGraphics,
             [&](vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
             {
-                const vk::CommandBufferBeginInfo BeginInfo {
+                const vk::CommandBufferBeginInfo beginInfo {
                     .sType {vk::StructureType::eCommandBufferBeginInfo},
                     .pNext {nullptr},
                     .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
                     .pInheritanceInfo {nullptr},
                 };
 
-                commandBuffer.begin(BeginInfo);
+                commandBuffer.begin(beginInfo);
 
                 ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
 
                 commandBuffer.end();
 
-                const vk::SubmitInfo SubmitInfo {
+                const vk::SubmitInfo submitInfo {
                     .sType {vk::StructureType::eSubmitInfo},
                     .pNext {nullptr},
                     .waitSemaphoreCount {0},
@@ -192,7 +192,7 @@ namespace gfx
                     .pSignalSemaphores {nullptr},
                 };
 
-                queue.submit(SubmitInfo, *imguiFontUploadFence);
+                queue.submit(submitInfo, *imguiFontUploadFence);
             });
 
         const vk::Result result = device.asLogicalDevice().waitForFences(

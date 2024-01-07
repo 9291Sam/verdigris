@@ -142,9 +142,9 @@ namespace game::world
     }
 
     void VoxelVolume::drawToVectors(
-        std::vector<gfx::vulkan::Vertex>& outputVertices,
-        std::vector<gfx::vulkan::Index>&  outputIndices,
-        Position                          localOffset)
+        std::vector<gfx::recordables::FlatRecordable::Vertex>& outputVertices,
+        std::vector<gfx::recordables::FlatRecordable::Index>&  outputIndices,
+        Position                                               localOffset)
     {
         auto iterator = std::views::iota(0, static_cast<std::int32_t>(Extent));
 
@@ -162,67 +162,63 @@ namespace game::world
                         continue;
                     }
 
-                    static constexpr std::array<gfx::vulkan::Vertex, 8>
-                        cubeVertices {
-                            gfx::vulkan::Vertex {
-                                .position {-1.0f, -1.0f, -1.0f},
-                                .color {0.0f, 0.0f, 0.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {-1.0f, -1.0f, 1.0f},
-                                .color {0.0f, 0.0f, 1.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {-1.0f, 1.0f, -1.0f},
-                                .color {0.0f, 1.0f, 0.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {-1.0f, 1.0f, 1.0f},
-                                .color {0.0f, 1.0f, 1.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {1.0f, -1.0f, -1.0f},
-                                .color {1.0f, 0.0f, 0.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {1.0f, -1.0f, 1.0f},
-                                .color {1.0f, 0.0f, 1.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {1.0f, 1.0f, -1.0f},
-                                .color {1.0f, 1.0f, 0.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                            gfx::vulkan::Vertex {
-                                .position {1.0f, 1.0f, 1.0f},
-                                .color {1.0f, 1.0f, 1.0f, 1.0f},
-                                .normal {},
-                                .uv {},
-                            },
-                        };
+                    static constexpr std::
+                        array<gfx::recordables::FlatRecordable::Vertex, 8>
+                            cubeVertices {
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {0.0f, 0.0f, 0.0f, 1.0f},
+                                    .position {-1.0f, -1.0f, -1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {0.0f, 0.0f, 1.0f, 1.0f},
+                                    .position {-1.0f, -1.0f, 1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {0.0f, 1.0f, 0.0f, 1.0f},
+                                    .position {-1.0f, 1.0f, -1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {0.0f, 1.0f, 1.0f, 1.0f},
+                                    .position {-1.0f, 1.0f, 1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {1.0f, 0.0f, 0.0f, 1.0f},
+                                    .position {1.0f, -1.0f, -1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {1.0f, 0.0f, 1.0f, 1.0f},
+                                    .position {1.0f, -1.0f, 1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {1.0f, 1.0f, 0.0f, 1.0f},
+                                    .position {1.0f, 1.0f, -1.0f},
+                                    .normal {},
+                                },
+                                gfx::recordables::FlatRecordable::Vertex {
+                                    .color {1.0f, 1.0f, 1.0f, 1.0f},
+                                    .position {1.0f, 1.0f, 1.0f},
+                                    .normal {},
+                                },
+                            };
 
-                    constexpr std::array<gfx::vulkan::Index, 36> cubeIndices {
-                        6, 2, 7, 2, 3, 7, 0, 4, 5, 1, 0, 5, 0, 2, 6, 4, 0, 6,
-                        3, 1, 7, 1, 5, 7, 2, 0, 3, 0, 1, 3, 4, 6, 7, 5, 4, 7};
+                    constexpr std::
+                        array<gfx::recordables::FlatRecordable::Index, 36>
+                            cubeIndices {6, 2, 7, 2, 3, 7, 0, 4, 5, 1, 0, 5,
+                                         0, 2, 6, 4, 0, 6, 3, 1, 7, 1, 5, 7,
+                                         2, 0, 3, 0, 1, 3, 4, 6, 7, 5, 4, 7};
 
                     const std::size_t IndicesOffset = outputVertices.size();
 
                     // Update positions to be aligned with the world and insert
                     // into output
-                    for (gfx::vulkan::Vertex v : cubeVertices)
+                    for (gfx::recordables::FlatRecordable::Vertex v :
+                         cubeVertices)
                     {
                         v.position /= 2.0f;
 
@@ -237,7 +233,8 @@ namespace game::world
                     }
 
                     // update indices to actually point to the correct index
-                    for (gfx::vulkan::Index i : cubeIndices)
+                    for (gfx::recordables::FlatRecordable::Index i :
+                         cubeIndices)
                     {
                         i += static_cast<std::uint32_t>(IndicesOffset);
 
@@ -323,12 +320,14 @@ namespace game::world
             ->accessFromLocalPosition(volumeInternalPosition);
     }
 
-    std::pair<std::vector<gfx::vulkan::Vertex>, std::vector<gfx::vulkan::Index>>
+    std::pair<
+        std::vector<gfx::recordables::FlatRecordable::Vertex>,
+        std::vector<gfx::recordables::FlatRecordable::Index>>
     SparseVoxelVolume::draw(Position localOffset)
     {
-        std::vector<gfx::vulkan::Vertex> vertices;
+        std::vector<gfx::recordables::FlatRecordable::Vertex> vertices;
         vertices.reserve(3'000'000);
-        std::vector<gfx::vulkan::Index> indices;
+        std::vector<gfx::recordables::FlatRecordable::Index> indices;
         vertices.reserve(9'000'000);
         // for (std::size_t x = 0; x < SparseVoxelVolume) }
 

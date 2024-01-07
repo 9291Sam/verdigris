@@ -39,6 +39,16 @@ namespace gfx::vulkan
             {}
             std::size_t id;
         };
+
+        inline std::size_t hash_value(const DescriptorHandle& handle) // NOLINT
+        {
+            boost::hash<std::size_t> sizeTHasher {};
+
+            std::size_t workingHash = sizeTHasher(handle.id);
+
+            return workingHash;
+        }
+
     public:
         static std::shared_ptr<DescriptorPool> create(
             vk::Device,
