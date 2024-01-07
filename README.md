@@ -1,11 +1,13 @@
 # Verdigris
-An experimental rasterizing and raytracing voxel renderer with the goal of creating endless, fully editable, semi-realistic landscapes and natural scenes.
+An experimental rasterizing and raytracing voxel renderer with the goal of creating endless, fully editable, semi-realistic natural scenes.
+
 
 ## Demonstration video
-https://github.com/9291Sam/verdigris/assets/25729215/5086dd9f-a24e-44ef-8fa5-76f0865e7c9a
+https://github.com/9291Sam/verdigris/assets/25729215/1b843f5d-4562-487f-9fb6-f400d29b9cc6
+
 
 ### Features
-- 25 512^3 voxel chunks being generated concurrently
+- 16 512^3 voxel chunks being generated concurrently
 - Compute shader raytracing at aligned positions with rasterized objects
 - Isolated render and tick threads
 - Pervasive use of fork-join parallelism
