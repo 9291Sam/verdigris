@@ -37,6 +37,18 @@ namespace gfx
     class Renderer
     {
     public:
+        // TODO: maybe not violate open-closed principle and make a proper
+        // render graph, this is going to take a while and I don't care right
+        // now!
+        enum class DrawStage
+        {
+            TopOfPipeCompute     = 0,
+            VoxelDiscoveryPass   = 1,
+            PostDiscoveryCompute = 2,
+            DisplayPass          = 3,
+            PostPipeCompute      = 4
+        };
+    public:
 
         Renderer();
         ~Renderer();
@@ -46,7 +58,7 @@ namespace gfx
         Renderer& operator= (const Renderer&) = delete;
         Renderer& operator= (Renderer&&)      = delete;
 
-        // TODO: use events.
+        // TODO: use events for the menu.
         [[nodiscard]] const util::Mutex<ImGuiMenu::State>& getMenuState() const;
         [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
         [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
@@ -74,7 +86,7 @@ namespace gfx
         friend vulkan::GraphicsPipeline;
         friend vulkan::ComputePipeline;
         [[nodiscard]] util::RwLock<std::unique_ptr<vulkan::RenderPass>>
-        getRenderPass() const;
+            getRenderPass(DrawStage) const;
 
         // Vulkan prelude objects
         std::unique_ptr<Window>               window;
@@ -84,10 +96,14 @@ namespace gfx
         std::unique_ptr<vulkan::Allocator>    allocator;
 
         // Rendering objects
-        std::unique_ptr<vulkan::Swapchain>                swapchain;
-        std::unique_ptr<vulkan::Image2D>                  depth_buffer;
-        util::RwLock<std::unique_ptr<vulkan::RenderPass>> render_pass;
-        std::unique_ptr<vulkan::PipelineCache>            pipelines;
+        std::unique_ptr<vulkan::Swapchain> swapchain;
+        std::unique_ptr<vulkan::Image2D>   depth_buffer;
+        std::map<
+            DrawStage,
+            util::RwLock<std::optional<std::unique_ptr<vulkan::RenderPass>>>>
+                                                       render_passes;
+        std::unique_ptr<vulkan::PipelineCache>         pipelines;
+        std::unique_ptr<vulkan::FramebufferDeleagator> framebuffers;
 
         // Drawing things
         std::unique_ptr<ImGuiMenu> menu;

@@ -178,6 +178,7 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
+        // TODO: integrate the menu as a Renderable
         {
             auto [currentFrame, previousFence] = this->render_pass.readLock(
                 [](const std::unique_ptr<vulkan::RenderPass>& renderPass)
