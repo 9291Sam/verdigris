@@ -1,8 +1,9 @@
 #include "renderer.hpp"
 #include "imgui_menu.hpp"
-#include "recordable.hpp"
+#include "recordables/recordable.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
+#include "vulkan/frame.hpp"
 #include "vulkan/image.hpp"
 #include "vulkan/instance.hpp"
 #include "vulkan/pipelines.hpp"
@@ -78,8 +79,13 @@ namespace gfx
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, &*this->device)}
-        , render_pass {nullptr}
-        , menu_state {ImGuiMenu::State {}}
+        , swapchain {nullptr}
+        , depth_buffer {nullptr}
+        , voxel_discovery_pass {{nullptr}}
+        , voxel_discovery_image {nullptr}
+        , final_raster_pass {{nullptr}}
+        , pipelines {nullptr}
+        , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , show_menu {false}
         , is_cursor_attached {true}
@@ -109,9 +115,10 @@ namespace gfx
         return Window::Delta {.x {deltaRadiansX}, .y {deltaRadiansY}};
     }
 
-    const util::Mutex<ImGuiMenu::State>& Renderer::getMenuState() const
+    const util::Mutex<recordables::DebugMenu::State>&
+    Renderer::getMenuState() const
     {
-        return this->menu_state;
+        return this->debug_menu_state;
     }
 
     [[nodiscard]] bool Renderer::isActionActive(Window::Action a) const
@@ -178,85 +185,100 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        // TODO: integrate the menu as a Renderable
+        std::vector<std::shared_ptr<const recordables::Recordable>>
+            renderables = [&]
         {
-            auto [currentFrame, previousFence] = this->render_pass.readLock(
-                [](const std::unique_ptr<vulkan::RenderPass>& renderPass)
-                {
-                    return renderPass->getNextFrame();
-                });
+            std::vector<util::UUID> weakRecordablesToRemove {};
 
-            // TODO: move to a draw object.
-            std::future<void> menuRender = std::async(
-                std::launch::async,
-                [&]
-                {
-                    if (this->show_menu)
-                    {
-                        this->menu_state.lock(
-                            [&](ImGuiMenu::State& state)
-                            {
-                                this->menu->render(state);
-                            });
-                    }
-                });
+            std::vector<std::shared_ptr<const recordables::Recordable>>
+                                           strongMaybeDrawRenderables {};
+            std::vector<std::future<void>> maybeDrawStateUpdateFutures {};
 
-            std::vector<std::shared_ptr<const Recordable>> strongRecordables;
-            std::vector<const Recordable*>                 rawRecordables;
-
-            for (const auto& [id, weakRenderable] : this->draw_objects.access())
+            // Collect the strong
+            for (const auto& [weakUUID, weakRecordable] :
+                 this->recordable_registry.access())
             {
-                if (std::shared_ptr<const Recordable> obj =
-                        weakRenderable.lock())
+                if (std::shared_ptr<const recordables::Recordable> recordable =
+                        weakRecordable.lock())
                 {
-                    obj->updateFrameState();
-
-                    if (obj->shouldDraw())
-                    {
-                        rawRecordables.push_back(obj.get());
-                        strongRecordables.push_back(std::move(obj));
-                    }
-                }
-            }
-
-            menuRender.get();
-
-            if (!currentFrame.render(
-                    this->draw_camera,
-                    rawRecordables,
-                    this->show_menu ? this->menu.get() : nullptr,
-                    previousFence))
-            {
-                this->resize();
-            }
-
-            if (this->window->isActionActive(
-                    Window::Action::ToggleConsole, true))
-            {
-                this->show_menu = !this->show_menu;
-            }
-
-            if (this->window->isActionActive(
-                    Window::Action::ToggleCursorAttachment, true))
-            {
-                if (this->is_cursor_attached)
-                {
-                    this->is_cursor_attached = false;
-                    this->window->detachCursor();
+                    maybeDrawStateUpdateFutures.push_back(std::async(
+                        [rawRecordable = recordable.get()]
+                        {
+                            rawRecordable->updateFrameState();
+                        }));
+                    strongMaybeDrawRenderables.push_back(std::move(recordable));
                 }
                 else
                 {
-                    this->is_cursor_attached = true;
-                    this->window->attachCursor();
+                    weakRecordablesToRemove.push_back(weakUUID);
                 }
             }
 
-            this->menu_state.lock(
-                [&](ImGuiMenu::State& state)
+            // Purge the weak
+            for (const util::UUID& weakID : weakRecordablesToRemove)
+            {
+                this->recordable_registry.remove(weakID);
+            }
+
+            std::vector<std::shared_ptr<const recordables::Recordable>>
+                strongDrawingRenderables {};
+
+            maybeDrawStateUpdateFutures.clear(); // join all futures
+
+            for (const std::shared_ptr<const recordables::Recordable>&
+                     maybeDrawingRecordable : strongMaybeDrawRenderables)
+            {
+                if (maybeDrawingRecordable->shouldDraw())
                 {
-                    state.fps = 1 / this->getFrameDeltaTimeSeconds();
-                });
+                    strongDrawingRenderables.push_back(
+                        std::move(maybeDrawingRecordable));
+                }
+            }
+
+            return strongDrawingRenderables;
+        }();
+        renderables.push_back(this->debug_menu);
+
+        // get next framebuffer index
+        // bind that to the last renderpass
+        // renmder
+
+        Frame& frameToDraw = {};
+
+        frameToDraw.if (!currentFrame.render(
+                            this->draw_camera,
+                            rawRecordables,
+                            this->show_menu ? this->menu.get() : nullptr,
+                            previousFence))
+        {
+            this->resize();
         }
+
+        if (this->window->isActionActive(Window::Action::ToggleConsole, true))
+        {
+            this->debug_menu->setVisibility(!this->debug_menu->shouldDraw());
+        }
+
+        if (this->window->isActionActive(
+                Window::Action::ToggleCursorAttachment, true))
+        {
+            if (this->is_cursor_attached)
+            {
+                this->is_cursor_attached = false;
+                this->window->detachCursor();
+            }
+            else
+            {
+                this->is_cursor_attached = true;
+                this->window->attachCursor();
+            }
+        }
+
+        this->debug_menu_state.lock(
+            [&](recordables::DebugMenu::State& state)
+            {
+                state.fps = 1 / this->getFrameDeltaTimeSeconds();
+            });
 
         this->window->endFrame();
     }
@@ -304,34 +326,39 @@ namespace gfx
             vk::ImageTiling::eOptimal,
             vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-        if (maybeWriteLockedRenderPass.has_value())
-        {
-            **maybeWriteLockedRenderPass = std::make_unique<vulkan::RenderPass>(
-                this->device.get(), this->swapchain.get(), *this->depth_buffer);
+        static_assert(false);
+        this->swapchain->getRenderTargets();
 
-            this->menu = std::make_unique<ImGuiMenu>(
-                *this->window,
-                **this->instance,
-                *this->device,
-                ****maybeWriteLockedRenderPass); // lol
-        }
-        else
-        {
-            this->render_pass.writeLock(
-                [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
-                {
-                    renderPass = std::make_unique<vulkan::RenderPass>(
-                        this->device.get(),
-                        this->swapchain.get(),
-                        *this->depth_buffer);
+        // if (maybeWriteLockedRenderPass.has_value())
+        // {
+        //     **maybeWriteLockedRenderPass =
+        //     std::make_unique<vulkan::RenderPass>(
+        //         this->device.get(), this->swapchain.get(),
+        //         *this->depth_buffer);
 
-                    this->menu = std::make_unique<ImGuiMenu>(
-                        *this->window,
-                        **this->instance,
-                        *this->device,
-                        **renderPass);
-                });
-        }
+        //     this->menu = std::make_unique<ImGuiMenu>(
+        //         *this->window,
+        //         **this->instance,
+        //         *this->device,
+        //         ****maybeWriteLockedRenderPass); // lol
+        // }
+        // else
+        // {
+        //     this->render_pass.writeLock(
+        //         [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
+        //         {
+        //             renderPass = std::make_unique<vulkan::RenderPass>(
+        //                 this->device.get(),
+        //                 this->swapchain.get(),
+        //                 *this->depth_buffer);
+
+        //             this->menu = std::make_unique<ImGuiMenu>(
+        //                 *this->window,
+        //                 **this->instance,
+        //                 *this->device,
+        //                 **renderPass);
+        //         });
+        // }
 
         if (this->pipelines == nullptr)
         {

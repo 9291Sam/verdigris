@@ -72,7 +72,12 @@ namespace gfx::vulkan
             commandBuffer.endRenderPass();
         }
 
+        vk::RenderPass
+        operator* () const; // TODO: remove and give imgui its own renderpass!
+
+
     private:
+
         vk::UniqueRenderPass          render_pass;
         vk::Framebuffer               framebuffer;
         vk::Extent2D                  framebuffer_extent;

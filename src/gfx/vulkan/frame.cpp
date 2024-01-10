@@ -105,15 +105,13 @@ namespace gfx::vulkan
 
     std::expected<void, FlyingFrame::ResizeNeeded>
     FlyingFrame::recordAndDisplay(
-        Camera camera,
-        const std::map<
-            Renderer::DrawStage,
-            std::pair<
-                std::optional<vulkan::RenderPass*>,
-                std::span<const Recordable*>>>& recordables,
-        vk::SwapchainKHR                        presentSwapchain,
-        std::uint32_t            presentSwapchainFramebufferIndex,
-        std::optional<vk::Fence> maybePreviousFrameInFlightFence)
+        Camera                             camera,
+        std::span<const std::pair<
+            std::optional<vulkan::RenderPass*>,
+            std::span<const Recordable*>>> recordables,
+        vk::SwapchainKHR                   presentSwapchain,
+        std::uint32_t                      presentSwapchainFramebufferIndex,
+        std::optional<vk::Fence>           maybePreviousFrameInFlightFence)
     {
         std::vector<std::pair<
             std::optional<vulkan::RenderPass*>,

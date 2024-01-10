@@ -12,7 +12,10 @@ struct GLFWwindow;
 
 namespace gfx
 {
-    class ImGuiMenu;
+    namespace recordables
+    {
+        class DebugMenu;
+    } // namespace recordables
 
     /// Handles creation of the window
     /// Exposes surface to the renderer
@@ -94,7 +97,7 @@ namespace gfx
         static void windowFocusCallback(GLFWwindow*, int);
         static void errorCallback(int, const char*);
 
-        friend class ::gfx::ImGuiMenu;
+        friend recordables::DebugMenu;
 
         GLFWwindow*               window;
         std::atomic<vk::Extent2D> framebuffer_size;

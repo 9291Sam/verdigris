@@ -1,17 +1,15 @@
 #ifndef SRC_GFX_RECORDABLE_HPP
 #define SRC_GFX_RECORDABLE_HPP
 
-#include "camera.hpp"
-#include "renderer.hpp"
 #include <array>
+#include <gfx/camera.hpp>
+#include <gfx/draw_stages.hpp>
 #include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
-namespace gfx
+namespace gfx::recordables
 {
-    class Renderer;
-
     namespace vulkan
     {
         class Allocator;
@@ -45,20 +43,20 @@ namespace gfx
         /// vkCmdDraw[s] here
         virtual void record(vk::CommandBuffer, const Camera&) const = 0;
 
-        std::strong_ordering              operator<=> (const Recordable&) const;
-        [[nodiscard]] explicit            operator std::string () const;
-        [[nodiscard]] Renderer::DrawStage getDrawStage() const;
-        [[nodiscard]] bool                shouldDraw() const;
-        [[nodiscard]] util::UUID          getUUID() const;
+        std::strong_ordering     operator<=> (const Recordable&) const;
+        [[nodiscard]] explicit   operator std::string () const;
+        [[nodiscard]] DrawStage  getDrawStage() const;
+        [[nodiscard]] bool       shouldDraw() const;
+        [[nodiscard]] util::UUID getUUID() const;
 
     protected:
         [[nodiscard]] vulkan::Allocator& getAllocator() const;
         void                             registerSelf();
 
-        const Renderer&           renderer;
-        const std::string         name;
-        const util::UUID          uuid;
-        const Renderer::DrawStage stage;
+        const Renderer&   renderer;
+        const std::string name;
+        const util::UUID  uuid;
+        const DrawStage   stage;
 
         /// You must manage the lifetime on the descriptors, the pipelines are
         /// functionally static
@@ -71,12 +69,12 @@ namespace gfx
 
         Recordable(
             const gfx::Renderer&,
-            std::string         name,
-            Renderer::DrawStage stage,
-            bool                shouldDraw = true,
-            const vulkan::Pipeline*        = nullptr,
-            DescriptorRefArray             = {});
+            std::string name,
+            DrawStage   stage,
+            bool        shouldDraw  = true,
+            const vulkan::Pipeline* = nullptr,
+            DescriptorRefArray      = {});
     };
-} // namespace gfx
+} // namespace gfx::recordables
 
 #endif // SRC_GFX_RECORDABLE_HPP

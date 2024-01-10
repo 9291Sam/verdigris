@@ -2,7 +2,7 @@
 #define SRC_GFX_RENDERER_HPP
 
 #include "camera.hpp"
-#include "imgui_menu.hpp"
+#include "recordables/debug_menu.hpp"
 #include "window.hpp"
 #include <memory>
 #include <util/registrar.hpp>
@@ -14,7 +14,12 @@
 namespace gfx
 {
     class Window;
-    class Recordable;
+
+    namespace recordables
+    {
+        class DebugMenu;
+        class Recordable;
+    } // namespace recordables
 
     namespace vulkan
     {
@@ -37,18 +42,6 @@ namespace gfx
     class Renderer
     {
     public:
-        // TODO: maybe not violate open-closed principle and make a proper
-        // render graph, this is going to take a while and I don't care right
-        // now!
-        enum class DrawStage
-        {
-            TopOfPipeCompute     = 0,
-            VoxelDiscoveryPass   = 1,
-            PostDiscoveryCompute = 2,
-            DisplayPass          = 3,
-            PostPipeCompute      = 4
-        };
-    public:
 
         Renderer();
         ~Renderer();
@@ -59,7 +52,8 @@ namespace gfx
         Renderer& operator= (Renderer&&)      = delete;
 
         // TODO: use events for the menu.
-        [[nodiscard]] const util::Mutex<ImGuiMenu::State>& getMenuState() const;
+        [[nodiscard]] const util::Mutex<recordables::DebugMenu::State>&
+                                    getMenuState() const;
         [[nodiscard]] float         getFrameDeltaTimeSeconds() const;
         [[nodiscard]] Window::Delta getMouseDeltaRadians() const;
 
@@ -80,11 +74,13 @@ namespace gfx
         initializeRenderer(std::optional<std::unique_ptr<vulkan::RenderPass>*>
                                maybeWriteLockedRenderPass);
 
-        friend Recordable;
-        void registerRecordable(const std::shared_ptr<const Recordable>&) const;
+        friend recordables::Recordable;
+        void registerRecordable(
+            const std::shared_ptr<const recordables::Recordable>&) const;
 
         friend vulkan::GraphicsPipeline;
         friend vulkan::ComputePipeline;
+        friend recordables::DebugMenu;
         [[nodiscard]] util::RwLock<std::unique_ptr<vulkan::RenderPass>>
             getRenderPass(DrawStage) const;
 
@@ -95,33 +91,29 @@ namespace gfx
         std::unique_ptr<vulkan::Device>       device;
         std::unique_ptr<vulkan::Allocator>    allocator;
 
-        // Rendering objects
+        // Pre-renderpass Rendering objects
         std::unique_ptr<vulkan::Swapchain> swapchain;
         std::unique_ptr<vulkan::Image2D>   depth_buffer;
-        std::map<
-            DrawStage,
-            util::RwLock<std::optional<std::unique_ptr<vulkan::RenderPass>>>>
-                                                       render_passes;
-        std::unique_ptr<vulkan::PipelineCache>         pipelines;
-        std::unique_ptr<vulkan::FramebufferDeleagator> framebuffers;
 
-        // Drawing things
-        std::unique_ptr<ImGuiMenu> menu;
+        // Render passes
+        util::RwLock<std::unique_ptr<vulkan::RenderPass>> voxel_discovery_pass;
+        std::unique_ptr<vulkan::Image2D>                  voxel_discovery_image;
+        util::RwLock<std::unique_ptr<vulkan::RenderPass>> final_raster_pass;
 
-        // Rasterizeables
-        util::Registrar<util::UUID, std::weak_ptr<const Recordable>>
-            draw_objects;
+        // Post-renderpass Rendering Objects
+        std::unique_ptr<vulkan::PipelineCache> pipelines;
+        std::unique_ptr<vulkan::FrameManager>  frame_manager;
+
+        // Objects
+        std::shared_ptr<recordables::DebugMenu> debug_menu;
+        util::
+            Registrar<util::UUID, std::weak_ptr<const recordables::Recordable>>
+                recordable_registry;
 
         // State
-        util::Mutex<ImGuiMenu::State> menu_state;
-        std::atomic<Camera>           draw_camera;
-        bool                          show_menu;
-        bool                          is_cursor_attached;
-        // things to draw
-        // std::unique_ptr<VoxelComputeRenderer> voxel_renderer;
-        // poke into menu and get the image
-        // start with rendering a constant color image
-        // then try to do a simple ray trace of a fixed size like 1024
+        util::Mutex<recordables::DebugMenu::State> debug_menu_state;
+        std::atomic<Camera>                        draw_camera;
+        bool                                       is_cursor_attached;
     };
 } // namespace gfx
 
