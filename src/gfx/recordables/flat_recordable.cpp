@@ -8,6 +8,46 @@
 
 namespace gfx::recordables
 {
+
+    const vk::VertexInputBindingDescription*
+    FlatRecordable::Vertex::getBindingDescription()
+    {
+        static const vk::VertexInputBindingDescription bindings {
+            .binding {0},
+            .stride {sizeof(Vertex)},
+            .inputRate {vk::VertexInputRate::eVertex},
+        };
+
+        return &bindings;
+    }
+
+    const std::array<vk::VertexInputAttributeDescription, 3>*
+    FlatRecordable::Vertex::getAttributeDescriptions()
+    {
+        static const std::array<vk::VertexInputAttributeDescription, 3>
+            descriptions {
+                vk::VertexInputAttributeDescription {
+                    .location {0},
+                    .binding {0},
+                    .format {vk::Format::eR32G32B32A32Sfloat},
+                    .offset {offsetof(Vertex, color)},
+                },
+                vk::VertexInputAttributeDescription {
+                    .location {1},
+                    .binding {0},
+                    .format {vk::Format::eR32G32B32Sfloat},
+                    .offset {offsetof(Vertex, position)},
+                },
+                vk::VertexInputAttributeDescription {
+                    .location {2},
+                    .binding {0},
+                    .format {vk::Format::eR32G32B32Sfloat},
+                    .offset {offsetof(Vertex, normal)},
+                }};
+
+        return &descriptions;
+    }
+
     std::shared_ptr<FlatRecordable> FlatRecordable::create(
         const gfx::Renderer& renderer_,
         std::vector<Vertex>  vertices,

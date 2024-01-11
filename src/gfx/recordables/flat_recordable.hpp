@@ -54,7 +54,7 @@ namespace gfx::recordables
             static const vk::VertexInputBindingDescription*
             getBindingDescription();
 
-            static const std::array<vk::VertexInputAttributeDescription, 2>*
+            static const std::array<vk::VertexInputAttributeDescription, 3>*
             getAttributeDescriptions();
         };
 

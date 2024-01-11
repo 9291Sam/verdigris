@@ -307,6 +307,24 @@ namespace gfx
         this->device->asLogicalDevice().waitIdle();
     }
 
+    std::optional<const vulkan::RenderPass*>
+    Renderer::RenderPasses::acquireRenderPassFromStage(DrawStage stage) const
+    {
+        switch (stage)
+        {
+        case DrawStage::TopOfPipeCompute:
+            return std::nullopt;
+        case DrawStage::VoxelDiscoveryPass:
+            return &*this->voxel_discovery_pass;
+        case DrawStage::PostDiscoveryCompute:
+            return std::nullopt;
+        case DrawStage::DisplayPass:
+            return &*this->final_raster_pass;
+        case DrawStage::PostPipeCompute:
+            return std::nullopt;
+        }
+    }
+
     void Renderer::resize()
     {
         this->window->blockThisThreadWhileMinimized();

@@ -17,15 +17,16 @@ namespace
 namespace gfx::vulkan
 {
     FrameManager::FrameManager(
-        vk::Device     device,
+        vk::Device     device_,
         Allocator*     allocator,
         Swapchain*     swapchain_,
         vk::RenderPass finalRasterPass,
         std::size_t    numberOfFlyingFrames)
-        : swapchain {swapchain_} // clang-format off
+        : device {device_}
+        , swapchain {swapchain_} // clang-format off
         , depth_buffer {
             allocator,
-            device,
+            device_,
             swapchain_->getExtent(),
             vk::Format::eD32Sfloat,
             vk::ImageLayout::eUndefined,

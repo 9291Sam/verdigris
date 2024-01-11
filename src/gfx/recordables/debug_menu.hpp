@@ -39,7 +39,7 @@ namespace gfx::recordables
         void updateFrameState() const override;
         void record(vk::CommandBuffer, const Camera&) const override;
 
-        void setVisibility(bool visible) const;
+        void setVisibility(bool) const;
 
     private:
         mutable State            state;
@@ -50,7 +50,8 @@ namespace gfx::recordables
             const gfx::Renderer&,
             gfx::vulkan::Instance&,
             gfx::vulkan::Device&,
-            gfx::Window&);
+            gfx::Window&,
+            vk::RenderPass);
     };
 } // namespace gfx::recordables
 

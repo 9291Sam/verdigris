@@ -39,6 +39,57 @@ namespace gfx::recordables
         }
     }
 
+    std::strong_ordering Recordable::operator<=> (const Recordable& other) const
+    {
+        //! bruh!!!
+        return std::tie(
+                   this->pipeline,
+                   this->sets[0],
+                   this->sets[1],
+                   this->sets[2],
+                   this->sets[3])
+           <=> std::tie(
+                   other.pipeline,
+                   other.sets[0],
+                   other.sets[1],
+                   other.sets[2],
+                   other.sets[3]);
+    }
+
+    Recordable::operator std::string () const
+    {
+        return fmt::format(
+            "Object {} | ID: {} | Drawing?: {}",
+            this->name,
+            static_cast<std::string>(this->uuid),
+            this->shouldDraw());
+    }
+
+    DrawStage Recordable::getDrawStage() const
+    {
+        return this->stage;
+    }
+
+    bool Recordable::shouldDraw() const
+    {
+        return this->should_draw.load(std::memory_order_acquire);
+    }
+
+    util::UUID Recordable::getUUID() const
+    {
+        return this->uuid;
+    }
+
+    vulkan::Allocator& Recordable::getAllocator() const
+    {
+        return *this->renderer.allocator;
+    }
+
+    vulkan::PipelineCache& Recordable::getPipelineCache() const
+    {
+        return *this->renderer.pipeline_cache;
+    }
+
     void Recordable::accessRenderPass(
         DrawStage                                      accessStage,
         std::function<void(const vulkan::RenderPass*)> func) const
@@ -57,4 +108,28 @@ namespace gfx::recordables
                 func(*passes.acquireRenderPassFromStage(accessStage));
             });
     }
+
+    void Recordable::registerSelf()
+    {
+        this->renderer.registerRecordable(this->shared_from_this());
+    }
+
+    Recordable::Recordable(
+        const gfx::Renderer&    renderer_,
+        std::string             name_,
+        DrawStage               stage_,
+        const vulkan::Pipeline* pipeline_,
+        vk::PipelineBindPoint   bindPoint,
+        DescriptorRefArray      sets_,
+        bool                    shouldDraw)
+        : renderer {renderer_}
+        , name {std::move(name_)}
+        , uuid {util::UUID {}}
+        , stage {stage_}
+        , sets {sets_}
+        , pipeline {pipeline_}
+        , pipeline_bind_point {bindPoint}
+        , should_draw {shouldDraw}
+    {}
+
 } // namespace gfx::recordables

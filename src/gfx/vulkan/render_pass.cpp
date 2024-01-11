@@ -32,4 +32,15 @@ namespace gfx::vulkan
         this->framebuffer        = newFramebuffer;
         this->framebuffer_extent = newExtent;
     }
+
+    [[nodiscard]] vk::RenderPass RenderPass::operator* () const
+    {
+        return *this->render_pass;
+    }
+
+    [[nodiscard]] vk::Extent2D RenderPass::getExtent() const
+    {
+        return this->framebuffer_extent;
+    }
+
 } // namespace gfx::vulkan

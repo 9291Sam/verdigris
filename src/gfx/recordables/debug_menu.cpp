@@ -33,11 +33,27 @@ namespace
 namespace gfx::recordables
 {
 
+    std::shared_ptr<DebugMenu> DebugMenu::create(
+        const gfx::Renderer&   renderer_,
+        gfx::vulkan::Instance& instance_,
+        gfx::vulkan::Device&   device_,
+        gfx::Window&           window_,
+        vk::RenderPass         renderPass)
+    {
+        std::shared_ptr<DebugMenu> recordable {
+            new DebugMenu {renderer_, instance_, device_, window_, renderPass}};
+
+        recordable->registerSelf();
+
+        return recordable;
+    }
+
     DebugMenu::DebugMenu(
         const gfx::Renderer&   renderer_,
         gfx::vulkan::Instance& instance,
         gfx::vulkan::Device&   device,
-        gfx::Window&           window)
+        gfx::Window&           window,
+        vk::RenderPass         renderPass)
         : Recordable {
             renderer_, "Debug Menu", gfx::DrawStage::DisplayPass, nullptr, {}}
     {
@@ -134,8 +150,8 @@ namespace gfx::recordables
             .MinImageCount {2}, // >= 2
             .ImageCount {2},    // >= MinImageCount
             .MSAASamples {static_cast<VkSampleCountFlagBits>(
-                vk::SampleCountFlagBits::e1)}, // >= VK_SAMPLE_COUNT_1_BIT (0 ->
-                                               // default to
+                vk::SampleCountFlagBits::e1)}, // >= VK_SAMPLE_COUNT_1_BIT
+                                               // (0 -> default to
                                                // VK_SAMPLE_COUNT_1_BIT)
 
             // Dynamic Rendering (Optional)
@@ -146,14 +162,9 @@ namespace gfx::recordables
             .Allocator {nullptr},
             .CheckVkResultFn {checkImguiResult}};
 
-        this->accessRenderPass(
-            DrawStage::DisplayPass,
-            [&](const vulkan::RenderPass* displayPass)
-            {
-                util::assertFatal(
-                    ImGui_ImplVulkan_Init(&imguiInitInfo, **displayPass),
-                    "Failed to initalize imguiVulkan");
-            });
+        util::assertFatal(
+            ImGui_ImplVulkan_Init(&imguiInitInfo, renderPass),
+            "Failed to initalize imguiVulkan");
 
         const vk::FenceCreateInfo fenceCreateInfo {
             .sType {vk::StructureType::eFenceCreateInfo},
@@ -293,10 +304,12 @@ namespace gfx::recordables
                 //     / static_cast<float>(this->display_image_size.width);
 
                 // const float imageWidth =
-                //     std::min(x, desiredConsoleSize.x - WindowPadding * 2); //
+                //     std::min(x, desiredConsoleSize.x - WindowPadding *
+                //     2); //
 
                 // auto vec =
-                //     ImVec2(imageWidth, imageWidth * displayImageAspectRatio);
+                //     ImVec2(imageWidth, imageWidth *
+                //     displayImageAspectRatio);
 
                 // ImGui::Image(
                 //     (ImTextureID)(this->image_descriptor),
@@ -353,5 +366,10 @@ namespace gfx::recordables
             maybeDrawData != nullptr, "Failed to get ImGui draw data!");
 
         ImGui_ImplVulkan_RenderDrawData(maybeDrawData, commandBuffer);
+    }
+
+    void DebugMenu::setVisibility(bool newVisibility) const
+    {
+        this->should_draw.store(newVisibility, std::memory_order_release);
     }
 } // namespace gfx::recordables
