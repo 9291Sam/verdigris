@@ -226,10 +226,7 @@ target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 
 if (NOT (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    target_compile_options(verdigris PUBLIC -Ofast)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 else()
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
 
 
@@ -248,10 +245,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             target_compile_options(verdigris PUBLIC -glldb)
             target_compile_options(verdigris PUBLIC -gdwarf-4)
             target_compile_options(verdigris PUBLIC -g3)
-            # target_compile_options(verdigris PUBLIC -fcoverage-mapping)
-            # target_compile_options(verdigris PUBLIC -fprofile-instr-generate)
-            
-            # target_link_options(verdigris PUBLIC -fprofile-instr-generate)
         else()
             if (WIN32) # release only!
             endif()

@@ -175,6 +175,8 @@ namespace gfx::recordables
         vk::UniqueFence imguiFontUploadFence =
             device.asLogicalDevice().createFenceUnique(fenceCreateInfo);
 
+        util::logTrace("Beginning font upload");
+
         // Upload fonts
         device.accessQueue(
             vk::QueueFlagBits::eGraphics,
@@ -207,6 +209,8 @@ namespace gfx::recordables
 
                 queue.submit(submitInfo, *imguiFontUploadFence);
             });
+
+        util::logTrace("uploaded fonts");
 
         const vk::Result result = device.asLogicalDevice().waitForFences(
             *imguiFontUploadFence,

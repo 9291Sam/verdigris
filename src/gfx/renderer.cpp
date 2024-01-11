@@ -376,7 +376,7 @@ namespace gfx
                     this->device->asLogicalDevice(),
                     this->swapchain->getExtent(),
                     vk::Format::eR32Sint,
-                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eUndefined,
                     vk::ImageUsageFlagBits::eColorAttachment,
                     vk::ImageAspectFlagBits::eColor,
                     vk::ImageTiling::eOptimal,
@@ -480,8 +480,8 @@ namespace gfx
 
                 {
                     std::array<vk::ImageView, 2> attachments {
-                        **renderPasses.depth_buffer,
-                        **renderPasses.voxel_discovery_image};
+                        **renderPasses.voxel_discovery_image,
+                        **renderPasses.depth_buffer};
 
                     vk::FramebufferCreateInfo
                         voxelDiscoveryFramebufferCreateInfo {
@@ -528,8 +528,10 @@ namespace gfx
                         .storeOp {vk::AttachmentStoreOp::eDontCare},
                         .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
                         .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
-                        .initialLayout {vk::ImageLayout::eUndefined},
+                        .initialLayout {
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
                         .finalLayout {
+                            // why isn't this undefined?
                             vk::ImageLayout::eDepthStencilAttachmentOptimal},
                     },
                 };
@@ -613,6 +615,8 @@ namespace gfx
         {
             this->render_passes.writeLock(renderPassInitFunc);
         }
+
+        util::logTrace("Finished initialization of renderer");
     }
 
     void Renderer::registerRecordable(
