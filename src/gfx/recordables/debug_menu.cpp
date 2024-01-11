@@ -38,7 +38,8 @@ namespace gfx::recordables
         gfx::vulkan::Instance& instance,
         gfx::vulkan::Device&   device,
         gfx::Window&           window)
-        : Recordable {renderer_, "Debug Menu", gfx::DrawStage::DisplayPass}
+        : Recordable {
+            renderer_, "Debug Menu", gfx::DrawStage::DisplayPass, nullptr, {}}
     {
         util::assertFatal(
             !isMenuInitalized.exchange(true), "Only one DebugMenu can exist!");
@@ -145,14 +146,14 @@ namespace gfx::recordables
             .Allocator {nullptr},
             .CheckVkResultFn {checkImguiResult}};
 
-        this->renderer.getRenderPass(DrawStage::DisplayPass)
-            .readLock(
-                [&](const std::unique_ptr<gfx::vulkan::RenderPass>& displayPass)
-                {
-                    util::assertFatal(
-                        ImGui_ImplVulkan_Init(&imguiInitInfo, **displayPass),
-                        "Failed to initalize imguiVulkan");
-                });
+        this->accessRenderPass(
+            DrawStage::DisplayPass,
+            [&](const vulkan::RenderPass* displayPass)
+            {
+                util::assertFatal(
+                    ImGui_ImplVulkan_Init(&imguiInitInfo, **displayPass),
+                    "Failed to initalize imguiVulkan");
+            });
 
         const vk::FenceCreateInfo fenceCreateInfo {
             .sType {vk::StructureType::eFenceCreateInfo},

@@ -116,8 +116,10 @@ namespace gfx::vulkan
 
         this->descriptor_cache.visit(
             handle,
-            [&](const std::shared_ptr<DescriptorSetLayout>& cachedLayout)
+            [&](const auto& input)
             {
+                const std::shared_ptr<DescriptorSetLayout>& cachedLayout =
+                    input.second;
                 // ensure we have enough descriptors available for the
                 // desired descriptor set
                 for (const auto& binding : cachedLayout->getLayoutBindings())

@@ -143,7 +143,6 @@ namespace gfx::vulkan
 
 namespace boost
 {
-
     inline std::size_t hash_value(
         const gfx::vulkan::DescriptorPool::DescriptorHandle& handle) // NOLINT
     {

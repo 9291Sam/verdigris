@@ -8,6 +8,23 @@
 
 namespace
 {
+    template<class T>
+    T* getValueOrNullptr(std::optional<T>& oT)
+    {
+        if (oT.has_value())
+        {
+            return &*oT;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+} // namespace
+
+namespace gfx::vulkan
+{
     vk::UniqueShaderModule
     createShaderFromFile(vk::Device device, const char* filePath)
     {
@@ -42,24 +59,6 @@ namespace
 
         return device.createShaderModuleUnique(shaderCreateInfo);
     }
-
-    template<class T>
-    T* getValueOrNullptr(std::optional<T>& oT)
-    {
-        if (oT.has_value())
-        {
-            return &*oT;
-        }
-        else
-        {
-            return nullptr;
-        }
-    }
-
-} // namespace
-
-namespace gfx::vulkan
-{
 
     PipelineCache::PipelineCache()
         : next_free_id {0}

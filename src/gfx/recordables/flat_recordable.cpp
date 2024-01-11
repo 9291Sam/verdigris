@@ -1,6 +1,8 @@
 #include "flat_recordable.hpp"
 #include <atomic>
 #include <gfx/vulkan/allocator.hpp>
+#include <gfx/vulkan/buffer.hpp>
+#include <gfx/vulkan/device.hpp>
 #include <gfx/vulkan/pipelines.hpp>
 #include <util/log.hpp>
 
@@ -79,54 +81,85 @@ namespace gfx::recordables
 
     const vulkan::Pipeline* FlatRecordable::getPipeline() const
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
         static util::Mutex<vulkan::PipelineCache::PipelineHandle>
             maybeHandleMutex {}; // NOLINT
+#pragma clang diagnostic pop
 
         vulkan::PipelineCache::PipelineHandle handle = maybeHandleMutex.lock(
             [&](vulkan::PipelineCache::PipelineHandle& maybeHandle)
             {
                 if (!maybeHandle.isValid())
                 {
-                    std::vector<std::pair<
-                        vk::ShaderStageFlagBits,
-                        vk::UniqueShaderModule>>
-                        shaderStages {};
-
-                    return this->getAllocator().getPipelineCache().cachePipeline(
-                        std::unique_ptr<
-                            vulkan::Pipeline> {new vulkan::GraphicsPipeline {
-                            this->renderer,
-                            shaderStages,
-                            vk::PipelineVertexInputStateCreateInfo {
-                                .sType {
-                                    vk::StructureType::
-                                        ePipelineVertexInputStateCreateInfo},
-                                .pNext {nullptr},
-                                .flags {},
-                                .vertexBindingDescriptionCount {1},
-                                .pVertexBindingDescriptions {
-                                    Vertex::getBindingDescription()},
-                                .vertexAttributeDescriptionCount {
-                                    static_cast<std::uint32_t>(
-                                        Vertex::getAttributeDescriptions()
-                                            ->size())},
-                                .pVertexAttributeDescriptions {
-                                    Vertex::getAttributeDescriptions()->data()},
-                            },
-                            vk::PrimitiveTopology::eTriangleList,
-                            {},
-                            std::array {vk::PushConstantRange {
-                                .stageFlags {vk::ShaderStageFlagBits::eVertex},
-                                .offset {0},
-                                .size {sizeof(PushConstants)},
-                            }},
-                            "FlatRecordable"}});
+                    return maybeHandle;
                 }
+
+                this->accessRenderPass(
+                    this->stage,
+                    [&](const vulkan::RenderPass* renderPass)
+                    {
+                        std::vector<vk::UniqueShaderModule> uniqueShaders {};
+
+                        std::vector<std::pair<
+                            vk::ShaderStageFlagBits,
+                            vk::ShaderModule>>
+                            pipelineShaders {};
+
+                        {
+                            vk::UniqueShaderModule fragmentShader =
+                                vulkan::createShaderFromFile(
+                                    this->getAllocator()
+                                        .getOwningDevice()
+                                        ->asLogicalDevice(),
+                                    "src/gfx/vulkan/shaders/"
+                                    "flat_pipeline.frag.bin");
+
+                            pipelineShaders.push_back(
+                                {vk::ShaderStageFlagBits::eFragment,
+                                 *fragmentShader});
+                        }
+
+                        std::unique_ptr<vulkan::Pipeline> newPipeline {
+                            new vulkan::GraphicsPipeline {
+                                this->renderer,
+                                renderPass,
+                                pipelineShaders,
+                                vk::PipelineVertexInputStateCreateInfo {
+                                    .sType {
+                                        vk::StructureType::
+                                            ePipelineVertexInputStateCreateInfo},
+                                    .pNext {nullptr},
+                                    .flags {},
+                                    .vertexBindingDescriptionCount {1},
+                                    .pVertexBindingDescriptions {
+                                        Vertex::getBindingDescription()},
+                                    .vertexAttributeDescriptionCount {
+                                        static_cast<std::uint32_t>(
+                                            Vertex::getAttributeDescriptions()
+                                                ->size())},
+                                    .pVertexAttributeDescriptions {
+                                        Vertex::getAttributeDescriptions()
+                                            ->data()},
+                                },
+                                vk::PrimitiveTopology::eTriangleList,
+                                {},
+                                std::array {vk::PushConstantRange {
+                                    .stageFlags {
+                                        vk::ShaderStageFlagBits::eVertex},
+                                    .offset {0},
+                                    .size {sizeof(PushConstants)},
+                                }},
+                                "FlatRecordable"}};
+
+                        return this->getPipelineCache().cachePipeline(
+                            std::move(newPipeline));
+                    });
 
                 return maybeHandle;
             });
 
-        return this->getAllocator().getPipelineCache().lookupPipeline(handle);
+        return this->getPipelineCache().lookupPipeline(handle);
     }
 
     FlatRecordable::FlatRecordable(
@@ -141,9 +174,10 @@ namespace gfx::recordables
                 "FlatRecordable | {} | Vertices: {} | Indicies {} ",
                 name_,
                 vertices.size(),
-                indicies.size()),
-            DrawStage::RenderPass,
-            false}
+                indicies.size()), 
+            DrawStage::DisplayPass,
+            nullptr,
+            vk::PipelineBindPoint::eGraphics}
         , transform {std::move(transform_)} // NOLINT: rvalue is needed
         , number_of_vertices {vertices.size()}
         , number_of_indices {indicies.size()}

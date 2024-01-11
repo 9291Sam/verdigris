@@ -59,8 +59,8 @@ namespace game::entity
                     static_cast<std::size_t>(index.vertex_index);
                 const std::size_t normalIndex =
                     static_cast<std::size_t>(index.normal_index);
-                const std::size_t texcoordIndex =
-                    static_cast<std::size_t>(index.texcoord_index);
+                // const std::size_t texcoordIndex =
+                //     static_cast<std::size_t>(index.texcoord_index);
 
                 gfx::recordables::FlatRecordable::Vertex vertex {
                     .color {
@@ -96,7 +96,7 @@ namespace game::entity
 
                 // If this vertex is being encountered for the first
                 // time.
-                if (uniqueVertices.count(vertex) == 0)
+                if (!uniqueVertices.contains(vertex))
                 {
                     uniqueVertices[vertex] = vertices.size();
 

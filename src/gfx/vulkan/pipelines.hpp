@@ -23,6 +23,9 @@ namespace gfx::vulkan
     class ComputePipeline;
     class Allocator;
 
+    vk::UniqueShaderModule
+    createShaderFromFile(vk::Device device, const char* filePath);
+
     class PipelineCache
     {
     public:

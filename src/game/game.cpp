@@ -78,7 +78,7 @@ namespace game
         this->last_tick_end_time = thisFrameEndTime;
 
         this->renderer.getMenuState().lock(
-            [&](gfx::ImGuiMenu::State& state)
+            [&](gfx::recordables::DebugMenu::State& state)
             {
                 state.tps             = 1 / this->getTickDeltaTimeSeconds();
                 state.player_position = this->player.getCamera().getPosition();

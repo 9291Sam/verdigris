@@ -159,6 +159,7 @@ set(VERDIGRIS_SOURCES
 
     src/gfx/recordables/flat_recordable.cpp
     src/gfx/recordables/debug_menu.cpp
+    src/gfx/recordables/recordable.cpp
 
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp

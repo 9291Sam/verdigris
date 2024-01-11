@@ -1,20 +1,24 @@
-#ifndef SRC_GFX_RECORDABLE_HPP
-#define SRC_GFX_RECORDABLE_HPP
+#ifndef SRC_GFX_RECORDABLES_RECORDABLE_HPP
+#define SRC_GFX_RECORDABLES_RECORDABLE_HPP
 
 #include <array>
+#include <functional>
 #include <gfx/camera.hpp>
 #include <gfx/draw_stages.hpp>
 #include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
+namespace gfx::vulkan
+{
+    class Allocator;
+    class Pipeline;
+    class PipelineCache;
+    class RenderPass;
+} // namespace gfx::vulkan
+
 namespace gfx::recordables
 {
-    namespace vulkan
-    {
-        class Allocator;
-        class Pipeline;
-    } // namespace vulkan
 
     class Recordable : public std::enable_shared_from_this<Recordable>
     {
@@ -50,8 +54,16 @@ namespace gfx::recordables
         [[nodiscard]] util::UUID getUUID() const;
 
     protected:
-        [[nodiscard]] vulkan::Allocator& getAllocator() const;
-        void                             registerSelf();
+        // TODO: combine allocator into master class of memory, descriptor,
+        // pipeline, and renderpass allocation
+        [[nodiscard]] vulkan::Allocator&     getAllocator() const;
+        [[nodiscard]] vulkan::PipelineCache& getPipelineCache() const;
+
+        void accessRenderPass(
+            DrawStage                                      accessStage,
+            std::function<void(const vulkan::RenderPass*)> func) const;
+
+        void registerSelf();
 
         const Renderer&   renderer;
         const std::string name;
@@ -64,6 +76,7 @@ namespace gfx::recordables
         /// is called
         DescriptorRefArray      sets;
         const vulkan::Pipeline* pipeline;
+        vk::PipelineBindPoint   pipeline_bind_point;
 
         mutable std::atomic<bool> should_draw;
 
@@ -72,10 +85,11 @@ namespace gfx::recordables
             const gfx::Renderer&,
             std::string name,
             DrawStage   stage,
-            bool        shouldDraw  = true,
-            const vulkan::Pipeline* = nullptr,
-            DescriptorRefArray      = {});
+            const vulkan::Pipeline*,
+            vk::PipelineBindPoint,
+            DescriptorRefArray = {},
+            bool shouldDraw    = true);
     };
 } // namespace gfx::recordables
 
-#endif // SRC_GFX_RECORDABLE_HPP
+#endif // SRC_GFX_RECORDABLES_RECORDABLE_HPP
