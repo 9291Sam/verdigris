@@ -34,8 +34,7 @@ namespace gfx::vulkan
         RenderPass(
             vk::Device,
             vk::RenderPassCreateInfo,
-            vk::Framebuffer,
-            vk::Extent2D framebufferExtent,
+            std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>,
             std::span<vk::ClearValue>);
         ~RenderPass() = default;
 
@@ -45,9 +44,9 @@ namespace gfx::vulkan
         RenderPass& operator= (const RenderPass&) = delete;
         RenderPass& operator= (RenderPass&&)      = delete;
 
-        void setFramebuffer(vk::Framebuffer);
+        void setFramebuffer(vk::Framebuffer, vk::Extent2D) const;
         void recordWith(
-            vk::CommandBuffer commandBuffer, std::invocable<> auto&& func)
+            vk::CommandBuffer commandBuffer, std::invocable<> auto&& func) const
             requires std::is_nothrow_invocable_v<decltype(func)>
         {
             vk::RenderPassBeginInfo renderPassBeginInfo {
@@ -72,15 +71,16 @@ namespace gfx::vulkan
             commandBuffer.endRenderPass();
         }
 
-        vk::RenderPass
-        operator* () const; // TODO: remove and give imgui its own renderpass!
+        // TODO: remove and give imgui its own renderpass!
+        [[nodiscard]] vk::RenderPass operator* () const;
+        [[nodiscard]] vk::Extent2D   getExtent() const;
+
 
 
     private:
-
         vk::UniqueRenderPass          render_pass;
-        vk::Framebuffer               framebuffer;
-        vk::Extent2D                  framebuffer_extent;
+        mutable vk::Framebuffer       framebuffer;
+        mutable vk::Extent2D          framebuffer_extent;
         std::size_t                   clear_values_size;
         std::array<vk::ClearValue, 2> maybe_clear_values;
     }; // class RenderPass

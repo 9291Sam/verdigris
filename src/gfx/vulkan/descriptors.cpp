@@ -41,7 +41,7 @@ namespace gfx::vulkan
         : device {device_}
         , pool {nullptr}
         , inital_descriptors {makeAtomicMap(capacity)}
-        , available_descriptors {this->inital_descriptors}
+        , available_descriptors {makeAtomicMap(capacity)}
     {
         std::vector<vk::DescriptorPoolSize> requestedPoolMembers {};
         requestedPoolMembers.reserve(this->available_descriptors.size());
@@ -116,7 +116,7 @@ namespace gfx::vulkan
 
         this->descriptor_cache.visit(
             handle,
-            [&](std::shared_ptr<DescriptorSetLayout>& cachedLayout)
+            [&](const std::shared_ptr<DescriptorSetLayout>& cachedLayout)
             {
                 // ensure we have enough descriptors available for the
                 // desired descriptor set
@@ -127,8 +127,7 @@ namespace gfx::vulkan
                     {
                         util::panic(
                             "Unable to allocate {} descriptors of type {} "
-                            "from "
-                            "a pool with only {} available!",
+                            "from a pool with only {} available!",
                             binding.descriptorCount,
                             vk::to_string(binding.descriptorType),
                             this->available_descriptors

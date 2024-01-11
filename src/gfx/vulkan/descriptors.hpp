@@ -31,23 +31,21 @@ namespace gfx::vulkan
         {
             std::strong_ordering
             operator<=> (const DescriptorHandle&) const = default;
+
+            [[nodiscard]] std::size_t getID() const
+            {
+                return this->id;
+            }
+
         private:
             friend class DescriptorPool;
+            friend inline std::size_t hash_value(DescriptorHandle&);
 
             explicit DescriptorHandle(std::size_t newID)
                 : id {newID}
             {}
             std::size_t id;
         };
-
-        inline std::size_t hash_value(const DescriptorHandle& handle) // NOLINT
-        {
-            boost::hash<std::size_t> sizeTHasher {};
-
-            std::size_t workingHash = sizeTHasher(handle.id);
-
-            return workingHash;
-        }
 
     public:
         static std::shared_ptr<DescriptorPool> create(
@@ -142,5 +140,19 @@ namespace gfx::vulkan
     };
 
 } // namespace gfx::vulkan
+
+namespace boost
+{
+
+    inline std::size_t hash_value(
+        const gfx::vulkan::DescriptorPool::DescriptorHandle& handle) // NOLINT
+    {
+        boost::hash<std::size_t> sizeTHasher {};
+
+        std::size_t workingHash = sizeTHasher(handle.getID());
+
+        return workingHash;
+    }
+} // namespace boost
 
 #endif // SRC_GFX_VULKAN_DESCRIPTORS_HPP

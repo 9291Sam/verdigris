@@ -1,8 +1,8 @@
 #ifndef SRC_GFX_RECORDABLES_FLAT_RECORDABLE_HPP
 #define SRC_GFX_RECORDABLES_FLAT_RECORDABLE_HPP
 
+#include "recordable.hpp"
 #include <future>
-#include <gfx/recordable.hpp>
 #include <gfx/vulkan/buffer.hpp>
 #include <util/threads.hpp>
 
@@ -48,13 +48,15 @@ namespace gfx::recordables
     private:
         const vulkan::Pipeline* getPipeline() const;
 
-        mutable std::optional<std::future<vulkan::Buffer>> future_vertex_buffer;
-        std::size_t                                        number_of_vertices;
-        mutable std::optional<vulkan::Buffer>              vertex_buffer;
+        mutable std::optional<std::future<gfx::vulkan::Buffer>>
+                                                   future_vertex_buffer;
+        std::size_t                                number_of_vertices;
+        mutable std::optional<gfx::vulkan::Buffer> vertex_buffer;
 
-        mutable std::optional<std::future<vulkan::Buffer>> future_index_buffer;
-        std::size_t                                        number_of_indices;
-        mutable std::optional<vulkan::Buffer>              index_buffer;
+        mutable std::optional<std::future<gfx::vulkan::Buffer>>
+                                                   future_index_buffer;
+        std::size_t                                number_of_indices;
+        mutable std::optional<gfx::vulkan::Buffer> index_buffer;
 
         FlatRecordable(
             const gfx::Renderer&,

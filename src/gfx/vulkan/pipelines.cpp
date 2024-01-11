@@ -76,18 +76,25 @@ namespace gfx::vulkan
         return handle;
     }
 
-    const Pipeline& PipelineCache::lookupPipeline(PipelineHandle handle) const
+    const Pipeline* PipelineCache::lookupPipeline(PipelineHandle handle) const
     {
         const Pipeline* stablePipeline {nullptr};
+        bool            visited = false;
 
         this->cache.visit(
             handle,
-            [&](const std::unique_ptr<Pipeline>& pipeline)
+            [&](const auto& input)
             {
-                stablePipeline = pipeline.get();
+                // get the pipeline, second: unique_ptr<Pipeline>
+                stablePipeline = input.second.get();
+
+                util::assertFatal(
+                    !visited, "Pipeline handle visited multiple times!");
+
+                visited = true;
             });
 
-        return *stablePipeline;
+        return stablePipeline;
     }
 
     vk::Pipeline Pipeline::operator* () const
@@ -101,11 +108,11 @@ namespace gfx::vulkan
     }
 
     ComputePipeline::ComputePipeline(
-        const Renderer&                        renderer,
-        vk::ShaderModule                       shader,
-        std::array<vk::DescriptorSetLayout, 4> descriptors,
-        std::span<const vk::PushConstantRange> maybePushConstants,
-        const std::string&                     name)
+        const Renderer&                          renderer,
+        vk::ShaderModule                         shader,
+        std::span<const vk::DescriptorSetLayout> descriptors,
+        std::span<const vk::PushConstantRange>   maybePushConstants,
+        const std::string&                       name)
     {
         const vk::PipelineShaderStageCreateInfo shaderStageCreateInfo {
 
@@ -187,12 +194,128 @@ namespace gfx::vulkan
         }
     }
 
-    // Do nothing as compute pipelines never ned to be recreated
-    void ComputePipeline::recreate(vk::RenderPass) {}
+    GraphicsPipeline::GraphicsPipeline(
+        const Renderer&           renderer,
+        const vulkan::RenderPass* renderPass,
+        std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>
+                                                 shaderStages,
+        vk::PipelineVertexInputStateCreateInfo   vertexInputState,
+        vk::PrimitiveTopology                    topology,
+        std::span<const vk::DescriptorSetLayout> setLayouts,
+        std::span<const vk::PushConstantRange>   pushConstants,
+        std::string                              name)
+    {
+        const vk::Viewport viewport {
+            .x {0.0f},
+            .y {0.0f},
+            .width {static_cast<float>(renderPass->getExtent().width)},
+            .height {static_cast<float>(renderPass->getExtent().height)},
+            .minDepth {0.0f},
+            .maxDepth {1.0f},
+        };
+
+        const vk::Rect2D scissor {
+            .offset {0, 0}, .extent {renderPass->getExtent()}};
+
+        // TODO: what
+        const vk::PipelineColorBlendAttachmentState colorBlendAttachment {
+            .blendEnable {static_cast<vk::Bool32>(true)},
+            .srcColorBlendFactor {vk::BlendFactor::eSrcAlpha},
+            .dstColorBlendFactor {vk::BlendFactor::eOneMinusSrcAlpha},
+            .colorBlendOp {vk::BlendOp::eAdd},
+            .srcAlphaBlendFactor {vk::BlendFactor::eOne},
+            .dstAlphaBlendFactor {vk::BlendFactor::eZero},
+            .alphaBlendOp {vk::BlendOp::eAdd},
+            .colorWriteMask {
+                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG
+                | vk::ColorComponentFlagBits::eB
+                | vk::ColorComponentFlagBits::eA},
+        };
+
+        (*this) = GraphicsPipeline {
+            renderer,
+            renderPass,
+            shaderStages,
+            vertexInputState,
+            vk::PipelineInputAssemblyStateCreateInfo {
+                .sType {
+                    vk::StructureType::ePipelineInputAssemblyStateCreateInfo},
+                .pNext {},
+                .flags {},
+                .topology {topology},
+                .primitiveRestartEnable {static_cast<vk::Bool32>(false)},
+            },
+            std::nullopt,
+            vk::PipelineViewportStateCreateInfo {
+                .sType {vk::StructureType::ePipelineViewportStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .viewportCount {1},
+                .pViewports {&viewport},
+                .scissorCount {1},
+                .pScissors {&scissor},
+            },
+            vk::PipelineRasterizationStateCreateInfo {
+                .sType {
+                    vk::StructureType::ePipelineRasterizationStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .depthClampEnable {static_cast<vk::Bool32>(false)},
+                .rasterizerDiscardEnable {static_cast<vk::Bool32>(false)},
+                .polygonMode {vk::PolygonMode::eFill},
+                .cullMode {vk::CullModeFlagBits::eBack},
+                .frontFace {vk::FrontFace::eCounterClockwise},
+                .depthBiasEnable {static_cast<vk::Bool32>(false)},
+                .depthBiasConstantFactor {0.0f},
+                .depthBiasClamp {0.0f},
+                .depthBiasSlopeFactor {0.0f},
+                .lineWidth {1.0f},
+            },
+            vk::PipelineMultisampleStateCreateInfo {
+                .sType {vk::StructureType::ePipelineMultisampleStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .rasterizationSamples {vk::SampleCountFlagBits::e1},
+                .sampleShadingEnable {static_cast<vk::Bool32>(false)},
+                .minSampleShading {1.0f},
+                .pSampleMask {nullptr},
+                .alphaToCoverageEnable {static_cast<vk::Bool32>(false)},
+                .alphaToOneEnable {static_cast<vk::Bool32>(false)},
+            },
+            vk::PipelineDepthStencilStateCreateInfo {
+                .sType {
+                    vk::StructureType::ePipelineDepthStencilStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .depthTestEnable {static_cast<vk::Bool32>(true)},
+                .depthWriteEnable {static_cast<vk::Bool32>(true)},
+                .depthCompareOp {vk::CompareOp::eLess},
+                .depthBoundsTestEnable {static_cast<vk::Bool32>(false)},
+                .stencilTestEnable {static_cast<vk::Bool32>(false)},
+                .front {},
+                .back {},
+                .minDepthBounds {0.0f},
+                .maxDepthBounds {1.0f},
+            },
+            vk::PipelineColorBlendStateCreateInfo {
+                .sType {vk::StructureType::ePipelineColorBlendStateCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .logicOpEnable {static_cast<vk::Bool32>(false)},
+                .logicOp {vk::LogicOp::eCopy},
+                .attachmentCount {1},
+                .pAttachments {&colorBlendAttachment},
+                .blendConstants {{0.0f, 0.0f, 0.0f, 0.0f}},
+            },
+            setLayouts,
+            pushConstants,
+            std::move(name)};
+    }
 
     GraphicsPipeline::GraphicsPipeline(
-        const Renderer& renderer,
-        std::span<std::pair<vk::ShaderStageFlagBits, vk::UniqueShaderModule>>
+        const Renderer&           renderer,
+        const vulkan::RenderPass* renderPass,
+        std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>
                                                inputShaderStages,
         vk::PipelineVertexInputStateCreateInfo vertexInputState,
         std::optional<vk::PipelineInputAssemblyStateCreateInfo> inputAssembly,
@@ -202,12 +325,12 @@ namespace gfx::vulkan
         std::optional<vk::PipelineMultisampleStateCreateInfo>  multiSampleState,
         std::optional<vk::PipelineDepthStencilStateCreateInfo> depthState,
         std::optional<vk::PipelineColorBlendStateCreateInfo>   colorBlendState,
-        std::array<vk::DescriptorSetLayout, 4>                 descriptors,
+        std::span<const vk::DescriptorSetLayout>               descriptors,
         std::span<const vk::PushConstantRange>                 pushConstants,
-        std::string                                            name_)
-        : device {renderer.device->asLogicalDevice()}
-        , name {std::move(name_)}
+        std::string                                            name)
     {
+        vk::Device device = renderer.device->asLogicalDevice();
+
         this->layout =
             device.createPipelineLayoutUnique(vk::PipelineLayoutCreateInfo {
                 .sType {vk::StructureType::ePipelineLayoutCreateInfo},
@@ -221,67 +344,51 @@ namespace gfx::vulkan
                 .pPushConstantRanges {pushConstants.data()},
             });
 
-        this->shader_create_infos.clear();
-        this->shaders.clear();
+        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages {};
 
-        for (auto&& [stageFlags, shaderModule] : inputShaderStages)
+        for (const auto& [stage, module] : inputShaderStages)
         {
-            this->shader_create_infos.emplace_back(
-                vk::PipelineShaderStageCreateInfo {
-                    .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
-                    .pNext {nullptr},
-                    .flags {},
-                    .stage {},
-                    .module {*shaderModule},
-                    .pName {},
-                    .pSpecializationInfo {},
-                });
-
-            this->shaders.push_back(std::move(shaderModule));
+            shaderStages.emplace_back(vk::PipelineShaderStageCreateInfo {
+                .sType {vk::StructureType::ePipelineShaderStageCreateInfo},
+                .pNext {nullptr},
+                .flags {},
+                .stage {stage},
+                .module {module},
+                .pName {"main"},
+                .pSpecializationInfo {},
+            });
         }
 
-        renderer.getRenderPass().readLock(
-            [&](const std::unique_ptr<vulkan::RenderPass>& renderPass)
-            {
-                const vk::GraphicsPipelineCreateInfo
-                    graphicsPipelineCreateInfo {
-                        .sType {vk::StructureType::eGraphicsPipelineCreateInfo},
-                        .pNext {nullptr},
-                        .flags {},
-                        .stageCount {static_cast<std::uint32_t>(
-                            this->shader_create_infos.size())},
-                        .pStages {this->shader_create_infos.data()},
-                        .pVertexInputState {&vertexInputState},
-                        .pInputAssemblyState {getValueOrNullptr(inputAssembly)},
-                        .pTessellationState {
-                            getValueOrNullptr(tesselationInfo)},
-                        .pViewportState {getValueOrNullptr(viewportState)},
-                        .pRasterizationState {getValueOrNullptr(rasterization)},
-                        .pMultisampleState {
-                            getValueOrNullptr(multiSampleState)},
-                        .pDepthStencilState {getValueOrNullptr(depthState)},
-                        .pColorBlendState {getValueOrNullptr(colorBlendState)},
-                        .pDynamicState {nullptr},
-                        .layout {*this->layout},
-                        .renderPass {**renderPass},
-                        .subpass {0},
-                        .basePipelineHandle {nullptr},
-                        .basePipelineIndex {-1},
-                    };
+        const vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo {
+            .sType {vk::StructureType::eGraphicsPipelineCreateInfo},
+            .pNext {nullptr},
+            .flags {},
+            .stageCount {static_cast<std::uint32_t>(shaderStages.size())},
+            .pStages {shaderStages.data()},
+            .pVertexInputState {&vertexInputState},
+            .pInputAssemblyState {getValueOrNullptr(inputAssembly)},
+            .pTessellationState {getValueOrNullptr(tesselationInfo)},
+            .pViewportState {getValueOrNullptr(viewportState)},
+            .pRasterizationState {getValueOrNullptr(rasterization)},
+            .pMultisampleState {getValueOrNullptr(multiSampleState)},
+            .pDepthStencilState {getValueOrNullptr(depthState)},
+            .pColorBlendState {getValueOrNullptr(colorBlendState)},
+            .pDynamicState {nullptr},
+            .layout {*this->layout},
+            .renderPass {**renderPass},
+            .subpass {0},
+            .basePipelineHandle {nullptr},
+            .basePipelineIndex {-1},
+        };
 
-                this->create_info            = graphicsPipelineCreateInfo;
-                this->create_info.renderPass = nullptr;
+        auto [result, maybePipeline] = device.createGraphicsPipelineUnique(
+            nullptr, graphicsPipelineCreateInfo);
 
-                auto [result, maybePipeline] =
-                    this->device.createGraphicsPipelineUnique(
-                        nullptr, graphicsPipelineCreateInfo);
+        util::assertFatal(
+            result == vk::Result::eSuccess,
+            "Failed to create graphics pipeline");
 
-                util::assertFatal(
-                    result == vk::Result::eSuccess,
-                    "Failed to create graphics pipeline");
-
-                this->pipeline = std::move(maybePipeline); // NOLINT
-            });
+        this->pipeline = std::move(maybePipeline); // NOLINT
 
         if (engine::getSettings()
                 .lookupSetting<engine::Setting::EnableGFXValidation>())
@@ -295,7 +402,7 @@ namespace gfx::vulkan
                     .pObjectName {name.c_str()},
                 };
 
-                this->device.setDebugUtilsObjectNameEXT(nameSetInfo);
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
             }
 
             {
@@ -308,39 +415,8 @@ namespace gfx::vulkan
                     .pObjectName {name.c_str()},
                 };
 
-                this->device.setDebugUtilsObjectNameEXT(nameSetInfo);
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
             }
-        }
-    }
-
-    void GraphicsPipeline::recreate(vk::RenderPass newRenderpass)
-    {
-        this->create_info.renderPass = newRenderpass;
-
-        auto [result, maybePipeline] =
-            this->device.createGraphicsPipelineUnique(
-                nullptr, this->create_info);
-
-        util::assertFatal(
-            result == vk::Result::eSuccess,
-            "Failed to create graphics pipeline");
-
-        this->pipeline = std::move(maybePipeline); // NOLINT
-
-        this->create_info.renderPass = nullptr;
-
-        if (engine::getSettings()
-                .lookupSetting<engine::Setting::EnableGFXValidation>())
-        {
-            vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
-                .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
-                .pNext {nullptr},
-                .objectType {vk::ObjectType::ePipelineLayout},
-                .objectHandle {std::bit_cast<std::uint64_t>(*this->layout)},
-                .pObjectName {name.c_str()},
-            };
-
-            this->device.setDebugUtilsObjectNameEXT(nameSetInfo);
         }
     }
 

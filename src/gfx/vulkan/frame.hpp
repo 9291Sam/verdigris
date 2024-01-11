@@ -1,6 +1,7 @@
 #ifndef SRC_GFX_VULKAN_FRAME_HPP
 #define SRC_GFX_VULKAN_FRAME_HPP
 
+#include "image.hpp"
 #include <expected>
 #include <gfx/camera.hpp>
 #include <gfx/draw_stages.hpp>
@@ -8,36 +9,50 @@
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
-namespace gfx
+namespace gfx::recordables
 {
     class Recordable;
-} // namespace gfx
+} // namespace gfx::recordables
 
 namespace gfx::vulkan
 {
     class RenderPass;
     class Device;
     class FlyingFrame;
+    class Image2D;
     class Swapchain;
+    class Allocator;
+
+    struct ResizeNeeded
+    {};
 
     class FrameManager
     {
     public:
 
-        explicit FrameManager(Swapchain*, std::size_t numberOfFlyingFrames = 3);
-        ~FrameManager() = default;
+        explicit FrameManager(
+            vk::Device,
+            Allocator*,
+            Swapchain*,
+            vk::RenderPass finalRasterPass,
+            std::size_t    numberOfFlyingFrames = 3);
+        ~FrameManager();
 
-        void renderObjectsFromCamera(
+        // attaches swapchain's framebuffer to final renderpass
+        std::expected<void, ResizeNeeded> renderObjectsFromCamera(
             Camera,
-            const std::map<
-                gfx::DrawStage,
-                std::pair<
-                    std::optional<vulkan::RenderPass*>,
-                    std::span<const Recordable*>>>&);
+            std::vector<std::pair<
+                std::optional<const vulkan::RenderPass*>,
+                std::vector<const recordables::Recordable*>>>);
 
     private:
+        vk::Device device;
+
         Swapchain*                         swapchain;
         std::vector<vk::UniqueFramebuffer> swapchain_framebuffers;
+        vulkan::Image2D                    depth_buffer;
+
+        vk::RenderPass final_raster_pass;
 
         std::optional<vk::Fence> maybe_previous_frame_fence;
         std::vector<FlyingFrame> flying_frames;
@@ -47,9 +62,6 @@ namespace gfx::vulkan
 
     class FlyingFrame
     {
-    public:
-        struct ResizeNeeded
-        {};
     public:
         explicit FlyingFrame(Device*);
         ~FlyingFrame();
@@ -63,11 +75,13 @@ namespace gfx::vulkan
 
         [[nodiscard]] std::expected<void, ResizeNeeded> recordAndDisplay(
             Camera,
-            std::span<const std::pair<
-                std::optional<vulkan::RenderPass*>,
-                std::vector<const Recordable*>>>,
-            vk::SwapchainKHR         presentSwapchain,
-            std::uint32_t            presentSwapchainFramebufferIndex,
+            std::vector<std::pair<
+                std::optional<const vulkan::RenderPass*>,
+                std::vector<const recordables::Recordable*>>>,
+            vk::SwapchainKHR                       presentSwapchain,
+            vk::RenderPass                         finalRasterPass,
+            std::span<const vk::UniqueFramebuffer> framebuffers,
+            vk::Extent2D                           framebufferExtent,
             std::optional<vk::Fence> maybePreviousFrameInFlightFence);
 
     private:
@@ -79,6 +93,7 @@ namespace gfx::vulkan
         vk::UniqueCommandPool   command_pool;
         vk::UniqueCommandBuffer command_buffer;
     };
+
 } // namespace gfx::vulkan
 
 #endif // SRC_GFX_VULKAN_FRAME_HPP

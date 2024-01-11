@@ -62,8 +62,9 @@ namespace gfx::vulkan
         return *this->pool;
     }
 
-    const PipelineCache& Allocator::getDescriptorPool() const
+    Device* Allocator::getOwningDevice() const
     {
-        return *this->
+        return this->device;
     }
+
 } // namespace gfx::vulkan

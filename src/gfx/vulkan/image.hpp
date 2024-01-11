@@ -17,6 +17,7 @@ namespace gfx::vulkan
     {
     public:
 
+        Image2D();
         Image2D(
             Allocator*,
             vk::Device,

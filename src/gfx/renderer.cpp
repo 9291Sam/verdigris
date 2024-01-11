@@ -80,19 +80,17 @@ namespace gfx
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, &*this->device)}
         , swapchain {nullptr}
-        , depth_buffer {nullptr}
-        , voxel_discovery_pass {{nullptr}}
-        , voxel_discovery_image {nullptr}
-        , final_raster_pass {{nullptr}}
-        , pipelines {nullptr}
+        , render_passes {RenderPasses {}}
+        , pipeline_cache {nullptr}
         , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
-        , show_menu {false}
         , is_cursor_attached {true}
     {
         this->initializeRenderer(std::nullopt);
 
         this->window->attachCursor();
+
+        this->debug_menu->setVisibility(false);
     }
 
     Renderer::~Renderer() = default;
@@ -154,17 +152,17 @@ namespace gfx
 
     //     return focalLength;
     // }
-    float gfx::Renderer::getFocalLength() const
-    {
-        // const auto [width, height] = this->window->getFramebufferSize();
-        // float fovYRadians          = this->getFovYRadians();
+    // float gfx::Renderer::getFocalLength() const
+    // {
+    //     // const auto [width, height] = this->window->getFramebufferSize();
+    //     // float fovYRadians          = this->getFovYRadians();
 
-        // // Assuming you're using glm::perspective for rasterization
-        // float focalLength = 1.0f / std::tan(fovYRadians / 2.0f);
+    //     // // Assuming you're using glm::perspective for rasterization
+    //     // float focalLength = 1.0f / std::tan(fovYRadians / 2.0f);
 
-        // return focalLength;
-        return 1.0f;
-    }
+    //     // return focalLength;
+    //     return 1.0f;
+    // }
 
     float gfx::Renderer::getAspectRatio() const
     {
@@ -239,17 +237,38 @@ namespace gfx
         }();
         renderables.push_back(this->debug_menu);
 
-        // get next framebuffer index
-        // bind that to the last renderpass
-        // renmder
+        //! DrawStage is useless because of how all commands in a command buffer
+        //! overlap with one another'
 
-        Frame& frameToDraw = {};
+        std::map<DrawStage, std::vector<const recordables::Recordable*>>
+            stageMap;
 
-        frameToDraw.if (!currentFrame.render(
-                            this->draw_camera,
-                            rawRecordables,
-                            this->show_menu ? this->menu.get() : nullptr,
-                            previousFence))
+        for (const std::shared_ptr<const recordables::Recordable>&
+                 strongRenderable : renderables)
+        {
+            stageMap[strongRenderable->getDrawStage()].push_back(
+                &*strongRenderable);
+        }
+
+        std::vector<std::pair<
+            std::optional<const vulkan::RenderPass*>,
+            std::vector<const recordables::Recordable*>>>
+            drawRecordables {};
+
+        //! I don't have to say this is bad, this is bad, but it's not a race!
+        this->render_passes.readLock(
+            [&](const RenderPasses& renderPasses)
+            {
+                for (auto& [stage, recordables] : stageMap)
+                {
+                    drawRecordables.push_back(
+                        {renderPasses.acquireRenderPassFromStage(stage),
+                         std::move(recordables)});
+                }
+            });
+
+        if (!this->frame_manager->renderObjectsFromCamera(
+                this->draw_camera, drawRecordables))
         {
             this->resize();
         }
@@ -293,83 +312,296 @@ namespace gfx
         this->window->blockThisThreadWhileMinimized();
         this->device->asLogicalDevice().waitIdle(); // stall TODO: make better?
 
-        this->render_pass.writeLock(
-            [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
+        this->render_passes.writeLock(
+            [&](RenderPasses& renderPasses)
             {
-                this->menu.reset();
-                // this->pipelines.reset();
-                renderPass.reset();
-                this->depth_buffer.reset();
-                this->swapchain.reset();
+                // Destroy things that need to be recreated
+                {
+                    this->debug_menu.reset();
+                    this->frame_manager.reset();
+                    this->pipeline_cache.reset();
 
-                this->initializeRenderer(&renderPass);
+                    renderPasses.final_raster_pass.reset();
+                    renderPasses.voxel_discovery_image.reset();
+                    renderPasses.voxel_discovery_pass.reset();
+                    renderPasses.depth_buffer.reset();
 
-                this->pipelines->updateRenderPass(**renderPass);
+                    this->swapchain.reset();
+                }
+
+                this->initializeRenderer(&renderPasses);
             });
     }
 
     void Renderer::initializeRenderer(
-        std::optional<std::unique_ptr<vulkan::RenderPass>*>
-            maybeWriteLockedRenderPass)
+        std::optional<RenderPasses*> maybeWriteLockedRenderPass)
     {
         this->swapchain = std::make_unique<vulkan::Swapchain>(
             *this->device, **this->surface, this->window->getFramebufferSize());
 
-        this->depth_buffer = std::make_unique<vulkan::Image2D>(
-            &*this->allocator,
-            this->device->asLogicalDevice(),
-            this->swapchain->getExtent(),
-            vk::Format::eD32Sfloat,
-            vk::ImageLayout::eUndefined,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            vk::ImageAspectFlagBits::eDepth,
-            vk::ImageTiling::eOptimal,
-            vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        static_assert(false);
-        this->swapchain->getRenderTargets();
-
-        // if (maybeWriteLockedRenderPass.has_value())
-        // {
-        //     **maybeWriteLockedRenderPass =
-        //     std::make_unique<vulkan::RenderPass>(
-        //         this->device.get(), this->swapchain.get(),
-        //         *this->depth_buffer);
-
-        //     this->menu = std::make_unique<ImGuiMenu>(
-        //         *this->window,
-        //         **this->instance,
-        //         *this->device,
-        //         ****maybeWriteLockedRenderPass); // lol
-        // }
-        // else
-        // {
-        //     this->render_pass.writeLock(
-        //         [&](std::unique_ptr<vulkan::RenderPass>& renderPass)
-        //         {
-        //             renderPass = std::make_unique<vulkan::RenderPass>(
-        //                 this->device.get(),
-        //                 this->swapchain.get(),
-        //                 *this->depth_buffer);
-
-        //             this->menu = std::make_unique<ImGuiMenu>(
-        //                 *this->window,
-        //                 **this->instance,
-        //                 *this->device,
-        //                 **renderPass);
-        //         });
-        // }
-
-        if (this->pipelines == nullptr)
+        auto renderPassInitFunc = [&](RenderPasses& renderPasses)
         {
-            this->pipelines = std::make_unique<vulkan::PipelineCache>();
+            renderPasses.depth_buffer = std::make_unique<vulkan::Image2D>(
+                &*this->allocator,
+                this->device->asLogicalDevice(),
+                this->swapchain->getExtent(),
+                vk::Format::eD32Sfloat,
+                vk::ImageLayout::eUndefined,
+                vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                vk::ImageAspectFlagBits::eDepth,
+                vk::ImageTiling::eOptimal,
+                vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+            renderPasses.voxel_discovery_image =
+                std::make_unique<vulkan::Image2D>(
+                    &*this->allocator,
+                    this->device->asLogicalDevice(),
+                    this->swapchain->getExtent(),
+                    vk::Format::eR32Sint,
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageUsageFlagBits::eColorAttachment,
+                    vk::ImageAspectFlagBits::eColor,
+                    vk::ImageTiling::eOptimal,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+            {
+                {
+                    const std::array<vk::AttachmentDescription, 2> attachments {
+                        vk::AttachmentDescription {
+                            .flags {},
+                            .format {vk::Format::eR32Sint},
+                            .samples {vk::SampleCountFlagBits::e1},
+                            .loadOp {vk::AttachmentLoadOp::eClear},
+                            .storeOp {vk::AttachmentStoreOp::eStore},
+                            .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                            .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                            .initialLayout {vk::ImageLayout::eUndefined},
+                            .finalLayout {
+                                vk::ImageLayout::eShaderReadOnlyOptimal},
+                        },
+                        vk::AttachmentDescription {
+                            .flags {},
+                            .format {renderPasses.depth_buffer->getFormat()},
+                            .samples {vk::SampleCountFlagBits::e1},
+                            .loadOp {vk::AttachmentLoadOp::eClear},
+                            .storeOp {vk::AttachmentStoreOp::eDontCare},
+                            .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                            .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                            .initialLayout {vk::ImageLayout::eUndefined},
+                            .finalLayout {vk::ImageLayout::
+                                              eDepthStencilAttachmentOptimal},
+                        },
+                    };
+
+                    const vk::AttachmentReference colorAttachmentReference {
+                        .attachment {0},
+                        .layout {vk::ImageLayout::eColorAttachmentOptimal},
+                    };
+
+                    const vk::AttachmentReference depthAttachmentReference {
+                        .attachment {1},
+                        .layout {
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                    };
+
+                    const vk::SubpassDescription subpass {
+                        .flags {},
+                        .pipelineBindPoint {vk::PipelineBindPoint::eGraphics},
+                        .inputAttachmentCount {0},
+                        .pInputAttachments {nullptr},
+                        .colorAttachmentCount {1},
+                        .pColorAttachments {&colorAttachmentReference},
+                        .pResolveAttachments {nullptr},
+                        .pDepthStencilAttachment {&depthAttachmentReference},
+                        .preserveAttachmentCount {0},
+                        .pPreserveAttachments {nullptr},
+                    };
+
+                    const vk::SubpassDependency subpassDependency {
+                        .srcSubpass {vk::SubpassExternal},
+                        .dstSubpass {0},
+                        .srcStageMask {
+                            vk::PipelineStageFlagBits::eColorAttachmentOutput
+                            | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                        .dstStageMask {
+                            vk::PipelineStageFlagBits::eColorAttachmentOutput
+                            | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                        .srcAccessMask {vk::AccessFlagBits::eNone},
+                        .dstAccessMask {
+                            vk::AccessFlagBits::eColorAttachmentWrite
+                            | vk::AccessFlagBits::eDepthStencilAttachmentWrite},
+                        .dependencyFlags {},
+                    };
+
+                    const vk::RenderPassCreateInfo renderPassCreateInfo {
+                        .sType {vk::StructureType::eRenderPassCreateInfo},
+                        .pNext {nullptr},
+                        .flags {},
+                        .attachmentCount {attachments.size()},
+                        .pAttachments {attachments.data()},
+                        .subpassCount {1},
+                        .pSubpasses {&subpass},
+                        .dependencyCount {1},
+                        .pDependencies {&subpassDependency},
+                    };
+
+                    std::array<vk::ClearValue, 2> clearValues {
+                        vk::ClearValue {.color {
+                            vk::ClearColorValue {.uint32 {{0U, 0U, 0U, 0U}}}}},
+                        vk::ClearValue {
+                            .depthStencil {vk::ClearDepthStencilValue {
+                                .depth {0.0f}, .stencil {0}}}}};
+
+                    renderPasses.voxel_discovery_pass =
+                        std::make_unique<vulkan::RenderPass>(
+                            this->device->asLogicalDevice(),
+                            renderPassCreateInfo,
+                            std::nullopt,
+                            clearValues);
+                }
+
+                {
+                    std::array<vk::ImageView, 2> attachments {
+                        **renderPasses.depth_buffer,
+                        **renderPasses.voxel_discovery_image};
+
+                    vk::FramebufferCreateInfo
+                        voxelDiscoveryFramebufferCreateInfo {
+                            .sType {vk::StructureType::eFramebufferCreateInfo},
+                            .pNext {nullptr},
+                            .flags {},
+                            .renderPass {**renderPasses.voxel_discovery_pass},
+                            .attachmentCount {attachments.size()},
+                            .pAttachments {attachments.data()},
+                            .width {this->swapchain->getExtent().width},
+                            .height {this->swapchain->getExtent().height},
+                            .layers {1},
+                        };
+
+                    renderPasses.voxel_discovery_framebuffer =
+                        this->device->asLogicalDevice().createFramebufferUnique(
+                            voxelDiscoveryFramebufferCreateInfo);
+                }
+
+                renderPasses.voxel_discovery_pass->setFramebuffer(
+                    *renderPasses.voxel_discovery_framebuffer,
+                    this->swapchain->getExtent());
+            }
+
+            // final raster pass
+            {
+                const std::array<vk::AttachmentDescription, 2> attachments {
+                    vk::AttachmentDescription {
+                        .flags {},
+                        .format {swapchain->getSurfaceFormat().format},
+                        .samples {vk::SampleCountFlagBits::e1},
+                        .loadOp {vk::AttachmentLoadOp::eClear},
+                        .storeOp {vk::AttachmentStoreOp::eStore},
+                        .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                        .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                        .initialLayout {vk::ImageLayout::eUndefined},
+                        .finalLayout {vk::ImageLayout::ePresentSrcKHR},
+                    },
+                    vk::AttachmentDescription {
+                        .flags {},
+                        .format {renderPasses.depth_buffer->getFormat()},
+                        .samples {vk::SampleCountFlagBits::e1},
+                        .loadOp {vk::AttachmentLoadOp::eLoad},
+                        .storeOp {vk::AttachmentStoreOp::eDontCare},
+                        .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                        .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                        .initialLayout {vk::ImageLayout::eUndefined},
+                        .finalLayout {
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                    },
+                };
+
+                const vk::AttachmentReference colorAttachmentReference {
+                    .attachment {0},
+                    .layout {vk::ImageLayout::eColorAttachmentOptimal},
+                };
+
+                const vk::AttachmentReference depthAttachmentReference {
+                    .attachment {1},
+                    .layout {vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                };
+
+                const vk::SubpassDescription subpass {
+                    .flags {},
+                    .pipelineBindPoint {vk::PipelineBindPoint::eGraphics},
+                    .inputAttachmentCount {0},
+                    .pInputAttachments {nullptr},
+                    .colorAttachmentCount {1},
+                    .pColorAttachments {&colorAttachmentReference},
+                    .pResolveAttachments {nullptr},
+                    .pDepthStencilAttachment {&depthAttachmentReference},
+                    .preserveAttachmentCount {0},
+                    .pPreserveAttachments {nullptr},
+                };
+
+                const vk::SubpassDependency subpassDependency {
+                    .srcSubpass {vk::SubpassExternal},
+                    .dstSubpass {0},
+                    .srcStageMask {
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput
+                        | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                    .dstStageMask {
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput
+                        | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                    .srcAccessMask {vk::AccessFlagBits::eNone},
+                    .dstAccessMask {
+                        vk::AccessFlagBits::eColorAttachmentWrite
+                        | vk::AccessFlagBits::eDepthStencilAttachmentWrite},
+                    .dependencyFlags {},
+                };
+
+                const vk::RenderPassCreateInfo renderPassCreateInfo {
+                    .sType {vk::StructureType::eRenderPassCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .attachmentCount {attachments.size()},
+                    .pAttachments {attachments.data()},
+                    .subpassCount {1},
+                    .pSubpasses {&subpass},
+                    .dependencyCount {1},
+                    .pDependencies {&subpassDependency},
+                };
+
+                std::array<vk::ClearValue, 0> clearValues {};
+
+                renderPasses.final_raster_pass =
+                    std::make_unique<vulkan::RenderPass>(
+                        this->device->asLogicalDevice(),
+                        renderPassCreateInfo,
+                        std::nullopt,
+                        clearValues);
+            }
+
+            this->debug_menu = recordables::DebugMenu::create(
+                *this,
+                *this->instance,
+                *this->device,
+                *this->window,
+                **renderPasses.final_raster_pass);
+
+            this->pipeline_cache = std::make_unique<vulkan::PipelineCache>();
+        };
+
+        if (maybeWriteLockedRenderPass.has_value())
+        {
+            renderPassInitFunc(**maybeWriteLockedRenderPass);
+        }
+        else
+        {
+            this->render_passes.writeLock(renderPassInitFunc);
         }
     }
 
     void Renderer::registerRecordable(
-        const std::shared_ptr<const Recordable>& objectToRegister) const
+        const std::shared_ptr<const recordables::Recordable>& objectToRegister)
+        const
     {
-        this->draw_objects.insert(
+        this->recordable_registry.insert(
             {objectToRegister->getUUID(), std::weak_ptr {objectToRegister}});
     }
 } // namespace gfx

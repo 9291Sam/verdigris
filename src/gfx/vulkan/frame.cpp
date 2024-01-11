@@ -1,7 +1,10 @@
 #include "frame.hpp"
 #include "device.hpp"
 #include "render_pass.hpp"
-#include <gfx/recordable.hpp>
+#include "swapchain.hpp"
+#include <gfx/recordables/recordable.hpp>
+#include <ranges>
+#include <util/log.hpp>
 
 namespace
 {
@@ -9,10 +12,115 @@ namespace
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::seconds {5})
             .count();
-}
+} // namespace
 
 namespace gfx::vulkan
 {
+    FrameManager::FrameManager(
+        vk::Device     device,
+        Allocator*     allocator,
+        Swapchain*     swapchain_,
+        vk::RenderPass finalRasterPass,
+        std::size_t    numberOfFlyingFrames)
+        : swapchain {swapchain_} // clang-format off
+        , depth_buffer {
+            allocator,
+            device,
+            swapchain_->getExtent(),
+            vk::Format::eD32Sfloat,
+            vk::ImageLayout::eUndefined,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            vk::ImageAspectFlagBits::eDepth,
+            vk::ImageTiling::eOptimal,
+            vk::MemoryPropertyFlagBits::eDeviceLocal}
+        // clang-format on
+        , final_raster_pass {finalRasterPass}
+        , maybe_previous_frame_fence {std::nullopt}
+        , flying_frame_index {0}
+        , number_of_flying_frames {numberOfFlyingFrames}
+    {
+        // Create framebuffers
+        {
+            std::span<const vk::UniqueImageView> swapchainImages =
+                this->swapchain->getRenderTargets();
+
+            this->swapchain_framebuffers.resize(swapchainImages.size());
+
+            // I love when std::views::zip can't iterate over a
+            // (const T&, T&)
+            for (std::size_t i = 0; i < swapchainImages.size(); ++i)
+            {
+                const vk::UniqueImageView& swapchainImage = swapchainImages[i];
+                vk::UniqueFramebuffer&     uninitializedSwapchainFramebuffer =
+                    this->swapchain_framebuffers[i];
+
+                std::array<vk::ImageView, 2> attachments {
+                    *swapchainImage, *this->depth_buffer};
+
+                vk::FramebufferCreateInfo frameBufferCreateInfo {
+                    .sType {vk::StructureType::eFramebufferCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .renderPass {this->final_raster_pass},
+                    .attachmentCount {attachments.size()},
+                    .pAttachments {attachments.data()},
+                    .width {this->swapchain->getExtent().width},
+                    .height {this->swapchain->getExtent().height},
+                    .layers {1},
+                };
+
+                uninitializedSwapchainFramebuffer =
+                    this->device.createFramebufferUnique(frameBufferCreateInfo);
+            }
+        }
+    }
+
+    FrameManager::~FrameManager()
+    {
+        if (maybe_previous_frame_fence.has_value())
+        {
+            vk::Result result = this->device.waitForFences(
+                *this->maybe_previous_frame_fence, vk::True, Timeout);
+
+            util::assertFatal(
+                result == vk::Result::eSuccess,
+                "Failed to wait for previous frame | Reason: {}",
+                vk::to_string(result));
+        }
+    }
+
+    // find final raster pass
+    // update its framebuffer
+
+    std::expected<void, ResizeNeeded> FrameManager::renderObjectsFromCamera(
+        Camera camera,
+        std::vector<std::pair<
+            std::optional<const vulkan::RenderPass*>,
+            std::vector<const recordables::Recordable*>>>
+            renderStages) // NOLINT
+    {
+        // Iterate wrapping
+        // number_of_flying_frames: 3
+        // 0 -> 1 -> 2 -> 0 -> 1 -> 2 -> 0
+        ++this->flying_frame_index %= this->number_of_flying_frames;
+
+        std::expected resizeResult =
+            this->flying_frames[this->flying_frame_index].recordAndDisplay(
+                camera,
+                std::move(renderStages),
+                **this->swapchain,
+                this->final_raster_pass,
+                this->swapchain_framebuffers,
+                this->swapchain->getExtent(),
+                this->maybe_previous_frame_fence);
+
+        this->maybe_previous_frame_fence =
+            this->flying_frames[this->flying_frame_index]
+                .getExecutionFinishFence();
+
+        return resizeResult;
+    }
+
     FlyingFrame::FlyingFrame(Device* device_)
         : device {device_}
         , image_available {nullptr}
@@ -103,183 +211,215 @@ namespace gfx::vulkan
         return *this->frame_in_flight;
     }
 
-    std::expected<void, FlyingFrame::ResizeNeeded>
-    FlyingFrame::recordAndDisplay(
-        Camera                             camera,
-        std::span<const std::pair<
-            std::optional<vulkan::RenderPass*>,
-            std::span<const Recordable*>>> recordables,
-        vk::SwapchainKHR                   presentSwapchain,
-        std::uint32_t                      presentSwapchainFramebufferIndex,
-        std::optional<vk::Fence>           maybePreviousFrameInFlightFence)
-    {
+    std::expected<void, ResizeNeeded> FlyingFrame::recordAndDisplay(
+        Camera                                            camera,
         std::vector<std::pair<
-            std::optional<vulkan::RenderPass*>,
-            std::vector<const Recordable*>>>
-            sortedRecordables;
+            std::optional<const vulkan::RenderPass*>,
+            std::vector<const recordables::Recordable*>>> recordables, // NOLINT
+        vk::SwapchainKHR                                  presentSwapchain,
+        vk::RenderPass                                    finalRasterPass,
+        std::span<const vk::UniqueFramebuffer>            framebuffers,
+        vk::Extent2D                                      framebufferExtent,
+        std::optional<vk::Fence> maybePreviousFrameInFlightFence)
+    {
+        this->device->asLogicalDevice().resetCommandPool(*this->command_pool);
 
-        // Initialize sortedRecordables
+        // acquire next image
+        std::uint32_t nextImageIndex = ~std::uint32_t {0};
         {
-            for (const auto& [stage, renderPassAndUnsortedRecordables] :
-                 recordables)
+            const auto [result, maybeNextFrameBufferIndex] =
+                this->device->asLogicalDevice().acquireNextImageKHR(
+                    presentSwapchain, Timeout, *this->image_available);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
+            switch (result)
             {
-                const auto& [maybeRenderPass, unsortedRecordables] =
-                    renderPassAndUnsortedRecordables;
+            case vk::Result::eErrorOutOfDateKHR:
+                util::logTrace(
+                    "Acquired invalid next image. Are we in a "
+                    "resize?");
+                return std::unexpected(ResizeNeeded {});
 
-                std::vector<const Recordable*> localSortedRecordables {
-                    unsortedRecordables.begin(), unsortedRecordables.end()};
+            case vk::Result::eSuboptimalKHR:
+                util::logTrace(
+                    "Acquired suboptimal next image. Are we in a "
+                    "resize?");
+                [[fallthrough]];
+            case vk::Result::eSuccess:
+                nextImageIndex =
+                    static_cast<std::uint32_t>(maybeNextFrameBufferIndex);
+                break;
+            default:
+                util::panic(
+                    "Invalid acquireNextImage {}", vk::to_string(result));
+                break;
+            }
+#pragma clang diagnostic pop
+        }
 
-                std::ranges::sort(
-                    localSortedRecordables,
-                    [](const Recordable* l, const Recordable* r)
-                    {
-                        return *l < *r;
-                    });
+        bool updatedRenderpass = false;
 
-                sortedRecordables.push_back(
-                    {maybeRenderPass, std::move(localSortedRecordables)});
+        for (auto& [maybeRenderpass, unsortedRecordables] : recordables)
+        {
+            // sort recordables
+            std::ranges::sort(
+                unsortedRecordables,
+                [](const recordables::Recordable* l,
+                   const recordables::Recordable* r)
+                {
+                    return l < r;
+                });
+
+            // update the raster pass
+            if (maybeRenderpass.has_value()
+                && ***maybeRenderpass == finalRasterPass)
+            {
+                util::assertFatal(
+                    !updatedRenderpass,
+                    "Renderpass was discovered multiple times!");
+
+                updatedRenderpass = true;
+                (*maybeRenderpass)
+                    ->setFramebuffer(
+                        *framebuffers[nextImageIndex], framebufferExtent);
             }
         }
 
+        this->device->asLogicalDevice().resetFences(*this->frame_in_flight);
+
+        const vk::CommandBufferBeginInfo commandBufferBeginInfo {
+            .sType {vk::StructureType::eCommandBufferBeginInfo},
+            .pNext {nullptr},
+            .flags {},
+            .pInheritanceInfo {nullptr},
+        };
+
+        this->command_buffer->begin(commandBufferBeginInfo);
+
+        vk::Pipeline                                     currentPipeline {};
+        gfx::recordables::Recordable::DescriptorRefArray currentDescriptors {};
+
+        for (const auto& [maybeRenderPass, renderPassRecordables] : recordables)
         {
-            this->device->asLogicalDevice().resetCommandPool(
-                *this->command_pool);
-
-            this->device->asLogicalDevice().resetFences(*this->frame_in_flight);
-
-            const vk::CommandBufferBeginInfo commandBufferBeginInfo {
-                .sType {vk::StructureType::eCommandBufferBeginInfo},
-                .pNext {nullptr},
-                .flags {},
-                .pInheritanceInfo {nullptr},
+            auto recordFunc = [&] noexcept
+            {
+                for (const recordables::Recordable* r : renderPassRecordables)
+                {
+                    r->bind(
+                        *this->command_buffer,
+                        currentPipeline,
+                        currentDescriptors);
+                    r->record(*this->command_buffer, camera);
+                }
             };
 
-            this->command_buffer->begin(commandBufferBeginInfo);
-
-            vk::Pipeline                   currentPipeline {};
-            Recordable::DescriptorRefArray currentDescriptors {};
-
-            for (const auto& [maybeRenderPass, renderPassRecordables] :
-                 sortedRecordables)
+            if (maybeRenderPass.has_value())
             {
-                auto recordFunc = [&] noexcept
-                {
-                    for (const Recordable* r : renderPassRecordables)
-                    {
-                        r->bind(
-                            *this->command_buffer,
-                            currentPipeline,
-                            currentDescriptors);
-                        r->record(*this->command_buffer, camera);
-                    }
-                };
-
-                if (maybeRenderPass.has_value())
-                {
-                    (*maybeRenderPass)
-                        ->recordWith(
-                            *this->command_buffer, std::move(recordFunc));
-                }
-                else
-                {
-                    recordFunc();
-                }
-
-                currentPipeline    = nullptr;
-                currentDescriptors = {nullptr, nullptr, nullptr, nullptr};
-            }
-
-            this->command_buffer->end();
-
-            const vk::PipelineStageFlags waitStages =
-                vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-            vk::SubmitInfo submitInfo {
-                .sType {vk::StructureType::eSubmitInfo},
-                .pNext {nullptr},
-                .waitSemaphoreCount {1},
-                .pWaitSemaphores {&*this->image_available},
-                .pWaitDstStageMask {&waitStages},
-                .commandBufferCount {1},
-                .pCommandBuffers {&*this->command_buffer},
-                .signalSemaphoreCount {1},
-                .pSignalSemaphores {&*this->render_finished},
-            };
-
-            bool shouldResize = false;
-
-            util::assertFatal(
-                this->device->getMainGraphicsQueue().tryAccess(
-                    [&](vk::Queue queue, vk::CommandBuffer)
-                    {
-                        queue.submit(submitInfo, *this->frame_in_flight);
-
-                        vk::PresentInfoKHR presentInfo {
-                            .sType {vk::StructureType::ePresentInfoKHR},
-                            .pNext {nullptr},
-                            .waitSemaphoreCount {1},
-                            .pWaitSemaphores {&*this->render_finished},
-                            .swapchainCount {1},
-                            .pSwapchains {&presentSwapchain},
-                            .pImageIndices {&presentSwapchainFramebufferIndex},
-                            .pResults {nullptr},
-                        };
-
-                        if (maybePreviousFrameInFlightFence.has_value())
-                        {
-                            const vk::Result result =
-                                this->device->asLogicalDevice().waitForFences(
-                                    *maybePreviousFrameInFlightFence,
-                                    vk::True,
-                                    Timeout);
-
-                            util::assertFatal(
-                                result == vk::Result::eSuccess,
-                                "Failed to wait for frame to complete drawing "
-                                "{}"
-                                "| timeout {} ns ",
-                                vk::to_string(result),
-                                Timeout);
-                        }
-
-                        {
-                            VkResult result =
-                                VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
-                                    static_cast<VkQueue>(queue),
-                                    reinterpret_cast< // NOLINT
-                                        const VkPresentInfoKHR*>(&presentInfo));
-
-                            if (result == VK_ERROR_OUT_OF_DATE_KHR
-                                || result == VK_SUBOPTIMAL_KHR)
-                            {
-                                util::logTrace(
-                                    "Present result {}",
-                                    vk::to_string(vk::Result {result}));
-
-                                shouldResize = true;
-                                return;
-                            }
-                            else if (result == VK_SUCCESS)
-                            {}
-                            else
-                            {
-                                util::panic(
-                                    "Unhandled error! {}",
-                                    vk::to_string(vk::Result {result}));
-                            }
-                        }
-                    },
-                    false),
-                "main graphics queue was not available");
-
-            if (shouldResize)
-            {
-                return std::unexpected(ResizeNeeded {});
+                (*maybeRenderPass)
+                    ->recordWith(*this->command_buffer, std::move(recordFunc));
             }
             else
             {
-                return {};
+                recordFunc();
             }
+
+            currentPipeline    = nullptr;
+            currentDescriptors = {nullptr, nullptr, nullptr, nullptr};
+        }
+
+        this->command_buffer->end();
+
+        const vk::PipelineStageFlags waitStages =
+            vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+        vk::SubmitInfo submitInfo {
+            .sType {vk::StructureType::eSubmitInfo},
+            .pNext {nullptr},
+            .waitSemaphoreCount {1},
+            .pWaitSemaphores {&*this->image_available},
+            .pWaitDstStageMask {&waitStages},
+            .commandBufferCount {1},
+            .pCommandBuffers {&*this->command_buffer},
+            .signalSemaphoreCount {1},
+            .pSignalSemaphores {&*this->render_finished},
+        };
+
+        bool shouldResize = false;
+
+        util::assertFatal(
+            this->device->getMainGraphicsQueue().tryAccess(
+                [&](vk::Queue queue, vk::CommandBuffer)
+                {
+                    queue.submit(submitInfo, *this->frame_in_flight);
+
+                    vk::PresentInfoKHR presentInfo {
+                        .sType {vk::StructureType::ePresentInfoKHR},
+                        .pNext {nullptr},
+                        .waitSemaphoreCount {1},
+                        .pWaitSemaphores {&*this->render_finished},
+                        .swapchainCount {1},
+                        .pSwapchains {&presentSwapchain},
+                        .pImageIndices {&nextImageIndex},
+                        .pResults {nullptr},
+                    };
+
+                    // TODO: can this be moved after so we have multiple
+                    // presentations ready?
+                    if (maybePreviousFrameInFlightFence.has_value())
+                    {
+                        const vk::Result result =
+                            this->device->asLogicalDevice().waitForFences(
+                                *maybePreviousFrameInFlightFence,
+                                vk::True,
+                                Timeout);
+
+                        util::assertFatal(
+                            result == vk::Result::eSuccess,
+                            "Failed to wait for frame to complete drawing "
+                            "{}"
+                            "| timeout {} ns ",
+                            vk::to_string(result),
+                            Timeout);
+                    }
+
+                    {
+                        VkResult result =
+                            VULKAN_HPP_DEFAULT_DISPATCHER.vkQueuePresentKHR(
+                                static_cast<VkQueue>(queue),
+                                reinterpret_cast< // NOLINT
+                                    const VkPresentInfoKHR*>(&presentInfo));
+
+                        if (result == VK_ERROR_OUT_OF_DATE_KHR
+                            || result == VK_SUBOPTIMAL_KHR)
+                        {
+                            util::logTrace(
+                                "Present result {}",
+                                vk::to_string(vk::Result {result}));
+
+                            shouldResize = true;
+                            return;
+                        }
+                        else if (result == VK_SUCCESS)
+                        {}
+                        else
+                        {
+                            util::panic(
+                                "Unhandled error! {}",
+                                vk::to_string(vk::Result {result}));
+                        }
+                    }
+                },
+                false),
+            "main graphics queue was not available");
+
+        if (shouldResize)
+        {
+            return std::unexpected(ResizeNeeded {});
+        }
+        else
+        {
+            return {};
         }
     }
 } // namespace gfx::vulkan

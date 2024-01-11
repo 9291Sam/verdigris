@@ -2,6 +2,7 @@
 #define SRC_GFX_VULKAN_PIPELINE_HPP
 
 #include <boost/unordered/concurrent_flat_map.hpp>
+#include <gfx/draw_stages.hpp>
 #include <util/threads.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -36,6 +37,11 @@ namespace gfx::vulkan
                 return this->id != ~0UZ;
             }
 
+            [[nodiscard]] std::size_t getID() const
+            {
+                return this->id;
+            }
+
             std::strong_ordering
             operator<=> (const PipelineHandle&) const = default;
         private:
@@ -59,7 +65,8 @@ namespace gfx::vulkan
         PipelineHandle  cachePipeline(std::unique_ptr<Pipeline>) const;
         const Pipeline* lookupPipeline(PipelineHandle) const;
 
-        void updateRenderPass(vk::RenderPass, const Swapchain&);
+        void updateRenderPass(
+            std::unordered_map<DrawStage, vk::RenderPass>, const Swapchain&);
 
     private:
         mutable std::atomic<std::size_t> next_free_id;
@@ -72,8 +79,8 @@ namespace gfx::vulkan
     {
     public:
 
-        Pipeline()          = default;
-        virtual ~Pipeline() = default;
+        Pipeline()  = default;
+        ~Pipeline() = default;
 
         Pipeline(const Pipeline&)             = delete;
         Pipeline(Pipeline&&)                  = default;
@@ -82,8 +89,6 @@ namespace gfx::vulkan
 
         [[nodiscard]] vk::Pipeline       operator* () const;
         [[nodiscard]] vk::PipelineLayout getLayout() const;
-
-        virtual void recreate(vk::RenderPass, const Swapchain&) = 0;
 
     protected:
         vk::UniquePipeline       pipeline;
@@ -99,8 +104,6 @@ namespace gfx::vulkan
             std::span<const vk::DescriptorSetLayout>,
             std::span<const vk::PushConstantRange>,
             const std::string& name);
-
-        void recreate(vk::RenderPass, const Swapchain&) override;
     };
 
     class GraphicsPipeline final : public Pipeline
@@ -108,8 +111,8 @@ namespace gfx::vulkan
     public:
         GraphicsPipeline(
             const Renderer&,
-            std::span<
-                std::pair<vk::ShaderStageFlagBits, vk::UniqueShaderModule>>,
+            const vulkan::RenderPass*,
+            std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>,
             vk::PipelineVertexInputStateCreateInfo,
             vk::PrimitiveTopology,
             std::span<const vk::DescriptorSetLayout>,
@@ -118,8 +121,8 @@ namespace gfx::vulkan
 
         GraphicsPipeline(
             const Renderer&,
-            std::span<
-                std::pair<vk::ShaderStageFlagBits, vk::UniqueShaderModule>>,
+            const vulkan::RenderPass*,
+            std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>,
             vk::PipelineVertexInputStateCreateInfo,
             std::optional<vk::PipelineInputAssemblyStateCreateInfo>,
             std::optional<vk::PipelineTessellationStateCreateInfo>,
@@ -131,18 +134,22 @@ namespace gfx::vulkan
             std::span<const vk::DescriptorSetLayout>,
             std::span<const vk::PushConstantRange>,
             std::string name);
-
-        void recreate(vk::RenderPass, const Swapchain&) override;
-
-    private:
-        vk::Device  device;
-        std::string name;
-
-        std::vector<vk::PipelineShaderStageCreateInfo> shader_create_infos;
-        std::vector<vk::UniqueShaderModule>            shaders;
-        vk::GraphicsPipelineCreateInfo                 create_info;
     };
 
 } // namespace gfx::vulkan
+
+namespace boost
+{
+
+    inline std::size_t hash_value(
+        const gfx::vulkan::PipelineCache::PipelineHandle& handle) // NOLINT
+    {
+        boost::hash<std::size_t> sizeTHasher {};
+
+        std::size_t workingHash = sizeTHasher(handle.getID());
+
+        return workingHash;
+    }
+} // namespace boost
 
 #endif // SRC_GFX_VULKAN_PIPELINE_HPP

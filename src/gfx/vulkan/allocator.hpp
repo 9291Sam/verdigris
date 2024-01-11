@@ -29,7 +29,7 @@ namespace gfx::vulkan
 
         [[nodiscard]] VmaAllocator          operator* () const;
         [[nodiscard]] const DescriptorPool& getDescriptorPool() const;
-        [[nodiscard]] const PipelineCache&  getPipelineCache() const;
+        [[nodiscard]] Device*               getOwningDevice() const;
 
     private:
         Device*                         device;

@@ -37,6 +37,7 @@ namespace gfx
         class PipelineCache;
         class GraphicsPipeline;
         class ComputePipeline;
+        class FrameManager;
     } // namespace vulkan
 
     class Renderer
@@ -60,7 +61,6 @@ namespace gfx
         [[nodiscard]] bool  isActionActive(Window::Action) const;
         [[nodiscard]] float getFovYRadians() const;
         [[nodiscard]] float getFovXRadians() const;
-        [[nodiscard]] float getFocalLength() const;
         [[nodiscard]] float getAspectRatio() const;
 
         void               setCamera(Camera);
@@ -69,20 +69,6 @@ namespace gfx
         void               waitIdle();
 
     private:
-        void resize();
-        void
-        initializeRenderer(std::optional<std::unique_ptr<vulkan::RenderPass>*>
-                               maybeWriteLockedRenderPass);
-
-        friend recordables::Recordable;
-        void registerRecordable(
-            const std::shared_ptr<const recordables::Recordable>&) const;
-
-        friend vulkan::GraphicsPipeline;
-        friend vulkan::ComputePipeline;
-        friend recordables::DebugMenu;
-        [[nodiscard]] util::RwLock<std::unique_ptr<vulkan::RenderPass>>
-            getRenderPass(DrawStage) const;
 
         // Vulkan prelude objects
         std::unique_ptr<Window>               window;
@@ -93,15 +79,27 @@ namespace gfx
 
         // Pre-renderpass Rendering objects
         std::unique_ptr<vulkan::Swapchain> swapchain;
-        std::unique_ptr<vulkan::Image2D>   depth_buffer;
 
-        // Render passes
-        util::RwLock<std::unique_ptr<vulkan::RenderPass>> voxel_discovery_pass;
-        std::unique_ptr<vulkan::Image2D>                  voxel_discovery_image;
-        util::RwLock<std::unique_ptr<vulkan::RenderPass>> final_raster_pass;
+        struct RenderPasses
+        {
+            std::unique_ptr<vulkan::Image2D> depth_buffer;
+
+            std::unique_ptr<vulkan::Image2D> voxel_discovery_image;
+
+            std::unique_ptr<vulkan::RenderPass> voxel_discovery_pass;
+
+            vk::UniqueFramebuffer voxel_discovery_framebuffer;
+
+            std::unique_ptr<vulkan::RenderPass> final_raster_pass;
+
+            [[nodiscard]] std::optional<const vulkan::RenderPass*>
+                acquireRenderPassFromStage(DrawStage) const;
+        };
+
+        util::RwLock<RenderPasses> render_passes;
 
         // Post-renderpass Rendering Objects
-        std::unique_ptr<vulkan::PipelineCache> pipelines;
+        std::unique_ptr<vulkan::PipelineCache> pipeline_cache;
         std::unique_ptr<vulkan::FrameManager>  frame_manager;
 
         // Objects
@@ -114,6 +112,19 @@ namespace gfx
         util::Mutex<recordables::DebugMenu::State> debug_menu_state;
         std::atomic<Camera>                        draw_camera;
         bool                                       is_cursor_attached;
+
+        friend vulkan::GraphicsPipeline;
+        friend vulkan::ComputePipeline;
+        friend recordables::DebugMenu;
+        [[nodiscard]] util::RwLock<RenderPasses> getRenderPasses() const;
+
+        void resize();
+        void initializeRenderer(
+            std::optional<RenderPasses*> maybeWriteLockedRenderPass);
+
+        friend recordables::Recordable;
+        void registerRecordable(
+            const std::shared_ptr<const recordables::Recordable>&) const;
     };
 } // namespace gfx
 

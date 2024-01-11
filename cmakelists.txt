@@ -158,6 +158,7 @@ set(VERDIGRIS_SOURCES
     # src/gfx/vulkan/voxel/voxel.cpp
 
     src/gfx/recordables/flat_recordable.cpp
+    src/gfx/recordables/debug_menu.cpp
 
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp
@@ -170,7 +171,6 @@ set(VERDIGRIS_SOURCES
     src/gfx/vulkan/swapchain.cpp
 
     src/gfx/camera.cpp
-    src/gfx/imgui_menu.cpp
     src/gfx/renderer.cpp
     src/gfx/transform.cpp
     src/gfx/window.cpp

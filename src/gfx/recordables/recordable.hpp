@@ -67,6 +67,7 @@ namespace gfx::recordables
 
         mutable std::atomic<bool> should_draw;
 
+        //
         Recordable(
             const gfx::Renderer&,
             std::string name,
