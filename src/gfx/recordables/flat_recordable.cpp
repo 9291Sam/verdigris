@@ -130,7 +130,7 @@ namespace gfx::recordables
         vulkan::PipelineCache::PipelineHandle handle = maybeHandleMutex.lock(
             [&](vulkan::PipelineCache::PipelineHandle& maybeHandle)
             {
-                if (!maybeHandle.isValid())
+                if (maybeHandle.isValid())
                 {
                     return maybeHandle;
                 }
@@ -199,6 +199,8 @@ namespace gfx::recordables
                 return maybeHandle;
             });
 
+        util::logDebug("Acquired handle Pipeline Handle {}", handle.getID());
+
         return this->getPipelineCache().lookupPipeline(handle);
     }
 
@@ -210,7 +212,7 @@ namespace gfx::recordables
         std::string          name_)
         : Recordable {
             renderer_,
-            std::format(
+            fmt::format(
                 "FlatRecordable | {} | Vertices: {} | Indicies {} ",
                 name_,
                 vertices.size(),
@@ -223,6 +225,7 @@ namespace gfx::recordables
         , number_of_indices {indicies.size()}
     {
         this->pipeline = this->getPipeline();
+        util::assertFatal(this->pipeline != nullptr, "we didnt get a pipeline");
 
         this->future_vertex_buffer = std::async(
             [lambdaVertices = std::move(vertices),

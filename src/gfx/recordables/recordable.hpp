@@ -25,8 +25,8 @@ namespace gfx::recordables
     public:
         using DescriptorRefArray = std::array<vk::DescriptorSet, 4>;
     public:
-        Recordable()          = delete;
-        virtual ~Recordable() = default;
+        Recordable() = delete;
+        virtual ~Recordable();
 
         Recordable(const Recordable&)             = delete;
         Recordable(Recordable&&)                  = delete;

@@ -17,7 +17,7 @@ namespace
 namespace gfx::vulkan
 {
     FrameManager::FrameManager(
-        vk::Device     device_,
+        Device*        device_,
         Allocator*     allocator,
         Swapchain*     swapchain_,
         vk::RenderPass finalRasterPass,
@@ -26,7 +26,7 @@ namespace gfx::vulkan
         , swapchain {swapchain_} // clang-format off
         , depth_buffer {
             allocator,
-            device_,
+            device_->asLogicalDevice(),
             swapchain_->getExtent(),
             vk::Format::eD32Sfloat,
             vk::ImageLayout::eUndefined,
@@ -40,7 +40,7 @@ namespace gfx::vulkan
         , flying_frame_index {0}
         , number_of_flying_frames {numberOfFlyingFrames}
     {
-        // Create framebuffers
+        // Create framebuffers && FlyingFrames
         {
             std::span<const vk::UniqueImageView> swapchainImages =
                 this->swapchain->getRenderTargets();
@@ -71,7 +71,10 @@ namespace gfx::vulkan
                 };
 
                 uninitializedSwapchainFramebuffer =
-                    this->device.createFramebufferUnique(frameBufferCreateInfo);
+                    this->device->asLogicalDevice().createFramebufferUnique(
+                        frameBufferCreateInfo);
+
+                this->flying_frames.push_back(FlyingFrame {this->device});
             }
         }
     }
@@ -80,7 +83,7 @@ namespace gfx::vulkan
     {
         if (maybe_previous_frame_fence.has_value())
         {
-            vk::Result result = this->device.waitForFences(
+            vk::Result result = this->device->asLogicalDevice().waitForFences(
                 *this->maybe_previous_frame_fence, vk::True, Timeout);
 
             util::assertFatal(
@@ -307,6 +310,11 @@ namespace gfx::vulkan
             {
                 for (const recordables::Recordable* r : renderPassRecordables)
                 {
+                    util::logDebug(
+                        "Recording r @ {} {}",
+                        static_cast<const void*>(r),
+                        std::to_underlying(r->getDrawStage()));
+
                     r->bind(
                         *this->command_buffer,
                         currentPipeline,

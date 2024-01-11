@@ -31,7 +31,7 @@ namespace gfx::vulkan
     public:
 
         explicit FrameManager(
-            vk::Device,
+            Device*,
             Allocator*,
             Swapchain*,
             vk::RenderPass finalRasterPass,
@@ -46,7 +46,7 @@ namespace gfx::vulkan
                 std::vector<const recordables::Recordable*>>>);
 
     private:
-        vk::Device device;
+        Device* device;
 
         Swapchain*                         swapchain;
         std::vector<vk::UniqueFramebuffer> swapchain_framebuffers;

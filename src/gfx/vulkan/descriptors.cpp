@@ -15,7 +15,7 @@ namespace gfx::vulkan
             std::unordered_map<vk::DescriptorType, std::atomic<std::uint32_t>>
                 out {};
 
-            for (const auto [descriptor, number] : map)
+            for (const auto& [descriptor, number] : map)
             {
                 out.emplace(
                     std::piecewise_construct,

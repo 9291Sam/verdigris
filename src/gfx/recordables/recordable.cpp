@@ -5,13 +5,16 @@
 
 namespace gfx::recordables
 {
+    // placed here to fix Recordable's vtable
+    Recordable::~Recordable() = default;
+
     void Recordable::bind(
         vk::CommandBuffer   commandBuffer,
         vk::Pipeline&       currentlyBoundPipeline,
         DescriptorRefArray& currentlyBoundDescriptors) const
     {
-        if (currentlyBoundPipeline != **this->pipeline
-            && this->pipeline != nullptr)
+        if (this->pipeline != nullptr
+            && currentlyBoundPipeline != **this->pipeline)
         {
             commandBuffer.bindPipeline(
                 this->pipeline_bind_point, **this->pipeline);

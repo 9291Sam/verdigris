@@ -141,7 +141,7 @@ namespace gfx::vulkan
 
 } // namespace gfx::vulkan
 
-namespace boost
+namespace gfx::vulkan
 {
     inline std::size_t hash_value(
         const gfx::vulkan::DescriptorPool::DescriptorHandle& handle) // NOLINT
@@ -152,6 +152,6 @@ namespace boost
 
         return workingHash;
     }
-} // namespace boost
+} // namespace gfx::vulkan
 
 #endif // SRC_GFX_VULKAN_DESCRIPTORS_HPP

@@ -141,7 +141,7 @@ namespace gfx::vulkan
 
 } // namespace gfx::vulkan
 
-namespace boost
+namespace gfx::vulkan
 {
 
     inline std::size_t hash_value(
@@ -153,6 +153,6 @@ namespace boost
 
         return workingHash;
     }
-} // namespace boost
+} // namespace gfx::vulkan
 
 #endif // SRC_GFX_VULKAN_PIPELINE_HPP

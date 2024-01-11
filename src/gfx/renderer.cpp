@@ -82,6 +82,7 @@ namespace gfx
         , swapchain {nullptr}
         , render_passes {RenderPasses {}}
         , pipeline_cache {nullptr}
+        , frame_manager {nullptr}
         , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , is_cursor_attached {true}
@@ -605,6 +606,12 @@ namespace gfx
                 **renderPasses.final_raster_pass);
 
             this->pipeline_cache = std::make_unique<vulkan::PipelineCache>();
+
+            this->frame_manager = std::make_unique<vulkan::FrameManager>(
+                &*this->device,
+                &*this->allocator,
+                &*this->swapchain,
+                **renderPasses.final_raster_pass);
         };
 
         if (maybeWriteLockedRenderPass.has_value())
