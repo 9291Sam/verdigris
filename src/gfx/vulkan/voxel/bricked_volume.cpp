@@ -154,7 +154,7 @@
 
 //         const vk::Result result = device->asLogicalDevice().waitForFences(
 //             *endTransferFence,
-//             static_cast<vk::Bool32>(true),
+//             vk::True,
 //             ~std::uint64_t {0});
 
 //         util::assertFatal(

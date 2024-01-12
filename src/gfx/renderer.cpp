@@ -235,7 +235,11 @@ namespace gfx
 
             return strongDrawingRenderables;
         }();
-        renderables.push_back(this->debug_menu);
+
+        if (this->debug_menu->shouldDraw())
+        {
+            renderables.push_back(this->debug_menu);
+        }
 
         //! DrawStage is useless because of how all commands in a command buffer
         //! overlap with one another'

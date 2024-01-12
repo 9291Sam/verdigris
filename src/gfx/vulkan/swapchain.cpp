@@ -83,7 +83,7 @@ namespace gfx::vulkan
             .preTransform          {surfaceCapabilities.currentTransform},
             .compositeAlpha        {vk::CompositeAlphaFlagBitsKHR::eOpaque},
             .presentMode           {selectedPresentMode},
-            .clipped               {static_cast<vk::Bool32>(true)},
+            .clipped               {vk::True},
             .oldSwapchain          {nullptr}
         };
         // clang-format on

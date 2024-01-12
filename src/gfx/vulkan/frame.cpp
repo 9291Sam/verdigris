@@ -257,13 +257,13 @@ namespace gfx::vulkan
         for (auto& [maybeRenderpass, unsortedRecordables] : recordables)
         {
             // sort recordables
-            std::ranges::sort(
-                unsortedRecordables,
-                [](const recordables::Recordable* l,
-                   const recordables::Recordable* r)
-                {
-                    return l < r;
-                });
+            // std::ranges::sort(
+            //     unsortedRecordables,
+            //     [](const recordables::Recordable* l,
+            //        const recordables::Recordable* r)
+            //     {
+            //         return l < r;
+            //     });
 
             // update the raster pass
             if (maybeRenderpass.has_value()
