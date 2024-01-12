@@ -37,7 +37,7 @@ namespace gfx::vulkan
             std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>,
             std::span<vk::ClearValue>,
             const std::string& name);
-        ~RenderPass() = default;
+        ~RenderPass();
 
         RenderPass()                              = delete;
         RenderPass(const RenderPass&)             = delete;
@@ -84,6 +84,8 @@ namespace gfx::vulkan
         mutable vk::Extent2D          framebuffer_extent;
         std::size_t                   clear_values_size;
         std::array<vk::ClearValue, 2> maybe_clear_values;
+
+        std::string name;
     }; // class RenderPass
 
 } // namespace gfx::vulkan

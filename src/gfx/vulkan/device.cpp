@@ -269,7 +269,10 @@ namespace gfx::vulkan
         }
     }
 
-    Device::~Device() = default;
+    Device::~Device()
+    {
+        util::logDebug("Destroying device!");
+    }
 
     bool Device::shouldBuffersStage() const
     {

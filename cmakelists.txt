@@ -5,6 +5,9 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+message(WARNING        BAD!)
 # https://bugs.llvm.org/show_bug.cgi?id=47950
 
 # Libraries
@@ -232,6 +235,7 @@ endif()
 
 
 
+
 # Compiler flags TODO: prettify
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
@@ -304,7 +308,10 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # endif()
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    message(FATAL_ERROR "MSVC support has not been added")
+    
+  target_compile_options(verdigris PUBLIC "/ZI")
+  target_link_options(verdigris PUBLIC "/INCREMENTAL")
+  target_include_directories(verdigris PUBLIC "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.29.30133/include")
 else ()
     message(FATAL_ERROR "Unknown and Unsupported compiler")
 endif ()

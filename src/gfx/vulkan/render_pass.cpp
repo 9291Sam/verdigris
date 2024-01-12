@@ -10,12 +10,13 @@ namespace gfx::vulkan
         std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>
                                   maybeFrameBuffer,
         std::span<vk::ClearValue> maybeClearValues,
-        const std::string&        name)
-        : render_pass {device.createRenderPass(renderPassCreateInfo)}
+        const std::string&        name_)
+        : render_pass {device.createRenderPassUnique(renderPassCreateInfo)}
         , framebuffer {maybeFrameBuffer.has_value() ? maybeFrameBuffer->first : nullptr}
         , framebuffer_extent {maybeFrameBuffer.has_value() ? maybeFrameBuffer->second : vk::Extent2D {}}
         , clear_values_size {maybeClearValues.size()}
         , maybe_clear_values {}
+        , name {name_}
     {
         util::assertFatal(
             maybeClearValues.size() <= this->maybe_clear_values.size(),
@@ -36,11 +37,21 @@ namespace gfx::vulkan
                 .objectType {vk::ObjectType::eRenderPass},
                 .objectHandle {
                     std::bit_cast<std::uint64_t>(*this->render_pass)},
-                .pObjectName {name.c_str()},
+                .pObjectName {this->name.c_str()},
             };
 
             device.setDebugUtilsObjectNameEXT(nameSetInfo);
         }
+    }
+
+    RenderPass::~RenderPass()
+    {
+        util::logDebug(
+            "Destroying {} | {} | {} | {}",
+            this->name,
+            (void*)VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyRenderPass,
+            (void*)&this->render_pass.getDispatch(),
+            (void*)this->render_pass.getOwner());
     }
 
     void RenderPass::setFramebuffer(
