@@ -1,7 +1,7 @@
 #include "disk_entity.hpp"
 #include "game/entity/disk_entity.hpp"
 #include "util/log.hpp"
-#include <gfx/object.hpp>
+#include <gfx/recordables/flat_recordable.hpp>
 #include <gfx/renderer.hpp>
 #include <unordered_map>
 
@@ -44,10 +44,12 @@ namespace game::entity
             warn,
             error);
 
-        std::vector<gfx::vulkan::Vertex> vertices;
-        std::vector<gfx::vulkan::Index>  indices;
+        std::vector<gfx::recordables::FlatRecordable::Vertex> vertices;
+        std::vector<gfx::recordables::FlatRecordable::Index>  indices;
 
-        std::unordered_map<gfx::vulkan::Vertex, std::size_t> uniqueVertices;
+        std::
+            unordered_map<gfx::recordables::FlatRecordable::Vertex, std::size_t>
+                uniqueVertices;
 
         for (const tinyobj::shape_t& shape : shapes)
         {
@@ -57,19 +59,10 @@ namespace game::entity
                     static_cast<std::size_t>(index.vertex_index);
                 const std::size_t normalIndex =
                     static_cast<std::size_t>(index.normal_index);
-                const std::size_t texcoordIndex =
-                    static_cast<std::size_t>(index.texcoord_index);
+                // const std::size_t texcoordIndex =
+                //     static_cast<std::size_t>(index.texcoord_index);
 
-                gfx::vulkan::Vertex vertex {
-                    .position {
-                        index.vertex_index >= 0 ?
-                        glm::vec3 {
-                            attribute.vertices.at(3 * vertexIndex + 0),
-                            attribute.vertices.at(3 * vertexIndex + 1),
-                            attribute.vertices.at(3 * vertexIndex + 2),
-                        } :
-                        glm::vec3 {0.0f, 0.0f, 0.0f}
-                    },
+                gfx::recordables::FlatRecordable::Vertex vertex {
                     .color {
                         index.vertex_index >= 0 ? 
                         glm::vec4 {
@@ -80,6 +73,16 @@ namespace game::entity
                         } :
                         glm::vec4 {1.0f, 1.0f, 1.0f, 1.0f}
                     },
+                    .position {
+                        index.vertex_index >= 0 ?
+                        glm::vec3 {
+                            attribute.vertices.at(3 * vertexIndex + 0),
+                            attribute.vertices.at(3 * vertexIndex + 1),
+                            attribute.vertices.at(3 * vertexIndex + 2),
+                        } :
+                        glm::vec3 {0.0f, 0.0f, 0.0f}
+                    },
+                    
                     .normal {
                         index.normal_index >= 0 ?
                         glm::vec3 {
@@ -89,19 +92,11 @@ namespace game::entity
                         } :
                         glm::vec3 {0.0f, 0.0f, 0.0f}
                     },
-                    .uv {
-                        index.texcoord_index >= 0 ?
-                        glm::vec2 {
-                            attribute.texcoords.at(2 * texcoordIndex + 0),
-                            attribute.texcoords.at(2 * texcoordIndex + 1),
-                        } :
-                        glm::vec2 {0.0f, 0.0f}
-                    }
                 };
 
                 // If this vertex is being encountered for the first
                 // time.
-                if (uniqueVertices.count(vertex) == 0)
+                if (!uniqueVertices.contains(vertex))
                 {
                     uniqueVertices[vertex] = vertices.size();
 
@@ -117,8 +112,12 @@ namespace game::entity
             }
         }
 
-        this->object = gfx::SimpleTriangulatedObject::create(
-            this->getRenderer(), vertices, indices);
+        this->object = gfx::recordables::FlatRecordable::create(
+            this->getRenderer(),
+            vertices,
+            indices,
+            {},
+            std::format("Disk Entity {}", filepath));
     }
 
     DiskEntity::~DiskEntity() {} // NOLINT pre declarations

@@ -2,12 +2,12 @@
 #define SRC_GAME_ENTITY_CUBE_HPP
 
 #include "entity.hpp"
+#include <gfx/recordables/flat_recordable.hpp>
 #include <memory>
 
 namespace gfx
 {
     class Renderer;
-    class SimpleTriangulatedObject;
 } // namespace gfx
 
 namespace game::entity
@@ -22,7 +22,7 @@ namespace game::entity
         void tick() const override;
 
     private:
-        std::shared_ptr<gfx::SimpleTriangulatedObject> object;
+        std::shared_ptr<gfx::recordables::FlatRecordable> object;
 
         glm::vec3     root;
         mutable float time_alive;

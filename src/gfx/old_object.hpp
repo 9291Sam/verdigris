@@ -1,5 +1,5 @@
-#ifndef SRC_GFX_OBJECT_HPP
-#define SRC_GFX_OBJECT_HPP
+#ifndef SRC_GFX_OLD_OBJECT_HPP
+#define SRC_GFX_OLD_OBJECT_HPP
 
 #include "camera.hpp"
 #include "vulkan/buffer.hpp"
@@ -144,4 +144,4 @@ namespace gfx
 
 } // namespace gfx
 
-#endif // SRC_GFX_OBJECT_HPP
+#endif // SRC_GFX_OLD_OBJECT_HPP

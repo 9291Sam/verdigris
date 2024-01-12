@@ -9,7 +9,6 @@ namespace game
 {
     Game::Game(gfx::Renderer& renderer_)
         : renderer {renderer_}
-        , entities {}
         , player {*this, {30.0f, 30.0f, -30.0f}}
         , world {*this}
     {
@@ -65,7 +64,6 @@ namespace game
 
         this->renderer.setCamera(this->player.getCamera());
 
-        this->world.tick();
         this->world.updateChunkState();
 
         strongEntityTickFutures.clear(); // await all futures
@@ -80,7 +78,7 @@ namespace game
         this->last_tick_end_time = thisFrameEndTime;
 
         this->renderer.getMenuState().lock(
-            [&](gfx::ImGuiMenu::State& state)
+            [&](gfx::recordables::DebugMenu::State& state)
             {
                 state.tps             = 1 / this->getTickDeltaTimeSeconds();
                 state.player_position = this->player.getCamera().getPosition();

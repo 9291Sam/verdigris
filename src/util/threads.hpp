@@ -109,51 +109,59 @@ namespace util
         RwLock& operator= (const RwLock&)     = delete;
         RwLock& operator= (RwLock&&) noexcept = default;
 
-        void writeLock(std::invocable<T&...> auto func) const
+        decltype(auto) writeLock(std::invocable<T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::unique_lock lock {this->rwlock};
 
-            std::apply(func, this->tuple);
+            return std::apply(func, this->tuple);
         }
 
-        bool tryWriteLock(std::invocable<T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
+        auto tryWriteLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple))) -> std::optional<
+                std::decay_t<std::invoke_result_t<decltype(func), T&...>>>
+            requires (!std::same_as<
+                      void,
+                      std::invoke_result_t<decltype(func), T&...>>)
         {
             std::unique_lock lock {this->rwlock, std::defer_lock};
 
             if (lock.try_lock())
             {
-                std::apply(func, this->tuple);
-                return true;
+                return std::optional {std::apply(
+                    std::forward<decltype(func)>(func), this->tuple)};
             }
             else
             {
-                return false;
+                return std::nullopt;
             }
         }
 
-        void readLock(std::invocable<const T&...> auto func) const
+        decltype(auto) readLock(std::invocable<const T&...> auto func) const
             noexcept(noexcept(std::apply(func, this->tuple)))
         {
             std::shared_lock lock {this->rwlock};
 
-            std::apply(func, this->tuple);
+            return std::apply(func, this->tuple);
         }
 
-        bool tryReadLock(std::invocable<const T&...> auto func) const
-            noexcept(noexcept(std::apply(func, this->tuple)))
+        auto tryReadLock(std::invocable<T&...> auto&& func) const
+            noexcept(noexcept(std::apply(func, this->tuple))) -> std::optional<
+                std::decay_t<std::invoke_result_t<decltype(func), T&...>>>
+            requires (!std::same_as<
+                      void,
+                      std::invoke_result_t<decltype(func), T&...>>)
         {
             std::shared_lock lock {this->rwlock, std::defer_lock};
 
             if (lock.try_lock())
             {
-                std::apply(func, this->tuple);
-                return true;
+                return std::optional {std::apply(
+                    std::forward<decltype(func)>(func), this->tuple)};
             }
             else
             {
-                return false;
+                return std::nullopt;
             }
         }
 

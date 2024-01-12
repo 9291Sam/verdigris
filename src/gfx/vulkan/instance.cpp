@@ -69,16 +69,6 @@ namespace gfx::vulkan
             vk::ValidationFeatureEnableEXT::eBestPractices,
             vk::ValidationFeatureEnableEXT::eGpuAssistedReserveBindingSlot};
 
-        // const std::array<vk::ValidationFeatureDisableEXT, 0>
-        //     disabledFeatures {};
-
-        //         VkStructureType
-        // const void*
-        // uint32_t
-        // const VkValidationFeatureEnableEXT*
-        // uint32_t
-        // const VkValidationFeatureDisableEXT*
-
         const vk::DebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo {
             .sType {vk::StructureType::eDebugUtilsMessengerCreateInfoEXT},
             .pNext {},

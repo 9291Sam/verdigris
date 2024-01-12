@@ -5,7 +5,6 @@
 #include <util/log.hpp>
 #include <util/threads.hpp>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_enums.hpp>
 
 namespace gfx::vulkan

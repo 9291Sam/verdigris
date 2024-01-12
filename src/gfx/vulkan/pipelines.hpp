@@ -1,95 +1,131 @@
 #ifndef SRC_GFX_VULKAN_PIPELINE_HPP
 #define SRC_GFX_VULKAN_PIPELINE_HPP
 
-#include <memory>
-#include <unordered_map>
+#include <boost/unordered/concurrent_flat_map.hpp>
+#include <gfx/draw_stages.hpp>
 #include <util/threads.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
+
+namespace gfx
+{
+    class Renderer;
+}
 
 namespace gfx::vulkan
 {
     class Device;
     class RenderPass;
     class Swapchain;
+    class Pipeline;
     class GraphicsPipeline;
     class DescriptorPool;
     class ComputePipeline;
     class Allocator;
 
-    enum class GraphicsPipelineType
-    {
-        NoPipeline,
-        Flat,
-        Voxel,
-        ParallaxRayMarching
-    };
+    vk::UniqueShaderModule
+    createShaderFromFile(vk::Device device, const char* filePath);
 
-    enum class ComputePipelineType
-    {
-        NoPipeline,
-        RayCaster
-    };
-
-    class PipelineManager
+    class PipelineCache
     {
     public:
+        struct PipelineHandle
+        {
+            PipelineHandle()
+                : id {~0UZ}
+            {}
 
-        PipelineManager(vk::Device, vk::RenderPass, Swapchain*, Allocator*);
-        ~PipelineManager() = default;
+            [[nodiscard]] bool isValid() const
+            {
+                return this->id != ~0UZ;
+            }
 
-        PipelineManager(const PipelineManager&)             = delete;
-        PipelineManager(PipelineManager&&)                  = delete;
-        PipelineManager& operator= (const PipelineManager&) = delete;
-        PipelineManager& operator= (PipelineManager&&)      = delete;
+            [[nodiscard]] std::size_t getID() const
+            {
+                return this->id;
+            }
 
-        const GraphicsPipeline& getGraphicsPipeline(GraphicsPipelineType) const;
-        const ComputePipeline&  getComputePipeline(ComputePipelineType) const;
+            std::strong_ordering
+            operator<=> (const PipelineHandle&) const = default;
+        private:
+            friend class PipelineCache;
+
+            explicit PipelineHandle(std::size_t newID)
+                : id {newID}
+            {}
+            std::size_t id;
+        };
+    public:
+
+        PipelineCache();
+        ~PipelineCache() = default;
+
+        PipelineCache(const PipelineCache&)             = delete;
+        PipelineCache(PipelineCache&&)                  = delete;
+        PipelineCache& operator= (const PipelineCache&) = delete;
+        PipelineCache& operator= (PipelineCache&&)      = delete;
+
+        PipelineHandle  cachePipeline(std::unique_ptr<Pipeline>) const;
+        const Pipeline* lookupPipeline(PipelineHandle) const;
+
+        void updateRenderPass(
+            std::unordered_map<DrawStage, vk::RenderPass>, const Swapchain&);
 
     private:
-        GraphicsPipeline createGraphicsPipeline(GraphicsPipelineType) const;
-        ComputePipeline  createComputePipeline(ComputePipelineType) const;
-
-        vk::Device     device;
-        vk::RenderPass render_pass;
-        Swapchain*     swapchain;
-        Allocator*     allocator;
-
-        util::RwLock<std::unordered_map<GraphicsPipelineType, GraphicsPipeline>>
-            graphics_pipeline_cache;
-        util::RwLock<std::unordered_map<ComputePipelineType, ComputePipeline>>
-            compute_pipeline_cache;
+        mutable std::atomic<std::size_t> next_free_id;
+        mutable boost::unordered::
+            concurrent_flat_map<PipelineHandle, std::unique_ptr<Pipeline>>
+                cache;
     };
 
-    class GraphicsPipeline // GraphicsPipeline
+    class Pipeline
     {
     public:
 
-        enum class VertexType
-        {
-            Parallax,
-            Normal,
-            None,
-        };
+        Pipeline()  = default;
+        ~Pipeline() = default;
 
+        Pipeline(const Pipeline&)             = delete;
+        Pipeline(Pipeline&&)                  = default;
+        Pipeline& operator= (const Pipeline&) = delete;
+        Pipeline& operator= (Pipeline&&)      = default;
+
+        [[nodiscard]] vk::Pipeline       operator* () const;
+        [[nodiscard]] vk::PipelineLayout getLayout() const;
+
+    protected:
+        vk::UniquePipeline       pipeline;
+        vk::UniquePipelineLayout layout;
+    };
+
+    class ComputePipeline final : public Pipeline
+    {
     public:
+        ComputePipeline(
+            const Renderer&,
+            vk::ShaderModule,
+            std::span<const vk::DescriptorSetLayout>,
+            std::span<const vk::PushConstantRange>,
+            const std::string& name);
+    };
 
-        GraphicsPipeline() = default;
-        // "optimized" constructor, (shorter)
+    class GraphicsPipeline final : public Pipeline
+    {
+    public:
         GraphicsPipeline(
-            VertexType,
-            vk::Device,
-            vk::RenderPass,
-            const Swapchain&,
-            std::span<vk::PipelineShaderStageCreateInfo>,
+            const Renderer&,
+            const vulkan::RenderPass*,
+            std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>,
+            vk::PipelineVertexInputStateCreateInfo,
             vk::PrimitiveTopology,
-            vk::UniquePipelineLayout);
+            std::span<const vk::DescriptorSetLayout>,
+            std::span<const vk::PushConstantRange>,
+            std::string name);
 
-        // manual constructor
         GraphicsPipeline(
-            vk::Device,
-            vk::RenderPass,
-            std::span<vk::PipelineShaderStageCreateInfo>,
+            const Renderer&,
+            const vulkan::RenderPass*,
+            std::span<std::pair<vk::ShaderStageFlagBits, vk::ShaderModule>>,
             vk::PipelineVertexInputStateCreateInfo,
             std::optional<vk::PipelineInputAssemblyStateCreateInfo>,
             std::optional<vk::PipelineTessellationStateCreateInfo>,
@@ -98,47 +134,25 @@ namespace gfx::vulkan
             std::optional<vk::PipelineMultisampleStateCreateInfo>,
             std::optional<vk::PipelineDepthStencilStateCreateInfo>,
             std::optional<vk::PipelineColorBlendStateCreateInfo>,
-            vk::UniquePipelineLayout);
-        ~GraphicsPipeline() = default;
-
-        GraphicsPipeline(const GraphicsPipeline&)             = delete;
-        GraphicsPipeline(GraphicsPipeline&&)                  = default;
-        GraphicsPipeline& operator= (const GraphicsPipeline&) = delete;
-        GraphicsPipeline& operator= (GraphicsPipeline&&)      = default;
-
-        [[nodiscard]] vk::Pipeline       operator* () const;
-        [[nodiscard]] vk::PipelineLayout getLayout() const;
-
-    private:
-        vk::UniquePipelineLayout layout;
-        vk::UniquePipeline       pipeline;
+            std::span<const vk::DescriptorSetLayout>,
+            std::span<const vk::PushConstantRange>,
+            std::string name);
     };
 
-    class ComputePipeline
+} // namespace gfx::vulkan
+
+namespace gfx::vulkan
+{
+
+    inline std::size_t hash_value(
+        const gfx::vulkan::PipelineCache::PipelineHandle& handle) // NOLINT
     {
-    public:
+        boost::hash<std::size_t> sizeTHasher {};
 
-        ComputePipeline() = default;
-        ComputePipeline(
-            vk::Device,
-            vk::UniqueShaderModule,
-            std::span<const vk::DescriptorSetLayout>);
-        ~ComputePipeline() = default;
+        std::size_t workingHash = sizeTHasher(handle.getID());
 
-        ComputePipeline(const ComputePipeline&)             = delete;
-        ComputePipeline(ComputePipeline&&)                  = default;
-        ComputePipeline& operator= (const ComputePipeline&) = delete;
-        ComputePipeline& operator= (ComputePipeline&&)      = default;
-
-        [[nodiscard]] vk::Pipeline       operator* () const;
-        [[nodiscard]] vk::PipelineLayout getLayout() const;
-
-
-    private:
-        vk::UniquePipelineLayout layout;
-        vk::UniquePipeline       pipeline;
-    };
-
+        return workingHash;
+    }
 } // namespace gfx::vulkan
 
 #endif // SRC_GFX_VULKAN_PIPELINE_HPP

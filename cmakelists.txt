@@ -151,16 +151,21 @@ set(VERDIGRIS_SOURCES
 
     src/game/game.cpp
     src/game/player.cpp
+    
 
+    # src/gfx/vulkan/voxel/bricked_volume.cpp
+    # src/gfx/vulkan/voxel/compute_renderer.cpp
+    # src/gfx/vulkan/voxel/voxel.cpp
 
-    src/gfx/vulkan/voxel/bricked_volume.cpp
-    src/gfx/vulkan/voxel/compute_renderer.cpp
-    src/gfx/vulkan/voxel/voxel.cpp
+    src/gfx/recordables/flat_recordable.cpp
+    src/gfx/recordables/debug_menu.cpp
+    src/gfx/recordables/recordable.cpp
 
     src/gfx/vulkan/allocator.cpp
     src/gfx/vulkan/buffer.cpp
     src/gfx/vulkan/descriptors.cpp
     src/gfx/vulkan/device.cpp
+    src/gfx/vulkan/frame.cpp
     src/gfx/vulkan/pipelines.cpp
     src/gfx/vulkan/image.cpp
     src/gfx/vulkan/instance.cpp
@@ -168,8 +173,6 @@ set(VERDIGRIS_SOURCES
     src/gfx/vulkan/swapchain.cpp
 
     src/gfx/camera.cpp
-    src/gfx/imgui_menu.cpp
-    src/gfx/object.cpp
     src/gfx/renderer.cpp
     src/gfx/transform.cpp
     src/gfx/window.cpp
@@ -223,10 +226,7 @@ target_compile_definitions(verdigris PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)
 
 if (NOT (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    target_compile_options(verdigris PUBLIC -Ofast)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 else()
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
 endif()
 
 
@@ -245,10 +245,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Ap
             target_compile_options(verdigris PUBLIC -glldb)
             target_compile_options(verdigris PUBLIC -gdwarf-4)
             target_compile_options(verdigris PUBLIC -g3)
-            # target_compile_options(verdigris PUBLIC -fcoverage-mapping)
-            # target_compile_options(verdigris PUBLIC -fprofile-instr-generate)
-            
-            # target_link_options(verdigris PUBLIC -fprofile-instr-generate)
         else()
             if (WIN32) # release only!
             endif()

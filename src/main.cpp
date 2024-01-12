@@ -2,7 +2,6 @@
 #include <engine/settings.hpp>
 #include <future>
 #include <game/game.hpp>
-#include <gfx/object.hpp>
 #include <gfx/renderer.hpp>
 #include <glm/common.hpp>
 #include <magic_enum_all.hpp>

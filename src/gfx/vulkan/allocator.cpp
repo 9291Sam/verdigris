@@ -9,13 +9,13 @@ namespace gfx::vulkan
     Allocator::Allocator(const vulkan::Instance& instance, Device* device_)
         : device {device_}
         , allocator {nullptr}
-        , pool {
+        , pool {DescriptorPool::create(
               device_->asLogicalDevice(),
               std::unordered_map<vk::DescriptorType, std::uint32_t> {
                   {vk::DescriptorType::eStorageBuffer, 3},
                   {vk::DescriptorType::eUniformBuffer, 3},
                   {vk::DescriptorType::eStorageImage, 3},
-              }}
+              })}
     {
         VmaVulkanFunctions vulkanFunctions {};
         vulkanFunctions.vkGetInstanceProcAddr =
@@ -57,19 +57,14 @@ namespace gfx::vulkan
         return this->allocator;
     }
 
-    DescriptorSet Allocator::allocateDescriptorSet(DescriptorSetType setType)
+    const DescriptorPool& Allocator::getDescriptorPool() const
     {
-        return this->pool.allocate(setType);
-    }
-
-    DescriptorSetLayout&
-    Allocator::getDescriptorSetLayout(DescriptorSetType setType)
-    {
-        return this->pool.lookupOrAddLayoutFromCache(setType);
+        return *this->pool;
     }
 
     Device* Allocator::getOwningDevice() const
     {
         return this->device;
     }
+
 } // namespace gfx::vulkan

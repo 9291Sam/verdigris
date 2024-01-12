@@ -61,3 +61,9 @@ hack brickmap together
 add dynamic reallocing
 
 shader + compute renderer rewrite
+
+refactor pipeline to be a similar dual inheritance thing
+
+move menu to be not special
+
+central predeclaration file

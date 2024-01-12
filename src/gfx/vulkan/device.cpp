@@ -3,7 +3,6 @@
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <util/threads.hpp>
-#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_beta.h>
 
 namespace gfx::vulkan

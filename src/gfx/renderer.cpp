@@ -1,19 +1,18 @@
 #include "renderer.hpp"
 #include "imgui_menu.hpp"
-#include "object.hpp"
+#include "recordables/recordable.hpp"
 #include "vulkan/allocator.hpp"
 #include "vulkan/device.hpp"
+#include "vulkan/frame.hpp"
 #include "vulkan/image.hpp"
 #include "vulkan/instance.hpp"
 #include "vulkan/pipelines.hpp"
 #include "vulkan/render_pass.hpp"
 #include "vulkan/swapchain.hpp"
-#include "vulkan/voxel/compute_renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
 
 namespace gfx
 {
@@ -79,14 +78,19 @@ namespace gfx
               **this->instance, **this->surface)}
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, &*this->device)}
-        , menu_state {ImGuiMenu::State {}}
+        , swapchain {nullptr}
+        , render_passes {RenderPasses {}}
+        , pipeline_cache {nullptr}
+        , frame_manager {nullptr}
+        , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
-        , show_menu {false}
         , is_cursor_attached {true}
     {
-        this->initializeRenderer();
+        this->initializeRenderer(std::nullopt);
 
         this->window->attachCursor();
+
+        this->debug_menu->setVisibility(false);
     }
 
     Renderer::~Renderer() = default;
@@ -109,9 +113,10 @@ namespace gfx
         return Window::Delta {.x {deltaRadiansX}, .y {deltaRadiansY}};
     }
 
-    const util::Mutex<ImGuiMenu::State>& Renderer::getMenuState() const
+    const util::Mutex<recordables::DebugMenu::State>&
+    Renderer::getMenuState() const
     {
-        return this->menu_state;
+        return this->debug_menu_state;
     }
 
     [[nodiscard]] bool Renderer::isActionActive(Window::Action a) const
@@ -147,17 +152,17 @@ namespace gfx
 
     //     return focalLength;
     // }
-    float gfx::Renderer::getFocalLength() const
-    {
-        // const auto [width, height] = this->window->getFramebufferSize();
-        // float fovYRadians          = this->getFovYRadians();
+    // float gfx::Renderer::getFocalLength() const
+    // {
+    //     // const auto [width, height] = this->window->getFramebufferSize();
+    //     // float fovYRadians          = this->getFovYRadians();
 
-        // // Assuming you're using glm::perspective for rasterization
-        // float focalLength = 1.0f / std::tan(fovYRadians / 2.0f);
+    //     // // Assuming you're using glm::perspective for rasterization
+    //     // float focalLength = 1.0f / std::tan(fovYRadians / 2.0f);
 
-        // return focalLength;
-        return 1.0f;
-    }
+    //     // return focalLength;
+    //     return 1.0f;
+    // }
 
     float gfx::Renderer::getAspectRatio() const
     {
@@ -178,89 +183,135 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        // collect objects and draw the frame TODO: move to isolate thread
+        std::vector<std::shared_ptr<const recordables::Recordable>>
+            renderables = [&]
         {
-            auto [currentFrame, previousFence] =
-                this->render_pass->getNextFrame();
+            std::vector<util::UUID> weakRecordablesToRemove {};
 
-            std::future<void> menuRender = std::async(
-                std::launch::async,
-                [&]
-                {
-                    if (this->show_menu)
-                    {
-                        this->menu_state.lock(
-                            [&](ImGuiMenu::State& state)
-                            {
-                                this->menu->render(state);
-                            });
-                    }
-                });
+            std::vector<std::shared_ptr<const recordables::Recordable>>
+                                           strongMaybeDrawRenderables {};
+            std::vector<std::future<void>> maybeDrawStateUpdateFutures {};
 
-            std::future<void> voxelRender = std::async(
-                std::launch::async,
-                [&]
-                {
-                    this->voxel_renderer->tick();
-                });
-
-            std::vector<std::shared_ptr<const Object>> strongObjects;
-            std::vector<const Object*>                 rawObjects;
-
-            for (const auto& [id, weakRenderable] : this->draw_objects.access())
+            // Collect the strong
+            for (const auto& [weakUUID, weakRecordable] :
+                 this->recordable_registry.access())
             {
-                if (std::shared_ptr<const Object> obj = weakRenderable.lock())
+                if (std::shared_ptr<const recordables::Recordable> recordable =
+                        weakRecordable.lock())
                 {
-                    obj->updateFrameState();
-
-                    if (obj->shouldDraw())
-                    {
-                        rawObjects.push_back(obj.get());
-                        strongObjects.push_back(std::move(obj));
-                    }
-                }
-            }
-
-            menuRender.get();
-            voxelRender.get();
-
-            if (!currentFrame.render(
-                    this->draw_camera,
-                    rawObjects,
-                    this->voxel_renderer.get(),
-                    this->show_menu ? this->menu.get() : nullptr,
-                    previousFence))
-            {
-                this->resize();
-            }
-
-            if (this->window->isActionActive(
-                    Window::Action::ToggleConsole, true))
-            {
-                this->show_menu = !this->show_menu;
-            }
-
-            if (this->window->isActionActive(
-                    Window::Action::ToggleCursorAttachment, true))
-            {
-                if (this->is_cursor_attached)
-                {
-                    this->is_cursor_attached = false;
-                    this->window->detachCursor();
+                    maybeDrawStateUpdateFutures.push_back(std::async(
+                        [rawRecordable = recordable.get()]
+                        {
+                            rawRecordable->updateFrameState();
+                        }));
+                    strongMaybeDrawRenderables.push_back(std::move(recordable));
                 }
                 else
                 {
-                    this->is_cursor_attached = true;
-                    this->window->attachCursor();
+                    weakRecordablesToRemove.push_back(weakUUID);
                 }
             }
 
-            this->menu_state.lock(
-                [&](ImGuiMenu::State& state)
+            // Purge the weak
+            for (const util::UUID& weakID : weakRecordablesToRemove)
+            {
+                this->recordable_registry.remove(weakID);
+            }
+
+            std::vector<std::shared_ptr<const recordables::Recordable>>
+                strongDrawingRenderables {};
+
+            maybeDrawStateUpdateFutures.clear(); // join all futures
+
+            for (const std::shared_ptr<const recordables::Recordable>&
+                     maybeDrawingRecordable : strongMaybeDrawRenderables)
+            {
+                if (maybeDrawingRecordable->shouldDraw())
                 {
-                    state.fps = 1 / this->getFrameDeltaTimeSeconds();
-                });
+                    strongDrawingRenderables.push_back(
+                        std::move(maybeDrawingRecordable));
+                }
+            }
+
+            return strongDrawingRenderables;
+        }();
+        renderables.push_back(this->debug_menu);
+
+        //! DrawStage is useless because of how all commands in a command buffer
+        //! overlap with one another'
+
+        std::map<DrawStage, std::vector<const recordables::Recordable*>>
+            stageMap;
+        magic_enum::enum_for_each<DrawStage>(
+            [&](DrawStage s)
+            {
+                stageMap[s] = {};
+            });
+
+        for (const std::shared_ptr<const recordables::Recordable>&
+                 strongRenderable : renderables)
+        {
+            stageMap[strongRenderable->getDrawStage()].push_back(
+                &*strongRenderable);
         }
+
+        std::vector<std::pair<
+            std::optional<const vulkan::RenderPass*>,
+            std::vector<const recordables::Recordable*>>>
+            drawRecordables {};
+
+        //! I don't have to say this is bad, this is bad, but it's not a race!
+        this->render_passes.readLock(
+            [&](const RenderPasses& renderPasses)
+            {
+                for (auto& [stage, recordables] : stageMap)
+                {
+                    drawRecordables.push_back(
+                        {renderPasses.acquireRenderPassFromStage(stage),
+                         std::move(recordables)});
+                }
+            });
+
+        util::logDebug("drawRecordables size: {}", drawRecordables.size());
+        for (const auto& [maybePass, recordables] : drawRecordables)
+        {
+            util::logDebug(
+                "Pass: {} | Recordables: {}",
+                maybePass.has_value() ? (void*)&*maybePass : nullptr,
+                recordables.size());
+        }
+
+        if (!this->frame_manager->renderObjectsFromCamera(
+                this->draw_camera, drawRecordables))
+        {
+            this->resize();
+        }
+
+        if (this->window->isActionActive(Window::Action::ToggleConsole, true))
+        {
+            this->debug_menu->setVisibility(!this->debug_menu->shouldDraw());
+        }
+
+        if (this->window->isActionActive(
+                Window::Action::ToggleCursorAttachment, true))
+        {
+            if (this->is_cursor_attached)
+            {
+                this->is_cursor_attached = false;
+                this->window->detachCursor();
+            }
+            else
+            {
+                this->is_cursor_attached = true;
+                this->window->attachCursor();
+            }
+        }
+
+        this->debug_menu_state.lock(
+            [&](recordables::DebugMenu::State& state)
+            {
+                state.fps = 1 / this->getFrameDeltaTimeSeconds();
+            });
 
         this->window->endFrame();
     }
@@ -270,104 +321,341 @@ namespace gfx
         this->device->asLogicalDevice().waitIdle();
     }
 
+    std::optional<const vulkan::RenderPass*>
+    Renderer::RenderPasses::acquireRenderPassFromStage(DrawStage stage) const
+    {
+        switch (stage)
+        {
+        case DrawStage::TopOfPipeCompute:
+            return std::nullopt;
+        case DrawStage::VoxelDiscoveryPass:
+            return &*this->voxel_discovery_pass;
+        case DrawStage::PostDiscoveryCompute:
+            return std::nullopt;
+        case DrawStage::DisplayPass:
+            return &*this->final_raster_pass;
+        case DrawStage::PostPipeCompute:
+            return std::nullopt;
+        }
+    }
+
     void Renderer::resize()
     {
         this->window->blockThisThreadWhileMinimized();
         this->device->asLogicalDevice().waitIdle(); // stall TODO: make better?
 
-        this->menu.reset();
-        this->voxel_renderer.reset();
-        this->pipelines.reset();
-        this->render_pass.reset();
-        this->depth_buffer.reset();
-        this->swapchain.reset();
+        this->render_passes.writeLock(
+            [&](RenderPasses& renderPasses)
+            {
+                // Destroy things that need to be recreated
+                {
+                    this->debug_menu.reset();
+                    this->frame_manager.reset();
+                    this->pipeline_cache.reset();
 
-        this->initializeRenderer();
+                    renderPasses.final_raster_pass.reset();
+                    renderPasses.voxel_discovery_image.reset();
+                    renderPasses.voxel_discovery_pass.reset();
+                    renderPasses.depth_buffer.reset();
+
+                    this->swapchain.reset();
+                }
+
+                this->initializeRenderer(&renderPasses);
+            });
     }
 
-    void Renderer::initializeRenderer()
+    void Renderer::initializeRenderer(
+        std::optional<RenderPasses*> maybeWriteLockedRenderPass)
     {
         this->swapchain = std::make_unique<vulkan::Swapchain>(
             *this->device, **this->surface, this->window->getFramebufferSize());
 
-        this->depth_buffer = std::make_unique<vulkan::Image2D>(
-            &*this->allocator,
-            this->device->asLogicalDevice(),
-            this->swapchain->getExtent(),
-            vk::Format::eD32Sfloat,
-            vk::ImageLayout::eUndefined,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            vk::ImageAspectFlagBits::eDepth,
-            vk::ImageTiling::eOptimal,
-            vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        this->render_pass = std::make_unique<vulkan::RenderPass>(
-            this->device.get(), this->swapchain.get(), *this->depth_buffer);
-
-        this->pipelines = std::make_unique<vulkan::PipelineManager>(
-            this->device->asLogicalDevice(),
-            **this->render_pass,
-            this->swapchain.get(),
-            this->allocator.get());
-
+        auto renderPassInitFunc = [&](RenderPasses& renderPasses)
         {
-            std::vector<std::future<void>> pipelineFutures {};
+            renderPasses.depth_buffer = std::make_unique<vulkan::Image2D>(
+                &*this->allocator,
+                this->device->asLogicalDevice(),
+                this->swapchain->getExtent(),
+                vk::Format::eD32Sfloat,
+                vk::ImageLayout::eUndefined,
+                vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                vk::ImageAspectFlagBits::eDepth,
+                vk::ImageTiling::eOptimal,
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                "Depth buffer");
 
-            magic_enum::enum_for_each<vulkan::GraphicsPipelineType>(
-                [&](vulkan::GraphicsPipelineType type)
+            renderPasses.voxel_discovery_image =
+                std::make_unique<vulkan::Image2D>(
+                    &*this->allocator,
+                    this->device->asLogicalDevice(),
+                    this->swapchain->getExtent(),
+                    vk::Format::eR32Sint,
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageUsageFlagBits::eColorAttachment
+                        | vk::ImageUsageFlagBits::eSampled,
+                    vk::ImageAspectFlagBits::eColor,
+                    vk::ImageTiling::eOptimal,
+                    vk::MemoryPropertyFlagBits::eDeviceLocal,
+                    "Voxel discovery ID image");
+
+            {
                 {
-                    if (type == vulkan::GraphicsPipelineType::NoPipeline)
-                    {
-                        return;
-                    }
+                    const std::array<vk::AttachmentDescription, 2> attachments {
+                        vk::AttachmentDescription {
+                            .flags {},
+                            .format {vk::Format::eR32Sint},
+                            .samples {vk::SampleCountFlagBits::e1},
+                            .loadOp {vk::AttachmentLoadOp::eClear},
+                            .storeOp {vk::AttachmentStoreOp::eStore},
+                            .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                            .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                            .initialLayout {vk::ImageLayout::eUndefined},
+                            .finalLayout {
+                                vk::ImageLayout::eShaderReadOnlyOptimal},
+                        },
+                        vk::AttachmentDescription {
+                            .flags {},
+                            .format {renderPasses.depth_buffer->getFormat()},
+                            .samples {vk::SampleCountFlagBits::e1},
+                            .loadOp {vk::AttachmentLoadOp::eClear},
+                            .storeOp {vk::AttachmentStoreOp::eStore},
+                            .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                            .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                            .initialLayout {vk::ImageLayout::eUndefined},
+                            .finalLayout {vk::ImageLayout::
+                                              eDepthStencilAttachmentOptimal},
+                        },
+                    };
 
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getGraphicsPipeline(type);
-                        }));
-                });
+                    const vk::AttachmentReference colorAttachmentReference {
+                        .attachment {0},
+                        .layout {vk::ImageLayout::eColorAttachmentOptimal},
+                    };
 
-            magic_enum::enum_for_each<vulkan::ComputePipelineType>(
-                [&](vulkan::ComputePipelineType type)
+                    const vk::AttachmentReference depthAttachmentReference {
+                        .attachment {1},
+                        .layout {
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                    };
+
+                    const vk::SubpassDescription subpass {
+                        .flags {},
+                        .pipelineBindPoint {vk::PipelineBindPoint::eGraphics},
+                        .inputAttachmentCount {0},
+                        .pInputAttachments {nullptr},
+                        .colorAttachmentCount {1},
+                        .pColorAttachments {&colorAttachmentReference},
+                        .pResolveAttachments {nullptr},
+                        .pDepthStencilAttachment {&depthAttachmentReference},
+                        .preserveAttachmentCount {0},
+                        .pPreserveAttachments {nullptr},
+                    };
+
+                    const vk::SubpassDependency subpassDependency {
+                        .srcSubpass {vk::SubpassExternal},
+                        .dstSubpass {0},
+                        .srcStageMask {
+                            vk::PipelineStageFlagBits::eColorAttachmentOutput
+                            | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                        .dstStageMask {
+                            vk::PipelineStageFlagBits::eColorAttachmentOutput
+                            | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                        .srcAccessMask {vk::AccessFlagBits::eNone},
+                        .dstAccessMask {
+                            vk::AccessFlagBits::eColorAttachmentWrite
+                            | vk::AccessFlagBits::eDepthStencilAttachmentWrite},
+                        .dependencyFlags {},
+                    };
+
+                    const vk::RenderPassCreateInfo renderPassCreateInfo {
+                        .sType {vk::StructureType::eRenderPassCreateInfo},
+                        .pNext {nullptr},
+                        .flags {},
+                        .attachmentCount {attachments.size()},
+                        .pAttachments {attachments.data()},
+                        .subpassCount {1},
+                        .pSubpasses {&subpass},
+                        .dependencyCount {1},
+                        .pDependencies {&subpassDependency},
+                    };
+
+                    std::array<vk::ClearValue, 2> clearValues {
+                        vk::ClearValue {.color {
+                            vk::ClearColorValue {.uint32 {{0U, 0U, 0U, 0U}}}}},
+                        vk::ClearValue {
+                            .depthStencil {vk::ClearDepthStencilValue {
+                                .depth {1.0f}, .stencil {0}}}}};
+
+                    renderPasses.voxel_discovery_pass =
+                        std::make_unique<vulkan::RenderPass>(
+                            this->device->asLogicalDevice(),
+                            renderPassCreateInfo,
+                            std::nullopt,
+                            clearValues,
+                            "Voxel Discovery");
+                }
+
                 {
-                    if (type == vulkan::ComputePipelineType::NoPipeline)
-                    {
-                        return;
-                    }
+                    std::array<vk::ImageView, 2> attachments {
+                        **renderPasses.voxel_discovery_image,
+                        **renderPasses.depth_buffer};
 
-                    pipelineFutures.push_back(std::async(
-                        std::launch::async,
-                        [this, type]
-                        {
-                            std::ignore =
-                                this->pipelines->getComputePipeline(type);
-                        }));
-                });
+                    vk::FramebufferCreateInfo
+                        voxelDiscoveryFramebufferCreateInfo {
+                            .sType {vk::StructureType::eFramebufferCreateInfo},
+                            .pNext {nullptr},
+                            .flags {},
+                            .renderPass {**renderPasses.voxel_discovery_pass},
+                            .attachmentCount {attachments.size()},
+                            .pAttachments {attachments.data()},
+                            .width {this->swapchain->getExtent().width},
+                            .height {this->swapchain->getExtent().height},
+                            .layers {1},
+                        };
+
+                    renderPasses.voxel_discovery_framebuffer =
+                        this->device->asLogicalDevice().createFramebufferUnique(
+                            voxelDiscoveryFramebufferCreateInfo);
+                }
+
+                renderPasses.voxel_discovery_pass->setFramebuffer(
+                    *renderPasses.voxel_discovery_framebuffer,
+                    this->swapchain->getExtent());
+            }
+
+            // final raster pass
+            {
+                const std::array<vk::AttachmentDescription, 2> attachments {
+                    vk::AttachmentDescription {
+                        .flags {},
+                        .format {swapchain->getSurfaceFormat().format},
+                        .samples {vk::SampleCountFlagBits::e1},
+                        .loadOp {vk::AttachmentLoadOp::eClear},
+                        .storeOp {vk::AttachmentStoreOp::eStore},
+                        .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                        .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                        .initialLayout {vk::ImageLayout::eUndefined},
+                        .finalLayout {vk::ImageLayout::ePresentSrcKHR},
+                    },
+                    vk::AttachmentDescription {
+                        .flags {},
+                        .format {renderPasses.depth_buffer->getFormat()},
+                        .samples {vk::SampleCountFlagBits::e1},
+                        .loadOp {vk::AttachmentLoadOp::eLoad},
+                        .storeOp {
+                            vk::AttachmentStoreOp::eStore}, // why isnt this
+                                                            // dont care?
+                        .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
+                        .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
+                        .initialLayout {
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                        .finalLayout {
+                            // why isn't this undefined?
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                    },
+                };
+
+                const vk::AttachmentReference colorAttachmentReference {
+                    .attachment {0},
+                    .layout {vk::ImageLayout::eColorAttachmentOptimal},
+                };
+
+                const vk::AttachmentReference depthAttachmentReference {
+                    .attachment {1},
+                    .layout {vk::ImageLayout::eDepthStencilAttachmentOptimal},
+                };
+
+                const vk::SubpassDescription subpass {
+                    .flags {},
+                    .pipelineBindPoint {vk::PipelineBindPoint::eGraphics},
+                    .inputAttachmentCount {0},
+                    .pInputAttachments {nullptr},
+                    .colorAttachmentCount {1},
+                    .pColorAttachments {&colorAttachmentReference},
+                    .pResolveAttachments {nullptr},
+                    .pDepthStencilAttachment {&depthAttachmentReference},
+                    .preserveAttachmentCount {0},
+                    .pPreserveAttachments {nullptr},
+                };
+
+                const vk::SubpassDependency subpassDependency {
+                    .srcSubpass {vk::SubpassExternal},
+                    .dstSubpass {0},
+                    .srcStageMask {
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput
+                        | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                    .dstStageMask {
+                        vk::PipelineStageFlagBits::eColorAttachmentOutput
+                        | vk::PipelineStageFlagBits::eEarlyFragmentTests},
+                    .srcAccessMask {vk::AccessFlagBits::eNone},
+                    .dstAccessMask {
+                        vk::AccessFlagBits::eColorAttachmentWrite
+                        | vk::AccessFlagBits::eDepthStencilAttachmentWrite},
+                    .dependencyFlags {},
+                };
+
+                const vk::RenderPassCreateInfo renderPassCreateInfo {
+                    .sType {vk::StructureType::eRenderPassCreateInfo},
+                    .pNext {nullptr},
+                    .flags {},
+                    .attachmentCount {attachments.size()},
+                    .pAttachments {attachments.data()},
+                    .subpassCount {1},
+                    .pSubpasses {&subpass},
+                    .dependencyCount {1},
+                    .pDependencies {&subpassDependency},
+                };
+
+                std::array<vk::ClearValue, 1> clearValues {
+                    vk::ClearValue {.color {vk::ClearColorValue {
+                        .float32 {{0.01f, 0.03f, 0.04f, 1.0f}}}}}};
+
+                renderPasses.final_raster_pass =
+                    std::make_unique<vulkan::RenderPass>(
+                        this->device->asLogicalDevice(),
+                        renderPassCreateInfo,
+                        std::nullopt,
+                        clearValues,
+                        "Final Raster");
+
+                renderPasses.final_raster_pass->setFramebuffer(
+                    nullptr, this->swapchain->getExtent());
+            }
+
+            this->debug_menu = recordables::DebugMenu::create(
+                *this,
+                *this->instance,
+                *this->device,
+                *this->window,
+                **renderPasses.final_raster_pass);
+
+            this->pipeline_cache = std::make_unique<vulkan::PipelineCache>();
+
+            this->frame_manager = std::make_unique<vulkan::FrameManager>(
+                &*this->device,
+                &*this->swapchain,
+                *renderPasses.depth_buffer,
+                **renderPasses.final_raster_pass);
+        };
+
+        if (maybeWriteLockedRenderPass.has_value())
+        {
+            renderPassInitFunc(**maybeWriteLockedRenderPass);
+        }
+        else
+        {
+            this->render_passes.writeLock(renderPassInitFunc);
         }
 
-        this->voxel_renderer = std::make_unique<vulkan::voxel::ComputeRenderer>(
-            *this,
-            this->device.get(),
-            this->allocator.get(),
-            this->pipelines.get(),
-            this->swapchain->getExtent());
-
-        this->menu = std::make_unique<ImGuiMenu>(
-            *this->window,
-            **this->instance,
-            *this->device,
-            **this->render_pass);
-
-        this->menu->bindImage(this->voxel_renderer->getImage());
+        util::logTrace("Finished initialization of renderer");
     }
 
-    void Renderer::registerObject(
-        const std::shared_ptr<const Object>& objectToRegister) const
+    void Renderer::registerRecordable(
+        const std::shared_ptr<const recordables::Recordable>& objectToRegister)
+        const
     {
-        this->draw_objects.insert(
+        this->recordable_registry.insert(
             {objectToRegister->getUUID(), std::weak_ptr {objectToRegister}});
     }
 } // namespace gfx

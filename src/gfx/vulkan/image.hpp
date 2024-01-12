@@ -17,6 +17,7 @@ namespace gfx::vulkan
     {
     public:
 
+        Image2D();
         Image2D(
             Allocator*,
             vk::Device,
@@ -26,7 +27,8 @@ namespace gfx::vulkan
             vk::ImageUsageFlags,
             vk::ImageAspectFlags,
             vk::ImageTiling,
-            vk::MemoryPropertyFlags);
+            vk::MemoryPropertyFlags,
+            const std::string& name);
         ~Image2D();
 
         Image2D(const Image2D&)             = delete;

@@ -1,7 +1,7 @@
 #ifndef SRC_GFX_TRANSFORM_HPP
 #define SRC_GFX_TRANSFORM_HPP
 
-#include <glm/gtc/quaternion.hpp>
+// #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>

@@ -13,7 +13,7 @@ namespace game
     void Player::tick()
     {
         // TODO: moving diaginally is faster
-        const float MoveScale        = this->game.renderer.isActionActive(
+        const float moveScale        = this->game.renderer.isActionActive(
                                     gfx::Window::Action::PlayerSprint)
                                          ? 25.0f
                                          : 10.0f;
@@ -21,7 +21,7 @@ namespace game
 
         this->camera.addPosition(
             this->camera.getForwardVector()
-            * this->game.getTickDeltaTimeSeconds() * MoveScale
+            * this->game.getTickDeltaTimeSeconds() * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveForward)
                    ? 1.0f
@@ -29,7 +29,7 @@ namespace game
 
         this->camera.addPosition(
             -this->camera.getForwardVector()
-            * this->game.getTickDeltaTimeSeconds() * MoveScale
+            * this->game.getTickDeltaTimeSeconds() * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveBackward)
                    ? 1.0f
@@ -37,7 +37,7 @@ namespace game
 
         this->camera.addPosition(
             -this->camera.getRightVector()
-            * this->game.getTickDeltaTimeSeconds() * MoveScale
+            * this->game.getTickDeltaTimeSeconds() * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveLeft)
                    ? 1.0f
@@ -45,7 +45,7 @@ namespace game
 
         this->camera.addPosition(
             this->camera.getRightVector() * this->game.getTickDeltaTimeSeconds()
-            * MoveScale
+            * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveRight)
                    ? 1.0f
@@ -53,7 +53,7 @@ namespace game
 
         this->camera.addPosition(
             gfx::Transform::UpVector * this->game.getTickDeltaTimeSeconds()
-            * MoveScale
+            * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveUp)
                    ? 1.0f
@@ -61,7 +61,7 @@ namespace game
 
         this->camera.addPosition(
             -gfx::Transform::UpVector * this->game.getTickDeltaTimeSeconds()
-            * MoveScale
+            * moveScale
             * (this->game.renderer.isActionActive(
                    gfx::Window::Action::PlayerMoveDown)
                    ? 1.0f

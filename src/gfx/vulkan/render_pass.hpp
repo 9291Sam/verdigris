@@ -1,10 +1,10 @@
 #ifndef SRC_GFX_VULKAN_RENDER_PASS_HPP
 #define SRC_GFX_VULKAN_RENDER_PASS_HPP
 
+#include <array>
 #include <expected>
+#include <functional>
 #include <gfx/camera.hpp>
-#include <gfx/object.hpp>
-#include <span>
 #include <util/misc.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -12,6 +12,7 @@
 namespace gfx
 {
     class ImGuiMenu;
+    class Recordable;
 } // namespace gfx
 
 namespace gfx::vulkan
@@ -20,7 +21,6 @@ namespace gfx::vulkan
     class Image2D;
     class Swapchain;
     class Frame;
-    class PipelineManager;
 
     namespace voxel
     {
@@ -31,7 +31,12 @@ namespace gfx::vulkan
     {
     public:
 
-        RenderPass(Device*, Swapchain*, const Image2D& depthBuffer);
+        RenderPass(
+            vk::Device,
+            vk::RenderPassCreateInfo,
+            std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>,
+            std::span<vk::ClearValue>,
+            const std::string& name);
         ~RenderPass() = default;
 
         RenderPass()                              = delete;
@@ -40,65 +45,46 @@ namespace gfx::vulkan
         RenderPass& operator= (const RenderPass&) = delete;
         RenderPass& operator= (RenderPass&&)      = delete;
 
+        void setFramebuffer(vk::Framebuffer, vk::Extent2D) const;
+        void recordWith(
+            vk::CommandBuffer commandBuffer, std::invocable<> auto&& func) const
+            requires std::is_nothrow_invocable_v<decltype(func)>
+        {
+            vk::RenderPassBeginInfo renderPassBeginInfo {
+                .sType {vk::StructureType::eRenderPassBeginInfo},
+                .pNext {nullptr},
+                .renderPass {*this->render_pass},
+                .framebuffer {this->framebuffer},
+                .renderArea {vk::Rect2D {
+                    .offset {0, 0},
+                    .extent {this->framebuffer_extent},
+                }},
+                .clearValueCount {
+                    static_cast<std::uint32_t>(this->clear_values_size)},
+                .pClearValues {this->maybe_clear_values.data()},
+            };
+
+            commandBuffer.beginRenderPass(
+                renderPassBeginInfo, vk::SubpassContents::eInline);
+            {
+                func();
+            }
+            commandBuffer.endRenderPass();
+        }
+
+        // TODO: remove and give imgui its own renderpass!
         [[nodiscard]] vk::RenderPass operator* () const;
+        [[nodiscard]] vk::Extent2D   getExtent() const;
 
-        // This frame and (maybe) the previous frame's fence
-        [[nodiscard]] std::pair<Frame&, std::optional<vk::Fence>>
-        getNextFrame();
+
 
     private:
-        vk::UniqueRenderPass render_pass;
-        Device*              device;
-
-        /// Because of how vulkan's image acquisition works, we're pigeonholed
-        /// into doing this design and there's not much you can do about it.
-        std::vector<vk::UniqueFramebuffer> framebuffers;
-        std::size_t                        next_frame_index;
-        std::vector<Frame>                 frames;
+        vk::UniqueRenderPass          render_pass;
+        mutable vk::Framebuffer       framebuffer;
+        mutable vk::Extent2D          framebuffer_extent;
+        std::size_t                   clear_values_size;
+        std::array<vk::ClearValue, 2> maybe_clear_values;
     }; // class RenderPass
-
-    class Frame
-    {
-    public:
-        struct ResizeNeeded
-        {};
-    public:
-
-        Frame();
-        Frame(
-            std::vector<vk::UniqueFramebuffer>*,
-            Device*,
-            Swapchain*,
-            vk::RenderPass);
-        ~Frame();
-
-        Frame(const Frame&)                 = delete;
-        Frame(Frame&&) noexcept             = default;
-        Frame& operator= (const Frame&)     = delete;
-        Frame& operator= (Frame&&) noexcept = default;
-
-        [[nodiscard]] vk::Fence getFrameInFlightFence() const;
-
-        // @return {true}, is resize needed
-        [[nodiscard]] std::expected<void, ResizeNeeded> render(
-            Camera,
-            std::span<const Object*>,
-            voxel::ComputeRenderer*,
-            ImGuiMenu*,
-            std::optional<vk::Fence> previousFrameInFlightFence);
-
-    private:
-        Device*                             device;
-        Swapchain*                          swapchain;
-        vk::RenderPass                      render_pass;
-        std::vector<vk::UniqueFramebuffer>* framebuffers;
-
-        vk::UniqueSemaphore     image_available;
-        vk::UniqueSemaphore     render_finished;
-        vk::UniqueFence         frame_in_flight;
-        vk::UniqueCommandPool   command_pool;
-        vk::UniqueCommandBuffer command_buffer;
-    };
 
 } // namespace gfx::vulkan
 

@@ -16,7 +16,8 @@ namespace gfx::vulkan
         vk::ImageUsageFlags     usage,
         vk::ImageAspectFlags    aspect_,
         vk::ImageTiling         tiling,
-        vk::MemoryPropertyFlags memoryPropertyFlags)
+        vk::MemoryPropertyFlags memoryPropertyFlags,
+        const std::string&      name)
         : allocator {**allocator_}
         , extent {extent_}
         , format {format_}
@@ -95,6 +96,34 @@ namespace gfx::vulkan
         };
 
         this->view = device.createImageViewUnique(imageViewCreateInfo);
+
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableGFXValidation>())
+        {
+            {
+                vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                    .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                    .pNext {nullptr},
+                    .objectType {vk::ObjectType::eImage},
+                    .objectHandle {std::bit_cast<std::uint64_t>(this->image)},
+                    .pObjectName {name.c_str()},
+                };
+
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
+            }
+
+            {
+                vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                    .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                    .pNext {nullptr},
+                    .objectType {vk::ObjectType::eImageView},
+                    .objectHandle {std::bit_cast<std::uint64_t>(*this->view)},
+                    .pObjectName {name.c_str()},
+                };
+
+                device.setDebugUtilsObjectNameEXT(nameSetInfo);
+            }
+        }
     }
 
     Image2D::~Image2D()

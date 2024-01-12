@@ -22,7 +22,7 @@ namespace gfx::vulkan
             std::size_t sizeBytes,
             vk::BufferUsageFlags,
             vk::MemoryPropertyFlags,
-            std::string name = {});
+            std::string name);
         ~Buffer();
 
         Buffer(const Buffer&) = delete;
