@@ -32,10 +32,10 @@ namespace gfx::vulkan
 
         explicit FrameManager(
             Device*,
-            Allocator*,
             Swapchain*,
-            vk::RenderPass finalRasterPass,
-            std::size_t    numberOfFlyingFrames = 3);
+            const vulkan::Image2D& depthBuffer,
+            vk::RenderPass         finalRasterPass,
+            std::size_t            numberOfFlyingFrames = 3);
         ~FrameManager();
 
         // attaches swapchain's framebuffer to final renderpass
@@ -50,7 +50,6 @@ namespace gfx::vulkan
 
         Swapchain*                         swapchain;
         std::vector<vk::UniqueFramebuffer> swapchain_framebuffers;
-        vulkan::Image2D                    depth_buffer;
 
         vk::RenderPass final_raster_pass;
 

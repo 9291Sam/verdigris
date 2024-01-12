@@ -17,23 +17,13 @@ namespace
 namespace gfx::vulkan
 {
     FrameManager::FrameManager(
-        Device*        device_,
-        Allocator*     allocator,
-        Swapchain*     swapchain_,
-        vk::RenderPass finalRasterPass,
-        std::size_t    numberOfFlyingFrames)
+        Device*                device_,
+        Swapchain*             swapchain_,
+        const vulkan::Image2D& depthBuffer,
+        vk::RenderPass         finalRasterPass,
+        std::size_t            numberOfFlyingFrames)
         : device {device_}
         , swapchain {swapchain_} // clang-format off
-        , depth_buffer {
-            allocator,
-            device_->asLogicalDevice(),
-            swapchain_->getExtent(),
-            vk::Format::eD32Sfloat,
-            vk::ImageLayout::eUndefined,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            vk::ImageAspectFlagBits::eDepth,
-            vk::ImageTiling::eOptimal,
-            vk::MemoryPropertyFlagBits::eDeviceLocal}
         // clang-format on
         , final_raster_pass {finalRasterPass}
         , maybe_previous_frame_fence {std::nullopt}
@@ -56,7 +46,7 @@ namespace gfx::vulkan
                     this->swapchain_framebuffers[i];
 
                 std::array<vk::ImageView, 2> attachments {
-                    *swapchainImage, *this->depth_buffer};
+                    *swapchainImage, *depthBuffer};
 
                 vk::FramebufferCreateInfo frameBufferCreateInfo {
                     .sType {vk::StructureType::eFramebufferCreateInfo},
@@ -304,23 +294,22 @@ namespace gfx::vulkan
         vk::Pipeline                                     currentPipeline {};
         gfx::recordables::Recordable::DescriptorRefArray currentDescriptors {};
 
+        std::size_t idx = 0;
         for (const auto& [maybeRenderPass, renderPassRecordables] : recordables)
         {
             auto recordFunc = [&] noexcept
             {
                 for (const recordables::Recordable* r : renderPassRecordables)
                 {
-                    util::logDebug(
-                        "Recording r @ {} {}",
-                        static_cast<const void*>(r),
-                        std::to_underlying(r->getDrawStage()));
-
                     r->bind(
                         *this->command_buffer,
                         currentPipeline,
                         currentDescriptors);
                     r->record(*this->command_buffer, camera);
                 }
+
+                util::logDebug(
+                    "Recorded {} @ {}", renderPassRecordables.size(), idx++);
             };
 
             if (maybeRenderPass.has_value())

@@ -6,7 +6,6 @@
 #include <magic_enum_all.hpp>
 #include <thread>
 #include <util/log.hpp>
-#include <vulkan/vulkan.hpp>
 
 // NOLINTBEGIN clang-format off
 

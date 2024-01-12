@@ -13,7 +13,6 @@
 #include <magic_enum_all.hpp>
 #include <util/log.hpp>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
 
 namespace gfx
 {
@@ -243,6 +242,11 @@ namespace gfx
 
         std::map<DrawStage, std::vector<const recordables::Recordable*>>
             stageMap;
+        magic_enum::enum_for_each<DrawStage>(
+            [&](DrawStage s)
+            {
+                stageMap[s] = {};
+            });
 
         for (const std::shared_ptr<const recordables::Recordable>&
                  strongRenderable : renderables)
@@ -267,6 +271,15 @@ namespace gfx
                          std::move(recordables)});
                 }
             });
+
+        util::logDebug("drawRecordables size: {}", drawRecordables.size());
+        for (const auto& [maybePass, recordables] : drawRecordables)
+        {
+            util::logDebug(
+                "Pass: {} | Recordables: {}",
+                maybePass.has_value() ? (void*)&*maybePass : nullptr,
+                recordables.size());
+        }
 
         if (!this->frame_manager->renderObjectsFromCamera(
                 this->draw_camera, drawRecordables))
@@ -369,7 +382,8 @@ namespace gfx
                 vk::ImageUsageFlagBits::eDepthStencilAttachment,
                 vk::ImageAspectFlagBits::eDepth,
                 vk::ImageTiling::eOptimal,
-                vk::MemoryPropertyFlagBits::eDeviceLocal);
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                "Depth buffer");
 
             renderPasses.voxel_discovery_image =
                 std::make_unique<vulkan::Image2D>(
@@ -378,10 +392,12 @@ namespace gfx
                     this->swapchain->getExtent(),
                     vk::Format::eR32Sint,
                     vk::ImageLayout::eUndefined,
-                    vk::ImageUsageFlagBits::eColorAttachment,
+                    vk::ImageUsageFlagBits::eColorAttachment
+                        | vk::ImageUsageFlagBits::eSampled,
                     vk::ImageAspectFlagBits::eColor,
                     vk::ImageTiling::eOptimal,
-                    vk::MemoryPropertyFlagBits::eDeviceLocal);
+                    vk::MemoryPropertyFlagBits::eDeviceLocal,
+                    "Voxel discovery ID image");
 
             {
                 {
@@ -403,7 +419,7 @@ namespace gfx
                             .format {renderPasses.depth_buffer->getFormat()},
                             .samples {vk::SampleCountFlagBits::e1},
                             .loadOp {vk::AttachmentLoadOp::eClear},
-                            .storeOp {vk::AttachmentStoreOp::eDontCare},
+                            .storeOp {vk::AttachmentStoreOp::eStore},
                             .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
                             .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
                             .initialLayout {vk::ImageLayout::eUndefined},
@@ -469,14 +485,15 @@ namespace gfx
                             vk::ClearColorValue {.uint32 {{0U, 0U, 0U, 0U}}}}},
                         vk::ClearValue {
                             .depthStencil {vk::ClearDepthStencilValue {
-                                .depth {0.0f}, .stencil {0}}}}};
+                                .depth {1.0f}, .stencil {0}}}}};
 
                     renderPasses.voxel_discovery_pass =
                         std::make_unique<vulkan::RenderPass>(
                             this->device->asLogicalDevice(),
                             renderPassCreateInfo,
                             std::nullopt,
-                            clearValues);
+                            clearValues,
+                            "Voxel Discovery");
                 }
 
                 {
@@ -526,7 +543,9 @@ namespace gfx
                         .format {renderPasses.depth_buffer->getFormat()},
                         .samples {vk::SampleCountFlagBits::e1},
                         .loadOp {vk::AttachmentLoadOp::eLoad},
-                        .storeOp {vk::AttachmentStoreOp::eDontCare},
+                        .storeOp {
+                            vk::AttachmentStoreOp::eStore}, // why isnt this
+                                                            // dont care?
                         .stencilLoadOp {vk::AttachmentLoadOp::eDontCare},
                         .stencilStoreOp {vk::AttachmentStoreOp::eDontCare},
                         .initialLayout {
@@ -588,14 +607,17 @@ namespace gfx
                     .pDependencies {&subpassDependency},
                 };
 
-                std::array<vk::ClearValue, 0> clearValues {};
+                std::array<vk::ClearValue, 1> clearValues {
+                    vk::ClearValue {.color {vk::ClearColorValue {
+                        .float32 {{0.01f, 0.03f, 0.04f, 1.0f}}}}}};
 
                 renderPasses.final_raster_pass =
                     std::make_unique<vulkan::RenderPass>(
                         this->device->asLogicalDevice(),
                         renderPassCreateInfo,
                         std::nullopt,
-                        clearValues);
+                        clearValues,
+                        "Final Raster");
 
                 renderPasses.final_raster_pass->setFramebuffer(
                     nullptr, this->swapchain->getExtent());
@@ -612,8 +634,8 @@ namespace gfx
 
             this->frame_manager = std::make_unique<vulkan::FrameManager>(
                 &*this->device,
-                &*this->allocator,
                 &*this->swapchain,
+                *renderPasses.depth_buffer,
                 **renderPasses.final_raster_pass);
         };
 

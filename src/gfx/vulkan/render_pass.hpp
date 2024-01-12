@@ -35,7 +35,8 @@ namespace gfx::vulkan
             vk::Device,
             vk::RenderPassCreateInfo,
             std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>,
-            std::span<vk::ClearValue>);
+            std::span<vk::ClearValue>,
+            const std::string& name);
         ~RenderPass() = default;
 
         RenderPass()                              = delete;

@@ -1,4 +1,5 @@
 #include "render_pass.hpp"
+#include <engine/settings.hpp>
 #include <util/log.hpp>
 
 namespace gfx::vulkan
@@ -8,7 +9,8 @@ namespace gfx::vulkan
         vk::RenderPassCreateInfo renderPassCreateInfo,
         std::optional<std::pair<vk::Framebuffer, vk::Extent2D>>
                                   maybeFrameBuffer,
-        std::span<vk::ClearValue> maybeClearValues)
+        std::span<vk::ClearValue> maybeClearValues,
+        const std::string&        name)
         : render_pass {device.createRenderPass(renderPassCreateInfo)}
         , framebuffer {maybeFrameBuffer.has_value() ? maybeFrameBuffer->first : nullptr}
         , framebuffer_extent {maybeFrameBuffer.has_value() ? maybeFrameBuffer->second : vk::Extent2D {}}
@@ -24,6 +26,21 @@ namespace gfx::vulkan
             maybeClearValues.begin(),
             maybeClearValues.end(),
             this->maybe_clear_values.begin());
+
+        if (engine::getSettings()
+                .lookupSetting<engine::Setting::EnableGFXValidation>())
+        {
+            vk::DebugUtilsObjectNameInfoEXT nameSetInfo {
+                .sType {vk::StructureType::eDebugUtilsObjectNameInfoEXT},
+                .pNext {nullptr},
+                .objectType {vk::ObjectType::eRenderPass},
+                .objectHandle {
+                    std::bit_cast<std::uint64_t>(*this->render_pass)},
+                .pObjectName {name.c_str()},
+            };
+
+            device.setDebugUtilsObjectNameEXT(nameSetInfo);
+        }
     }
 
     void RenderPass::setFramebuffer(
