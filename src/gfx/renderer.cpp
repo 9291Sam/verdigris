@@ -596,6 +596,9 @@ namespace gfx
                         renderPassCreateInfo,
                         std::nullopt,
                         clearValues);
+
+                renderPasses.final_raster_pass->setFramebuffer(
+                    nullptr, this->swapchain->getExtent());
             }
 
             this->debug_menu = recordables::DebugMenu::create(

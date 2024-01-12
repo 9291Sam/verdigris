@@ -100,7 +100,8 @@ namespace gfx::recordables
         this->renderer.render_passes.readLock(
             [&](const Renderer::RenderPasses& passes)
             {
-                std::optional<vulkan::RenderPass*> maybeRenderPass;
+                std::optional<const vulkan::RenderPass*> maybeRenderPass =
+                    passes.acquireRenderPassFromStage(accessStage);
 
                 util::assertFatal(
                     maybeRenderPass.has_value(),
@@ -108,7 +109,7 @@ namespace gfx::recordables
                     "renderpass!",
                     std::to_underlying(accessStage));
 
-                func(*passes.acquireRenderPassFromStage(accessStage));
+                func(*maybeRenderPass);
             });
     }
 

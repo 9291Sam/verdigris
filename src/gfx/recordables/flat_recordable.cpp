@@ -137,7 +137,7 @@ namespace gfx::recordables
 
                 this->accessRenderPass(
                     this->stage,
-                    [&](const vulkan::RenderPass* renderPass)
+                    [&](const vulkan::RenderPass* renderPass) -> void
                     {
                         std::vector<vk::UniqueShaderModule> uniqueShaders {};
 
@@ -158,6 +158,24 @@ namespace gfx::recordables
                             pipelineShaders.push_back(
                                 {vk::ShaderStageFlagBits::eFragment,
                                  *fragmentShader});
+
+                            uniqueShaders.push_back(std::move(fragmentShader));
+                        }
+
+                        {
+                            vk::UniqueShaderModule vertexShader =
+                                vulkan::createShaderFromFile(
+                                    this->getAllocator()
+                                        .getOwningDevice()
+                                        ->asLogicalDevice(),
+                                    "src/gfx/vulkan/shaders/"
+                                    "flat_pipeline.vert.bin");
+
+                            pipelineShaders.push_back(
+                                {vk::ShaderStageFlagBits::eVertex,
+                                 *vertexShader});
+
+                            uniqueShaders.push_back(std::move(vertexShader));
                         }
 
                         std::unique_ptr<vulkan::Pipeline> newPipeline {
@@ -192,14 +210,18 @@ namespace gfx::recordables
                                 }},
                                 "FlatRecordable"}};
 
-                        return this->getPipelineCache().cachePipeline(
+                        util::logDebug(
+                            "Created Pipeline @ {}",
+                            static_cast<const void*>(newPipeline.get()));
+
+                        maybeHandle = this->getPipelineCache().cachePipeline(
                             std::move(newPipeline));
                     });
 
                 return maybeHandle;
             });
 
-        util::logDebug("Acquired handle Pipeline Handle {}", handle.getID());
+        util::logDebug("Acquired handle Pipeline Handle {} @ ", handle.getID());
 
         return this->getPipelineCache().lookupPipeline(handle);
     }
@@ -225,6 +247,7 @@ namespace gfx::recordables
         , number_of_indices {indicies.size()}
     {
         this->pipeline = this->getPipeline();
+
         util::assertFatal(this->pipeline != nullptr, "we didnt get a pipeline");
 
         this->future_vertex_buffer = std::async(

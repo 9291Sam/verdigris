@@ -67,8 +67,16 @@ namespace gfx::vulkan
     PipelineCache::PipelineHandle
     PipelineCache::cachePipeline(std::unique_ptr<Pipeline> pipeline) const
     {
+        util::logDebug("Next free ID: {}", this->next_free_id.load());
+
         PipelineHandle handle {
             this->next_free_id.fetch_add(1, std::memory_order_acq_rel)};
+
+        util::logDebug(
+            "Next free ID: {} | Gave: {} | Stored Addr {}",
+            this->next_free_id.load(),
+            handle.getID(),
+            static_cast<const void*>(pipeline.get()));
 
         this->cache.insert({handle, std::move(pipeline)});
 
@@ -92,6 +100,11 @@ namespace gfx::vulkan
 
                 visited = true;
             });
+
+        util::logDebug(
+            " Pipeline Lookup | Visited: {} | addr {}",
+            visited,
+            static_cast<const void*>(stablePipeline));
 
         return stablePipeline;
     }
@@ -204,6 +217,12 @@ namespace gfx::vulkan
         std::span<const vk::PushConstantRange>   pushConstants,
         std::string                              name)
     {
+        util::logDebug(
+            "RenderPass addr {} | Extent: {}, {}",
+            static_cast<const void*>(renderPass),
+            renderPass->getExtent().width,
+            renderPass->getExtent().height);
+
         const vk::Viewport viewport {
             .x {0.0f},
             .y {0.0f},
