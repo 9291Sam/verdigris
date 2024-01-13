@@ -181,110 +181,113 @@ namespace gfx
 
     void Renderer::drawFrame()
     {
-        std::vector<std::shared_ptr<const recordables::Recordable>>
-            renderables = [&]
+        std::expected<void, vulkan::ResizeNeeded> result = [&]
         {
-            std::vector<util::UUID> weakRecordablesToRemove {};
-
             std::vector<std::shared_ptr<const recordables::Recordable>>
-                                           strongMaybeDrawRenderables {};
-            std::vector<std::future<void>> maybeDrawStateUpdateFutures {};
-
-            // Collect the strong
-            for (const auto& [weakUUID, weakRecordable] :
-                 this->recordable_registry.access())
+                renderables = [&]
             {
-                if (std::shared_ptr<const recordables::Recordable> recordable =
-                        weakRecordable.lock())
+                std::vector<util::UUID> weakRecordablesToRemove {};
+
+                std::vector<std::shared_ptr<const recordables::Recordable>>
+                                               strongMaybeDrawRenderables {};
+                std::vector<std::future<void>> maybeDrawStateUpdateFutures {};
+
+                // Collect the strong
+                for (const auto& [weakUUID, weakRecordable] :
+                     this->recordable_registry.access())
                 {
-                    maybeDrawStateUpdateFutures.push_back(std::async(
-                        [rawRecordable = recordable.get()]
-                        {
-                            rawRecordable->updateFrameState();
-                        }));
-                    strongMaybeDrawRenderables.push_back(std::move(recordable));
+                    if (std::shared_ptr<const recordables::Recordable>
+                            recordable = weakRecordable.lock())
+                    {
+                        maybeDrawStateUpdateFutures.push_back(std::async(
+                            [rawRecordable = recordable.get()]
+                            {
+                                rawRecordable->updateFrameState();
+                            }));
+                        strongMaybeDrawRenderables.push_back(
+                            std::move(recordable));
+                    }
+                    else
+                    {
+                        weakRecordablesToRemove.push_back(weakUUID);
+                    }
                 }
-                else
+
+                // Purge the weak
+                for (const util::UUID& weakID : weakRecordablesToRemove)
                 {
-                    weakRecordablesToRemove.push_back(weakUUID);
+                    this->recordable_registry.remove(weakID);
                 }
+
+                std::vector<std::shared_ptr<const recordables::Recordable>>
+                    strongDrawingRenderables {};
+
+                maybeDrawStateUpdateFutures.clear(); // join all futures
+
+                for (std::shared_ptr<const recordables::Recordable>&
+                         maybeDrawingRecordable : strongMaybeDrawRenderables)
+                {
+                    if (maybeDrawingRecordable->shouldDraw())
+                    {
+                        strongDrawingRenderables.push_back(
+                            std::move(maybeDrawingRecordable));
+                    }
+                }
+
+                return strongDrawingRenderables;
+            }();
+
+            if (this->debug_menu->shouldDraw())
+            {
+                renderables.push_back(this->debug_menu);
             }
 
-            // Purge the weak
-            for (const util::UUID& weakID : weakRecordablesToRemove)
+            //! DrawStage is useless because of how all commands in a command
+            //! buffer overlap with one another'
+
+            std::map<DrawStage, std::vector<const recordables::Recordable*>>
+                stageMap;
+            magic_enum::enum_for_each<DrawStage>(
+                [&](DrawStage s)
+                {
+                    stageMap[s] = {};
+                });
+
+            for (const std::shared_ptr<const recordables::Recordable>&
+                     strongRenderable : renderables)
             {
-                this->recordable_registry.remove(weakID);
+                stageMap[strongRenderable->getDrawStage()].push_back(
+                    &*strongRenderable);
             }
 
-            std::vector<std::shared_ptr<const recordables::Recordable>>
-                strongDrawingRenderables {};
+            std::vector<std::pair<
+                std::optional<const vulkan::RenderPass*>,
+                std::vector<const recordables::Recordable*>>>
+                drawRecordables {};
 
-            maybeDrawStateUpdateFutures.clear(); // join all futures
-
-            for (std::shared_ptr<const recordables::Recordable>&
-                     maybeDrawingRecordable : strongMaybeDrawRenderables)
-            {
-                if (maybeDrawingRecordable->shouldDraw())
-                {
-                    strongDrawingRenderables.push_back(
-                        std::move(maybeDrawingRecordable));
-                }
-            }
-
-            return strongDrawingRenderables;
-        }();
-
-        if (this->debug_menu->shouldDraw())
-        {
-            renderables.push_back(this->debug_menu);
-        }
-
-        //! DrawStage is useless because of how all commands in a command buffer
-        //! overlap with one another'
-
-        std::map<DrawStage, std::vector<const recordables::Recordable*>>
-            stageMap;
-        magic_enum::enum_for_each<DrawStage>(
-            [&](DrawStage s)
-            {
-                stageMap[s] = {};
-            });
-
-        for (const std::shared_ptr<const recordables::Recordable>&
-                 strongRenderable : renderables)
-        {
-            stageMap[strongRenderable->getDrawStage()].push_back(
-                &*strongRenderable);
-        }
-
-        std::vector<std::pair<
-            std::optional<const vulkan::RenderPass*>,
-            std::vector<const recordables::Recordable*>>>
-            drawRecordables {};
-
-        //! I don't have to say this is bad, this is bad, but it's not a race!
-        this->render_passes.readLock(
-            [&](const RenderPasses& renderPasses)
-            {
-                for (auto& [stage, recordables] : stageMap)
-                {
-                    drawRecordables.push_back(
-                        {renderPasses.acquireRenderPassFromStage(stage),
-                         std::move(recordables)});
-                }
-            });
-
-        util::logDebug("drawRecordables size: {}", drawRecordables.size());
-        for (const auto& [maybePass, recordables] : drawRecordables)
-        {
-            util::logDebug(
-                "Pass: {} | Recordables: {}",
-                maybePass.has_value() ? (void*)&*maybePass : nullptr,
-                recordables.size());
-        }
-
-        std::expected<void, vulkan::ResizeNeeded> result =
+            //! I don't have to say this is bad, this is bad, but it's not a
+            //! race!
             this->render_passes.readLock(
+                [&](const RenderPasses& renderPasses)
+                {
+                    for (auto& [stage, recordables] : stageMap)
+                    {
+                        drawRecordables.push_back(
+                            {renderPasses.acquireRenderPassFromStage(stage),
+                             std::move(recordables)});
+                    }
+                });
+
+            util::logDebug("drawRecordables size: {}", drawRecordables.size());
+            for (const auto& [maybePass, recordables] : drawRecordables)
+            {
+                util::logDebug(
+                    "Pass: {} | Recordables: {}",
+                    maybePass.has_value() ? (void*)&*maybePass : nullptr,
+                    recordables.size());
+            }
+
+            return this->render_passes.readLock(
                 [&](const RenderPasses& renderPasses)
                 {
                     return this->frame_manager->renderObjectsFromCamera(
@@ -292,6 +295,12 @@ namespace gfx
                         drawRecordables,
                         *renderPasses.pipeline_cache);
                 });
+        }();
+
+        util::assertFatal(
+            this->debug_menu.use_count() == 1,
+            "Debug menu use count was not 0! | Count: {}",
+            this->debug_menu.use_count());
 
         if (!result)
         {
