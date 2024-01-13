@@ -46,12 +46,12 @@ namespace gfx::vulkan
 
     RenderPass::~RenderPass()
     {
-        util::logDebug(
-            "Destroying {} | {} | {} | {}",
-            this->name,
-            (void*)VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyRenderPass,
-            (void*)&this->render_pass.getDispatch(),
-            (void*)this->render_pass.getOwner());
+        // util::logDebug(
+        //     "Destroying {} | {} | {} | {}",
+        //     this->name,
+        //     (void*)VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyRenderPass,
+        //     (void*)&this->render_pass.getDispatch(),
+        //     (void*)this->render_pass.getOwner());
     }
 
     void RenderPass::setFramebuffer(

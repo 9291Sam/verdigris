@@ -278,14 +278,15 @@ namespace gfx
                     }
                 });
 
-            util::logDebug("drawRecordables size: {}", drawRecordables.size());
-            for (const auto& [maybePass, recordables] : drawRecordables)
-            {
-                util::logDebug(
-                    "Pass: {} | Recordables: {}",
-                    maybePass.has_value() ? (void*)&*maybePass : nullptr,
-                    recordables.size());
-            }
+            // util::logDebug("drawRecordables size: {}",
+            // drawRecordables.size()); for (const auto& [maybePass,
+            // recordables] : drawRecordables)
+            // {
+            // util::logDebug(
+            //     "Pass: {} | Recordables: {}",
+            //     maybePass.has_value() ? (void*)&*maybePass : nullptr,
+            //     recordables.size());
+            // }
 
             return this->render_passes.readLock(
                 [&](const RenderPasses& renderPasses)
@@ -369,7 +370,7 @@ namespace gfx
             {
                 // Destroy things that need to be recreated
                 {
-                    this->debug_menu.reset();
+                    // this->debug_menu.reset();
                     this->frame_manager.reset();
 
                     renderPasses.pipeline_cache.reset();
@@ -651,12 +652,15 @@ namespace gfx
                 *renderPasses.depth_buffer,
                 **renderPasses.final_raster_pass);
 
-            this->debug_menu = recordables::DebugMenu::create(
-                *this,
-                *this->instance,
-                *this->device,
-                *this->window,
-                **renderPasses.final_raster_pass);
+            if (this->debug_menu == nullptr)
+            {
+                this->debug_menu = recordables::DebugMenu::create(
+                    *this,
+                    *this->instance,
+                    *this->device,
+                    *this->window,
+                    **renderPasses.final_raster_pass);
+            }
         };
 
         if (maybeWriteLockedRenderPass.has_value())

@@ -241,7 +241,7 @@ namespace gfx::vulkan
                 util::logTrace(
                     "Acquired suboptimal next image. Are we in a "
                     "resize?");
-                [[fallthrough]];
+                return std::unexpected(ResizeNeeded {});
             case vk::Result::eSuccess:
                 nextImageIndex =
                     static_cast<std::uint32_t>(maybeNextFrameBufferIndex);
@@ -317,9 +317,6 @@ namespace gfx::vulkan
                     r->record(
                         *this->command_buffer, getPipelineLayout(), camera);
                 }
-
-                util::logDebug(
-                    "Recorded {} @ {}", renderPassRecordables.size(), idx++);
             };
 
             if (maybeRenderPass.has_value())

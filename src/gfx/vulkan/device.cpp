@@ -106,9 +106,6 @@ namespace gfx::vulkan
 #ifdef __APPLE__
                 VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif // __APPLE__
-       // #ifndef NDEBUG
-       //                 VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-       // #endif
             };
 
             // useless function call, silences a warning and its not in the
@@ -271,7 +268,7 @@ namespace gfx::vulkan
 
     Device::~Device()
     {
-        util::logDebug("Destroying device!");
+        // util::logDebug("Destroying device!");
     }
 
     bool Device::shouldBuffersStage() const

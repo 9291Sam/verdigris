@@ -16,5 +16,8 @@ void main()
 {
     gl_Position = in_push_constants.model_view_proj * vec4(in_position, 1.0);
     out_color   = in_color;
-    // out_normal  = in_normal;
+    if (in_normal == vec3(0.0004))
+    {
+        out_color = vec4(1.0);
+    }
 }

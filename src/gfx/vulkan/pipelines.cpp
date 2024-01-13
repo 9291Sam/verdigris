@@ -102,9 +102,9 @@ namespace gfx::vulkan
 
         util::assertFatal(visits == 1, "Pipeline hash collision");
 
-        util::logDebug(
-            " Pipeline Lookup | addr {}",
-            static_cast<const void*>(stablePipeline));
+        // util::logDebug(
+        //     " Pipeline Lookup | addr {}",
+        //     static_cast<const void*>(stablePipeline));
 
         return stablePipeline;
     }

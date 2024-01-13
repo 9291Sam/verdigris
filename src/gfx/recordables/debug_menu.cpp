@@ -177,8 +177,10 @@ namespace gfx::recordables
         util::logTrace("Beginning font upload");
 
         // Upload fonts
-        device.accessQueue(
-            vk::QueueFlagBits::eGraphics,
+
+    retry:
+
+        bool result = device.getMainGraphicsQueue().tryAccess(
             [&](vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
             {
                 const vk::CommandBufferBeginInfo beginInfo {
@@ -209,15 +211,20 @@ namespace gfx::recordables
                 queue.submit(submitInfo, *imguiFontUploadFence);
             });
 
+        if (!result)
+        {
+            goto retry;
+        }
+
         util::logTrace("uploaded fonts");
 
-        const vk::Result result = device.asLogicalDevice().waitForFences(
+        const vk::Result rresult = device.asLogicalDevice().waitForFences(
             *imguiFontUploadFence, vk::True, ~std::uint64_t {0});
 
         util::assertFatal(
-            result == vk::Result::eSuccess,
+            rresult == vk::Result::eSuccess,
             "Failed to wait for upload semaphore imgui | {}",
-            vk::to_string(result));
+            vk::to_string(rresult));
 
         ImGui_ImplVulkan_DestroyFontUploadObjects();
 
@@ -231,10 +238,9 @@ namespace gfx::recordables
         ImGui::DestroyContext();
 
         util::assertFatal(
-            isMenuInitalized.exchange(false),
-            "Only one DebugMenu can be destroyed");
+            isMenuInitalized.load(), "Only one DebugMenu can be destroyed");
 
-        util::logDebug("Destroyed DebugMenu");
+        // util::logDebug("Destroyed DebugMenu");
     }
 
     void DebugMenu::updateFrameState() const
@@ -291,7 +297,7 @@ namespace gfx::recordables
                 const std::string playerPosition = std::format(
                     "Player position: {}",
                     glm::to_string(state.player_position));
-                ImGui::TextUnformatted(playerPosition.c_str());
+                ImGui::TextWrapped("%s", playerPosition.c_str());
 
                 const std::string fpsAndTps = std::format(
                     "FPS: {:.3f} | TPS: {:.3f}"
@@ -300,7 +306,7 @@ namespace gfx::recordables
                     state.tps,
                     1000 / state.fps);
 
-                ImGui::TextUnformatted(fpsAndTps.c_str());
+                ImGui::TextWrapped("%s", fpsAndTps.c_str());
 
                 // const float displayImageAspectRatio =
                 //     static_cast<float>(this->display_image_size.height)

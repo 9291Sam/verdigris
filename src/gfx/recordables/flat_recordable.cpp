@@ -229,12 +229,12 @@ namespace gfx::recordables
                 return maybeHandle;
             });
 
-        util::logDebug(
-            "Acquired handle Pipeline Handle {} @ ",
-            handle.getID().has_value(),
-            handle.getID().has_value()
-                ? static_cast<std::string>(handle.getID().value())
-                : "null");
+        // util::logDebug(
+        //     "Acquired handle Pipeline Handle {} @ {}",
+        //     handle.getID().has_value(),
+        //     handle.getID().has_value()
+        //         ? static_cast<std::string>(handle.getID().value())
+        //         : "null");
 
         return {handle, vk::PipelineBindPoint::eGraphics};
     }
