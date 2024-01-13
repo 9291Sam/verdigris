@@ -80,8 +80,6 @@ namespace gfx
               *this->instance, &*this->device)}
         , swapchain {nullptr}
         , render_passes {RenderPasses {}}
-        , pipeline_cache {nullptr}
-        , frame_manager {nullptr}
         , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , is_cursor_attached {true}
@@ -223,7 +221,7 @@ namespace gfx
 
             maybeDrawStateUpdateFutures.clear(); // join all futures
 
-            for (const std::shared_ptr<const recordables::Recordable>&
+            for (std::shared_ptr<const recordables::Recordable>&
                      maybeDrawingRecordable : strongMaybeDrawRenderables)
             {
                 if (maybeDrawingRecordable->shouldDraw())
@@ -285,8 +283,17 @@ namespace gfx
                 recordables.size());
         }
 
-        if (!this->frame_manager->renderObjectsFromCamera(
-                this->draw_camera, drawRecordables))
+        std::expected<void, vulkan::ResizeNeeded> result =
+            this->render_passes.readLock(
+                [&](const RenderPasses& renderPasses)
+                {
+                    return this->frame_manager->renderObjectsFromCamera(
+                        this->draw_camera,
+                        drawRecordables,
+                        *renderPasses.pipeline_cache);
+                });
+
+        if (!result)
         {
             this->resize();
         }
@@ -355,8 +362,8 @@ namespace gfx
                 {
                     this->debug_menu.reset();
                     this->frame_manager.reset();
-                    this->pipeline_cache.reset();
 
+                    renderPasses.pipeline_cache.reset();
                     renderPasses.final_raster_pass.reset();
                     renderPasses.voxel_discovery_image.reset();
                     renderPasses.voxel_discovery_pass.reset();
@@ -626,20 +633,20 @@ namespace gfx
                 renderPasses.final_raster_pass->setFramebuffer(
                     nullptr, this->swapchain->getExtent());
             }
+            renderPasses.pipeline_cache =
+                std::make_unique<vulkan::PipelineCache>();
+
+            this->frame_manager = std::make_unique<vulkan::FrameManager>(
+                &*this->device,
+                &*this->swapchain,
+                *renderPasses.depth_buffer,
+                **renderPasses.final_raster_pass);
 
             this->debug_menu = recordables::DebugMenu::create(
                 *this,
                 *this->instance,
                 *this->device,
                 *this->window,
-                **renderPasses.final_raster_pass);
-
-            this->pipeline_cache = std::make_unique<vulkan::PipelineCache>();
-
-            this->frame_manager = std::make_unique<vulkan::FrameManager>(
-                &*this->device,
-                &*this->swapchain,
-                *renderPasses.depth_buffer,
                 **renderPasses.final_raster_pass);
         };
 

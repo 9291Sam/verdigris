@@ -67,26 +67,23 @@ namespace gfx::vulkan
     PipelineCache::PipelineHandle
     PipelineCache::cachePipeline(std::unique_ptr<Pipeline> pipeline) const
     {
-        util::logDebug("Next free ID: {}", this->next_free_id.load());
-
-        PipelineHandle handle {
-            this->next_free_id.fetch_add(1, std::memory_order_acq_rel)};
+        PipelineHandle handle {util::UUID {}};
 
         util::logDebug(
-            "Next free ID: {} | Gave: {} | Stored Addr {}",
-            this->next_free_id.load(),
-            handle.getID(),
-            static_cast<const void*>(pipeline.get()));
+            "Cached new pipeline {} @ {}",
+            static_cast<const void*>(pipeline.get()),
+            static_cast<std::string>(*handle.getID()));
 
         this->cache.insert({handle, std::move(pipeline)});
 
         return handle;
     }
 
-    const Pipeline* PipelineCache::lookupPipeline(PipelineHandle handle) const
+    std::expected<const Pipeline*, PipelineCache::InvalidCacheHandle>
+    PipelineCache::lookupPipeline(PipelineHandle handle) const
     {
         const Pipeline* stablePipeline {nullptr};
-        bool            visited = false;
+        std::size_t     visits = 0;
 
         this->cache.visit(
             handle,
@@ -95,15 +92,18 @@ namespace gfx::vulkan
                 // get the pipeline, second: unique_ptr<Pipeline>
                 stablePipeline = input.second.get();
 
-                util::assertFatal(
-                    !visited, "Pipeline handle visited multiple times!");
-
-                visited = true;
+                ++visits;
             });
 
+        if (visits == 0)
+        {
+            return std::unexpected(InvalidCacheHandle {});
+        }
+
+        util::assertFatal(visits == 1, "Pipeline hash collision");
+
         util::logDebug(
-            " Pipeline Lookup | Visited: {} | addr {}",
-            visited,
+            " Pipeline Lookup | addr {}",
             static_cast<const void*>(stablePipeline));
 
         return stablePipeline;

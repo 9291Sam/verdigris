@@ -55,4 +55,12 @@ namespace std
 
 } // namespace std
 
+namespace util
+{
+    inline std::size_t hash_value(const util::UUID& uuid)
+    {
+        return std::hash<util::UUID> {}(uuid);
+    }
+} // namespace util
+
 #endif // SEBUID_HPP

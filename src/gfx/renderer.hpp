@@ -4,6 +4,7 @@
 #include "camera.hpp"
 #include "recordables/debug_menu.hpp"
 #include "window.hpp"
+#include <gfx/vulkan/render_pass.hpp>
 #include <memory>
 #include <util/registrar.hpp>
 #include <util/threads.hpp>
@@ -80,7 +81,10 @@ namespace gfx
         // Pre-renderpass Rendering objects
         std::unique_ptr<vulkan::Swapchain> swapchain;
 
-        struct RenderPasses
+        // basically on resize we need the game thread to stall, however as many
+        // game threads can work on this at once. we're solving this with an
+        // RwLock, write is the resize
+        struct RenderPasses // TODO: change to RenderPassCriticalSection
         {
             std::unique_ptr<vulkan::Image2D> depth_buffer;
 
@@ -92,15 +96,16 @@ namespace gfx
 
             std::unique_ptr<vulkan::RenderPass> final_raster_pass;
 
+            // Post-renderpass Rendering Objects
+            std::unique_ptr<vulkan::PipelineCache> pipeline_cache;
+
             [[nodiscard]] std::optional<const vulkan::RenderPass*>
                 acquireRenderPassFromStage(DrawStage) const;
         };
 
-        util::RwLock<RenderPasses> render_passes;
+        std::unique_ptr<vulkan::FrameManager> frame_manager;
 
-        // Post-renderpass Rendering Objects
-        std::unique_ptr<vulkan::PipelineCache> pipeline_cache;
-        std::unique_ptr<vulkan::FrameManager>  frame_manager;
+        util::RwLock<RenderPasses> render_passes;
 
         // Objects
         std::shared_ptr<recordables::DebugMenu> debug_menu;

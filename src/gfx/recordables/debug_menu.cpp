@@ -54,8 +54,7 @@ namespace gfx::recordables
         gfx::vulkan::Device&   device,
         gfx::Window&           window,
         vk::RenderPass         renderPass)
-        : Recordable {
-            renderer_, "Debug Menu", gfx::DrawStage::DisplayPass, nullptr, {}}
+        : Recordable {renderer_, "Debug Menu", gfx::DrawStage::DisplayPass, {}}
     {
         util::assertFatal(
             !isMenuInitalized.exchange(true), "Only one DebugMenu can exist!");
@@ -234,6 +233,8 @@ namespace gfx::recordables
         util::assertFatal(
             isMenuInitalized.exchange(false),
             "Only one DebugMenu can be destroyed");
+
+        util::logDebug("Destroyed DebugMenu");
     }
 
     void DebugMenu::updateFrameState() const
@@ -360,7 +361,9 @@ namespace gfx::recordables
     }
 
     void DebugMenu::record(
-        vk::CommandBuffer commandBuffer, [[maybe_unused]] const Camera&) const
+        vk::CommandBuffer commandBuffer,
+        vk::PipelineLayout,
+        const Camera&) const
     {
         ImDrawData* const maybeDrawData = ImGui::GetDrawData();
 
@@ -368,6 +371,12 @@ namespace gfx::recordables
             maybeDrawData != nullptr, "Failed to get ImGui draw data!");
 
         ImGui_ImplVulkan_RenderDrawData(maybeDrawData, commandBuffer);
+    }
+
+    std::pair<vulkan::PipelineCache::PipelineHandle, vk::PipelineBindPoint>
+    DebugMenu::getPipeline(const vulkan::PipelineCache&) const
+    {
+        return {};
     }
 
     void DebugMenu::setVisibility(bool newVisibility) const

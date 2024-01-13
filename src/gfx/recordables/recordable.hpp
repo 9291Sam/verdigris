@@ -5,6 +5,7 @@
 #include <functional>
 #include <gfx/camera.hpp>
 #include <gfx/draw_stages.hpp>
+#include <gfx/vulkan/pipelines.hpp>
 #include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
@@ -40,12 +41,14 @@ namespace gfx::recordables
         /// Binds given pipeline and descriptors
         void bind(
             vk::CommandBuffer,
-            vk::Pipeline&       currentlyBoundPipeline,
-            DescriptorRefArray& currentlyBoundDescriptors) const;
+            const vulkan::PipelineCache&,
+            const vulkan::Pipeline** currentlyBoundPipeline,
+            DescriptorRefArray&      currentlyBoundDescriptors) const;
 
         /// Function that actually draws / dispatches the Recordable, place your
         /// vkCmdDraw[s] here
-        virtual void record(vk::CommandBuffer, const Camera&) const = 0;
+        virtual void
+        record(vk::CommandBuffer, vk::PipelineLayout, const Camera&) const = 0;
 
         std::strong_ordering     operator<=> (const Recordable&) const;
         [[nodiscard]] explicit   operator std::string () const;
@@ -56,8 +59,11 @@ namespace gfx::recordables
     protected:
         // TODO: combine allocator into master class of memory, descriptor,
         // pipeline, and renderpass allocation
-        [[nodiscard]] vulkan::Allocator&     getAllocator() const;
-        [[nodiscard]] vulkan::PipelineCache& getPipelineCache() const;
+        [[nodiscard]] vulkan::Allocator& getAllocator() const;
+
+        virtual std::
+            pair<vulkan::PipelineCache::PipelineHandle, vk::PipelineBindPoint>
+            getPipeline(const vulkan::PipelineCache&) const = 0;
 
         void accessRenderPass(
             DrawStage                                      accessStage,
@@ -65,30 +71,23 @@ namespace gfx::recordables
 
         void registerSelf();
 
-        const Renderer&   renderer;
-        const std::string name;
-        const util::UUID  uuid;
-        const DrawStage   stage;
-
-        /// You must manage the lifetime on the descriptors, the pipelines are
-        /// functionally static
-        /// These are the things that will be bound by the time drawOrDispatch
-        /// is called
-        DescriptorRefArray      sets;
-        const vulkan::Pipeline* pipeline;
-        vk::PipelineBindPoint   pipeline_bind_point;
-
+        const Renderer&           renderer;
+        const std::string         name;
+        const util::UUID          uuid;
+        const DrawStage           stage;
         mutable std::atomic<bool> should_draw;
 
-        //
+        /// You must manage the lifetime on the descriptors
         Recordable(
             const gfx::Renderer&,
             std::string name,
             DrawStage   stage,
-            const vulkan::Pipeline*,
-            vk::PipelineBindPoint,
             DescriptorRefArray = {},
             bool shouldDraw    = true);
+
+    private:
+        DescriptorRefArray                    sets;
+        vulkan::PipelineCache::PipelineHandle pipeline_handle;
     };
 } // namespace gfx::recordables
 

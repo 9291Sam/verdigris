@@ -75,12 +75,14 @@ namespace gfx::recordables
         ~FlatRecordable() override = default;
 
         void updateFrameState() const override;
-        void record(vk::CommandBuffer, const Camera&) const override;
+        void record(vk::CommandBuffer, vk::PipelineLayout, const Camera&)
+            const override;
 
         util::Mutex<Transform> transform;
 
     private:
-        const gfx::vulkan::Pipeline* getPipeline() const;
+        std::pair<vulkan::PipelineCache::PipelineHandle, vk::PipelineBindPoint>
+        getPipeline(const vulkan::PipelineCache&) const override;
 
         mutable std::optional<std::future<gfx::vulkan::Buffer>>
                                                    future_vertex_buffer;

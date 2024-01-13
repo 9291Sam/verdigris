@@ -22,6 +22,7 @@ namespace gfx::vulkan
     class Image2D;
     class Swapchain;
     class Allocator;
+    class PipelineCache;
 
     struct ResizeNeeded
     {};
@@ -43,7 +44,8 @@ namespace gfx::vulkan
             Camera,
             std::vector<std::pair<
                 std::optional<const vulkan::RenderPass*>,
-                std::vector<const recordables::Recordable*>>>);
+                std::vector<const recordables::Recordable*>>>,
+            const vulkan::PipelineCache&);
 
     private:
         Device* device;
@@ -77,6 +79,7 @@ namespace gfx::vulkan
             std::vector<std::pair<
                 std::optional<const vulkan::RenderPass*>,
                 std::vector<const recordables::Recordable*>>>,
+            const vulkan::PipelineCache&,
             vk::SwapchainKHR                       presentSwapchain,
             vk::RenderPass                         finalRasterPass,
             std::span<const vk::UniqueFramebuffer> framebuffers,

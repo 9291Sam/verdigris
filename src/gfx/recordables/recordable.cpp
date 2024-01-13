@@ -1,5 +1,6 @@
 #include "recordable.hpp"
 #include <gfx/renderer.hpp>
+#include <gfx/vulkan/image.hpp>
 #include <gfx/vulkan/pipelines.hpp>
 #include <ranges>
 
@@ -9,17 +10,34 @@ namespace gfx::recordables
     Recordable::~Recordable() = default;
 
     void Recordable::bind(
-        vk::CommandBuffer   commandBuffer,
-        vk::Pipeline&       currentlyBoundPipeline,
-        DescriptorRefArray& currentlyBoundDescriptors) const
+        vk::CommandBuffer            commandBuffer,
+        const vulkan::PipelineCache& pipelineCache,
+        const vulkan::Pipeline**     currentlyBoundPipeline,
+        DescriptorRefArray&          currentlyBoundDescriptors) const
     {
-        if (this->pipeline != nullptr
-            && currentlyBoundPipeline != **this->pipeline)
-        {
-            commandBuffer.bindPipeline(
-                this->pipeline_bind_point, **this->pipeline);
+        const auto [handle, bindPoint] = this->getPipeline(pipelineCache);
 
-            currentlyBoundPipeline = **this->pipeline;
+        if (!handle.isValid())
+        {
+            return;
+        }
+
+        std::expected<
+            const vulkan::Pipeline*,
+            vulkan::PipelineCache::InvalidCacheHandle>
+            shouldBePipeline = pipelineCache.lookupPipeline(handle);
+
+        if (!shouldBePipeline.has_value())
+        {
+            util::panic("Pipeline Cache lookup failed!");
+        }
+
+        if (*shouldBePipeline != nullptr
+            && *currentlyBoundPipeline != *shouldBePipeline)
+        {
+            commandBuffer.bindPipeline(bindPoint, ***shouldBePipeline);
+
+            *currentlyBoundPipeline = *shouldBePipeline;
         }
 
         for (std::size_t i = 0; i < this->sets.size(); ++i)
@@ -31,8 +49,8 @@ namespace gfx::recordables
             if (currentSet != maybeBindSet)
             {
                 commandBuffer.bindDescriptorSets(
-                    this->pipeline_bind_point,
-                    this->pipeline->getLayout(),
+                    bindPoint,
+                    (*shouldBePipeline)->getLayout(),
                     static_cast<std::uint32_t>(i),
                     {maybeBindSet},
                     {});
@@ -46,13 +64,13 @@ namespace gfx::recordables
     {
         //! bruh!!!
         return std::tie(
-                   this->pipeline,
+                   this->pipeline_handle,
                    this->sets[0],
                    this->sets[1],
                    this->sets[2],
                    this->sets[3])
            <=> std::tie(
-                   other.pipeline,
+                   other.pipeline_handle,
                    other.sets[0],
                    other.sets[1],
                    other.sets[2],
@@ -88,11 +106,6 @@ namespace gfx::recordables
         return *this->renderer.allocator;
     }
 
-    vulkan::PipelineCache& Recordable::getPipelineCache() const
-    {
-        return *this->renderer.pipeline_cache;
-    }
-
     void Recordable::accessRenderPass(
         DrawStage                                      accessStage,
         std::function<void(const vulkan::RenderPass*)> func) const
@@ -119,21 +132,17 @@ namespace gfx::recordables
     }
 
     Recordable::Recordable(
-        const gfx::Renderer&    renderer_,
-        std::string             name_,
-        DrawStage               stage_,
-        const vulkan::Pipeline* pipeline_,
-        vk::PipelineBindPoint   bindPoint,
-        DescriptorRefArray      sets_,
-        bool                    shouldDraw)
+        const gfx::Renderer& renderer_,
+        std::string          name_,
+        DrawStage            stage_,
+        DescriptorRefArray   sets_,
+        bool                 shouldDraw)
         : renderer {renderer_}
         , name {std::move(name_)}
         , uuid {util::UUID {}}
         , stage {stage_}
-        , sets {sets_}
-        , pipeline {pipeline_}
-        , pipeline_bind_point {bindPoint}
         , should_draw {shouldDraw}
+        , sets {sets_}
     {}
 
 } // namespace gfx::recordables

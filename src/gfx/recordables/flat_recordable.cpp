@@ -93,7 +93,9 @@ namespace gfx::recordables
     }
 
     void FlatRecordable::record(
-        vk::CommandBuffer commandBuffer, const Camera& camera) const
+        vk::CommandBuffer  commandBuffer,
+        vk::PipelineLayout layout,
+        const Camera&      camera) const
     {
         util::assertFatal(
             this->vertex_buffer.has_value() && this->index_buffer.has_value(),
@@ -110,16 +112,16 @@ namespace gfx::recordables
                 this->renderer, this->transform.copyInner())}};
 
         commandBuffer.pushConstants<PushConstants>(
-            this->pipeline->getLayout(),
-            vk::ShaderStageFlagBits::eVertex,
-            0,
-            pushConstants);
+            layout, vk::ShaderStageFlagBits::eVertex, 0, pushConstants);
 
         commandBuffer.drawIndexed(
             static_cast<std::uint32_t>(this->number_of_indices), 1, 0, 0, 0);
     }
 
-    const vulkan::Pipeline* FlatRecordable::getPipeline() const
+    // the pointers are still invalid just because you replace them theyre at
+    // different
+    std::pair<vulkan::PipelineCache::PipelineHandle, vk::PipelineBindPoint>
+    FlatRecordable::getPipeline(const vulkan::PipelineCache& cache) const
     {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wexit-time-destructors"
@@ -130,11 +132,17 @@ namespace gfx::recordables
         vulkan::PipelineCache::PipelineHandle handle = maybeHandleMutex.lock(
             [&](vulkan::PipelineCache::PipelineHandle& maybeHandle)
             {
-                if (maybeHandle.isValid())
+                std::expected<
+                    const vulkan::Pipeline*,
+                    vulkan::PipelineCache::InvalidCacheHandle>
+                    result = cache.lookupPipeline(maybeHandle);
+
+                if (result.has_value())
                 {
                     return maybeHandle;
                 }
 
+                // this *is* a double read lock...
                 this->accessRenderPass(
                     this->stage,
                     [&](const vulkan::RenderPass* renderPass) -> void
@@ -214,16 +222,21 @@ namespace gfx::recordables
                             "Created Pipeline @ {}",
                             static_cast<const void*>(newPipeline.get()));
 
-                        maybeHandle = this->getPipelineCache().cachePipeline(
-                            std::move(newPipeline));
+                        maybeHandle =
+                            cache.cachePipeline(std::move(newPipeline));
                     });
 
                 return maybeHandle;
             });
 
-        util::logDebug("Acquired handle Pipeline Handle {} @ ", handle.getID());
+        util::logDebug(
+            "Acquired handle Pipeline Handle {} @ ",
+            handle.getID().has_value(),
+            handle.getID().has_value()
+                ? static_cast<std::string>(handle.getID().value())
+                : "null");
 
-        return this->getPipelineCache().lookupPipeline(handle);
+        return {handle, vk::PipelineBindPoint::eGraphics};
     }
 
     FlatRecordable::FlatRecordable(
@@ -239,17 +252,11 @@ namespace gfx::recordables
                 name_,
                 vertices.size(),
                 indicies.size()), 
-            DrawStage::DisplayPass,
-            nullptr,
-            vk::PipelineBindPoint::eGraphics}
+            DrawStage::DisplayPass}
         , transform {std::move(transform_)} // NOLINT: rvalue is needed
         , number_of_vertices {vertices.size()}
         , number_of_indices {indicies.size()}
     {
-        this->pipeline = this->getPipeline();
-
-        util::assertFatal(this->pipeline != nullptr, "we didnt get a pipeline");
-
         this->future_vertex_buffer = std::async(
             [lambdaVertices = std::move(vertices),
              &allocator     = this->getAllocator(),

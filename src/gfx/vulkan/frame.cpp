@@ -87,11 +87,11 @@ namespace gfx::vulkan
     // update its framebuffer
 
     std::expected<void, ResizeNeeded> FrameManager::renderObjectsFromCamera(
-        Camera camera,
+        Camera                                            camera,
         std::vector<std::pair<
             std::optional<const vulkan::RenderPass*>,
-            std::vector<const recordables::Recordable*>>>
-            renderStages) // NOLINT
+            std::vector<const recordables::Recordable*>>> renderStages,
+        const vulkan::PipelineCache&                      cache) // NOLINT
     {
         // Iterate wrapping
         // number_of_flying_frames: 3
@@ -102,6 +102,7 @@ namespace gfx::vulkan
             this->flying_frames[this->flying_frame_index].recordAndDisplay(
                 camera,
                 std::move(renderStages),
+                cache,
                 **this->swapchain,
                 this->final_raster_pass,
                 this->swapchain_framebuffers,
@@ -210,6 +211,7 @@ namespace gfx::vulkan
         std::vector<std::pair<
             std::optional<const vulkan::RenderPass*>,
             std::vector<const recordables::Recordable*>>> recordables, // NOLINT
+        const vulkan::PipelineCache&                      cache,
         vk::SwapchainKHR                                  presentSwapchain,
         vk::RenderPass                                    finalRasterPass,
         std::span<const vk::UniqueFramebuffer>            framebuffers,
@@ -291,7 +293,12 @@ namespace gfx::vulkan
 
         this->command_buffer->begin(commandBufferBeginInfo);
 
-        vk::Pipeline                                     currentPipeline {};
+        const vulkan::Pipeline* currentPipeline {};
+        auto                    getPipelineLayout = [&]
+        {
+            return currentPipeline != nullptr ? currentPipeline->getLayout()
+                                              : nullptr;
+        };
         gfx::recordables::Recordable::DescriptorRefArray currentDescriptors {};
 
         std::size_t idx = 0;
@@ -303,9 +310,12 @@ namespace gfx::vulkan
                 {
                     r->bind(
                         *this->command_buffer,
-                        currentPipeline,
+                        cache,
+                        &currentPipeline,
                         currentDescriptors);
-                    r->record(*this->command_buffer, camera);
+
+                    r->record(
+                        *this->command_buffer, getPipelineLayout(), camera);
                 }
 
                 util::logDebug(

@@ -2,8 +2,10 @@
 #define SRC_GFX_VULKAN_PIPELINE_HPP
 
 #include <boost/unordered/concurrent_flat_map.hpp>
+#include <expected>
 #include <gfx/draw_stages.hpp>
 #include <util/threads.hpp>
+#include <util/uuid.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include <vulkan/vulkan_handles.hpp>
 
@@ -32,15 +34,15 @@ namespace gfx::vulkan
         struct PipelineHandle
         {
             PipelineHandle()
-                : id {~0UZ}
+                : id {std::nullopt}
             {}
 
             [[nodiscard]] bool isValid() const
             {
-                return this->id != ~0UZ;
+                return this->id.has_value();
             }
 
-            [[nodiscard]] std::size_t getID() const
+            [[nodiscard]] std::optional<util::UUID> getID() const
             {
                 return this->id;
             }
@@ -50,10 +52,11 @@ namespace gfx::vulkan
         private:
             friend class PipelineCache;
 
-            explicit PipelineHandle(std::size_t newID)
+            explicit PipelineHandle(util::UUID newID)
                 : id {newID}
             {}
-            std::size_t id;
+
+            std::optional<util::UUID> id;
         };
     public:
 
@@ -65,8 +68,12 @@ namespace gfx::vulkan
         PipelineCache& operator= (const PipelineCache&) = delete;
         PipelineCache& operator= (PipelineCache&&)      = delete;
 
-        PipelineHandle  cachePipeline(std::unique_ptr<Pipeline>) const;
-        const Pipeline* lookupPipeline(PipelineHandle) const;
+        PipelineHandle cachePipeline(std::unique_ptr<Pipeline>) const;
+
+        struct InvalidCacheHandle
+        {};
+        std::expected<const Pipeline*, InvalidCacheHandle>
+            lookupPipeline(PipelineHandle) const;
 
         void updateRenderPass(
             std::unordered_map<DrawStage, vk::RenderPass>, const Swapchain&);
@@ -147,11 +154,16 @@ namespace gfx::vulkan
     inline std::size_t hash_value(
         const gfx::vulkan::PipelineCache::PipelineHandle& handle) // NOLINT
     {
-        boost::hash<std::size_t> sizeTHasher {};
+        std::optional<util::UUID> id = handle.getID();
 
-        std::size_t workingHash = sizeTHasher(handle.getID());
-
-        return workingHash;
+        if (id.has_value())
+        {
+            return boost::hash<util::UUID> {}(*id);
+        }
+        else
+        {
+            return boost::hash<nullptr_t> {}(nullptr);
+        }
     }
 } // namespace gfx::vulkan
 

@@ -37,7 +37,8 @@ namespace gfx::recordables
         ~DebugMenu() override;
 
         void updateFrameState() const override;
-        void record(vk::CommandBuffer, const Camera&) const override;
+        void record(vk::CommandBuffer, vk::PipelineLayout, const Camera&)
+            const override;
 
         void setVisibility(bool) const;
 
@@ -45,6 +46,9 @@ namespace gfx::recordables
         mutable State            state;
         vk::UniqueDescriptorPool pool;
         mutable std::string_view current_logging_level_selection;
+
+        std::pair<vulkan::PipelineCache::PipelineHandle, vk::PipelineBindPoint>
+        getPipeline(const vulkan::PipelineCache&) const override;
 
         DebugMenu(
             const gfx::Renderer&,
