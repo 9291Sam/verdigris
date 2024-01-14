@@ -174,6 +174,7 @@ set(VERDIGRIS_SOURCES
 
     src/gfx/recordables/flat_recordable.cpp
     src/gfx/recordables/debug_menu.cpp
+    src/gfx/recordables/nuklear_menu.cpp
     src/gfx/recordables/recordable.cpp
 
     src/gfx/vulkan/allocator.cpp
@@ -218,12 +219,6 @@ target_include_directories(verdigris SYSTEM PUBLIC
     ${Vulkan_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS} ${fmt_SOURCE_DIR}/include)
 target_link_directories(verdigris PRIVATE ${FMT_BINARY_DIR})
-
-#     get_cmake_property(_variableNames VARIABLES)
-# list (SORT _variableNames)
-# foreach (_variableName ${_variableNames})
-#     message(STATUS "${_variableName}=${${_variableName}}")
-# endforeach()
 
 # Compile definitions
 
