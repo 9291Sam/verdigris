@@ -118,6 +118,18 @@ target_include_directories(imgui PRIVATE SYSTEM
 target_link_libraries(imgui PRIVATE glfw)
 target_compile_definitions(imgui INTERFACE IMGUI_IMPL_VULKAN_NO_PROTOTYPES=0)
 
+# Nuklear
+execute_process(
+    COMMAND git submodule update --init --recursive -- inc/Nuklear
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMAND_ERROR_IS_FATAL ANY
+)
+add_library(Nuklear INTERFACE)
+target_include_directories(Nuklear SYSTEM INTERFACE 
+    ${CMAKE_SOURCE_DIR}/inc/Nuklear
+)
+
+
 
 
 set(Boost_USE_STATIC_LIBS ON) 
@@ -192,6 +204,7 @@ target_link_libraries(verdigris PUBLIC
     fmt$<$<CONFIG:Debug>:d> concurrentqueue glfw
     gcem VulkanMemoryAllocator imgui magic_enum
     glm tinyobjloader Boost::container Boost::unordered 
+    Nuklear
     # ${Boost_STACKTRACE_BASIC_LIBRARY}
     # ${Boost_STACKTRACE_BACKTRACE_LIBRARY}
     # ${Boost_STACKTRACE_ADDR2LINE_LIBRARY}
