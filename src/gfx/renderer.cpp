@@ -79,8 +79,7 @@ namespace gfx
         , allocator {std::make_unique<vulkan::Allocator>(
               *this->instance, &*this->device)}
         , swapchain {nullptr}
-        , render_passes {RenderPasses {}}
-        , debug_menu {nullptr}
+        , render_passes {RenderPasses {}} // , debug_menu {nullptr}
         , draw_camera {Camera {{0.0f, 0.0f, 0.0f}}}
         , is_cursor_attached {true}
     {
@@ -88,7 +87,7 @@ namespace gfx
 
         this->window->attachCursor();
 
-        this->debug_menu->setVisibility(false);
+        // this->debug_menu->setVisibility(true);
     }
 
     Renderer::~Renderer() = default;
@@ -237,10 +236,10 @@ namespace gfx
                 return strongDrawingRenderables;
             }();
 
-            if (this->debug_menu->shouldDraw())
-            {
-                renderables.push_back(this->debug_menu);
-            }
+            // if (this->debug_menu->shouldDraw())
+            // {
+            //     renderables.push_back(this->debug_menu);
+            // }
 
             //! DrawStage is useless because of how all commands in a command
             //! buffer overlap with one another'
@@ -298,20 +297,21 @@ namespace gfx
                 });
         }();
 
-        util::assertFatal(
-            this->debug_menu.use_count() == 1,
-            "Debug menu use count was not 0! | Count: {}",
-            this->debug_menu.use_count());
+        // util::assertFatal(
+        //     this->debug_menu.use_count() == 1,
+        //     "Debug menu use count was not 0! | Count: {}",
+        //     this->debug_menu.use_count());
 
         if (!result)
         {
             this->resize();
         }
 
-        if (this->window->isActionActive(Window::Action::ToggleConsole, true))
-        {
-            this->debug_menu->setVisibility(!this->debug_menu->shouldDraw());
-        }
+        // if (this->window->isActionActive(Window::Action::ToggleConsole,
+        // true))
+        // {
+        //     this->debug_menu->setVisibility(!this->debug_menu->shouldDraw());
+        // }
 
         if (this->window->isActionActive(
                 Window::Action::ToggleCursorAttachment, true))
@@ -652,15 +652,15 @@ namespace gfx
                 *renderPasses.depth_buffer,
                 **renderPasses.final_raster_pass);
 
-            if (this->debug_menu == nullptr)
-            {
-                this->debug_menu = recordables::DebugMenu::create(
-                    *this,
-                    *this->instance,
-                    *this->device,
-                    *this->window,
-                    **renderPasses.final_raster_pass);
-            }
+            // if (this->debug_menu == nullptr)
+            // {
+            //     this->debug_menu = recordables::DebugMenu::create(
+            //         *this,
+            //         *this->instance,
+            //         *this->device,
+            //         *this->window,
+            //         **renderPasses.final_raster_pass);
+            // }
         };
 
         if (maybeWriteLockedRenderPass.has_value())

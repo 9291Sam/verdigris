@@ -31,8 +31,9 @@ Checks: >
   -cppcoreguidelines-use-default-member-init,
   -fuchsia-trailing-return,
   -modernize-use-emplace,
-  -hicpp-use-emplace
-
+  -hicpp-use-emplace,
+  -cppcoreguidelines-avoid-do-while
+  
 CheckOptions:
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true       }
   - { key: readability-identifier-naming.NamespaceCase,                     value: camelBack  }

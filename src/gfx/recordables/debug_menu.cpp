@@ -146,8 +146,8 @@ namespace gfx::recordables
             .PipelineCache {nullptr},
             .DescriptorPool {*this->pool},
             .Subpass {0},       // not touched
-            .MinImageCount {2}, // >= 2
-            .ImageCount {2},    // >= MinImageCount
+            .MinImageCount {3}, // >= 2
+            .ImageCount {5},    // >= MinImageCount
             .MSAASamples {static_cast<VkSampleCountFlagBits>(
                 vk::SampleCountFlagBits::e1)}, // >= VK_SAMPLE_COUNT_1_BIT
                                                // (0 -> default to
@@ -178,49 +178,55 @@ namespace gfx::recordables
 
         // Upload fonts
 
-    retry:
+        bool result = false;
 
-        bool result = device.getMainGraphicsQueue().tryAccess(
-            [&](vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
-            {
-                const vk::CommandBufferBeginInfo beginInfo {
-                    .sType {vk::StructureType::eCommandBufferBeginInfo},
-                    .pNext {nullptr},
-                    .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
-                    .pInheritanceInfo {nullptr},
-                };
+        do {
+            result = device.getMainGraphicsQueue().tryAccess(
+                [&](vk::Queue queue, vk::CommandBuffer commandBuffer) -> void
+                {
+                    const vk::CommandBufferBeginInfo beginInfo {
+                        .sType {vk::StructureType::eCommandBufferBeginInfo},
+                        .pNext {nullptr},
+                        .flags {vk::CommandBufferUsageFlagBits::eOneTimeSubmit},
+                        .pInheritanceInfo {nullptr},
+                    };
 
-                commandBuffer.begin(beginInfo);
+                    commandBuffer.begin(beginInfo);
 
-                ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
+                    ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
 
-                commandBuffer.end();
+                    commandBuffer.end();
 
-                const vk::SubmitInfo submitInfo {
-                    .sType {vk::StructureType::eSubmitInfo},
-                    .pNext {nullptr},
-                    .waitSemaphoreCount {0},
-                    .pWaitSemaphores {nullptr},
-                    .pWaitDstStageMask {nullptr},
-                    .commandBufferCount {1},
-                    .pCommandBuffers {&commandBuffer},
-                    .signalSemaphoreCount {0},
-                    .pSignalSemaphores {nullptr},
-                };
+                    const vk::SubmitInfo submitInfo {
+                        .sType {vk::StructureType::eSubmitInfo},
+                        .pNext {nullptr},
+                        .waitSemaphoreCount {0},
+                        .pWaitSemaphores {nullptr},
+                        .pWaitDstStageMask {nullptr},
+                        .commandBufferCount {1},
+                        .pCommandBuffers {&commandBuffer},
+                        .signalSemaphoreCount {0},
+                        .pSignalSemaphores {nullptr},
+                    };
 
-                queue.submit(submitInfo, *imguiFontUploadFence);
-            });
-
-        if (!result)
-        {
-            goto retry;
+                    queue.submit(submitInfo, *imguiFontUploadFence);
+                });
         }
+        while (!result);
 
         util::logTrace("uploaded fonts");
+
+        auto start = std::chrono::high_resolution_clock::now();
 
         const vk::Result rresult = device.asLogicalDevice().waitForFences(
             *imguiFontUploadFence, vk::True, ~std::uint64_t {0});
 
+        auto end = std::chrono::high_resolution_clock::now();
+
+        util::logTrace(
+            "waitTime  {}ms",
+            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+                .count());
         util::assertFatal(
             rresult == vk::Result::eSuccess,
             "Failed to wait for upload semaphore imgui | {}",
@@ -240,7 +246,7 @@ namespace gfx::recordables
         util::assertFatal(
             isMenuInitalized.load(), "Only one DebugMenu can be destroyed");
 
-        // util::logDebug("Destroyed DebugMenu");
+        util::logDebug("Destroyed DebugMenu");
     }
 
     void DebugMenu::updateFrameState() const

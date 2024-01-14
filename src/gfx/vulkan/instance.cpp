@@ -39,7 +39,7 @@ namespace
             vk::to_string(vk::DebugUtilsMessageTypeFlagsEXT {messageType}),
             message);
 
-        // util::panic("kill");
+        util::panic("kill");
 
         return vk::False;
     }

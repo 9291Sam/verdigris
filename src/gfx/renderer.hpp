@@ -108,7 +108,7 @@ namespace gfx
         util::RwLock<RenderPasses> render_passes;
 
         // Objects
-        std::shared_ptr<recordables::DebugMenu> debug_menu;
+        // std::shared_ptr<recordables::DebugMenu> debug_menu;
         util::
             Registrar<util::UUID, std::weak_ptr<const recordables::Recordable>>
                 recordable_registry;
